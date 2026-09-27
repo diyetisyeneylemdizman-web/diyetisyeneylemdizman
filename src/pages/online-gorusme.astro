@@ -1,0 +1,330 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import CtaBand from '../components/CtaBand.astro';
+
+const steps = [
+  {
+    icon: 'calendar',
+    title: 'Randevu talebi',
+    text: 'Randevu formunda görüşme türü olarak “Online”ı seçin. Talebiniz WhatsApp üzerinden bize ulaşır.',
+  },
+  {
+    icon: 'clock',
+    title: 'Gün ve saat',
+    text: 'Size uygun gün ve saat birlikte netleştirilir; görüşme bilgileri size iletilir.',
+  },
+  {
+    icon: 'video',
+    title: 'Görüntülü görüşme',
+    text: 'Randevu saatinde WhatsApp görüntülü arama ile bağlanır, beslenme değerlendirmenizi birlikte yaparız.',
+  },
+  {
+    icon: 'clipboard',
+    title: 'Plan ve takip',
+    text: 'Size özel beslenme planınız hazırlanır; kontrol görüşmeleriyle süreciniz takip edilir.',
+  },
+] as const;
+
+const prepare = [
+  'Güncel kilonuz (mümkünse sabah, aç karnına tartılmış)',
+  'Boy bilginiz ve mezura ile ölçülmüş bel çevreniz',
+  'Varsa son 3–6 ay içindeki kan tahlili sonuçlarınız',
+  'Kullandığınız ilaç ve takviyelerin listesi',
+  'Birkaç günlük yeme-içme alışkanlıklarınıza dair kısa notlar',
+];
+
+const tech = [
+  { icon: 'whatsapp', text: 'WhatsApp yüklü bir telefon veya bilgisayar' },
+  { icon: 'wifi', text: 'Görüntülü görüşme için yeterli internet bağlantısı' },
+  { icon: 'user', text: 'Rahat konuşabileceğiniz sessiz bir ortam' },
+] as const;
+
+const faqs = [
+  {
+    q: 'Online görüşme, yüz yüze görüşmeden farklı mı?',
+    a: 'Değerlendirme ve planlama süreci aynıdır. Tek fark, cihazla yapılan vücut analizinin online görüşmede yapılamamasıdır; bunun yerine bazı ölçümleri evde kendiniz alırsınız.',
+  },
+  {
+    q: 'Vücut analizi online yapılabilir mi?',
+    a: 'Cihazla yapılan vücut analizi için kliniğe gelmeniz gerekir. Online görüşmelerde kilo, bel ve kalça çevresi gibi ölçümleri evde almanız istenir.',
+  },
+  {
+    q: 'Görüşme ücreti ve ödeme nasıl yapılıyor?',
+    a: 'Görüşme ücreti ve ödeme bilgileri, randevunuz netleştiğinde size ayrıca iletilir.',
+  },
+  {
+    q: 'Yurt dışından veya başka bir şehirden görüşme yapabilir miyim?',
+    a: 'Evet. İnternet bağlantınız ve WhatsApp’ınız olduğu sürece bulunduğunuz yerden online görüşme yapabilirsiniz.',
+  },
+];
+---
+
+<BaseLayout
+  title="Online Görüşme"
+  description="WhatsApp görüntülü görüşmeyle online beslenme danışmanlığı: Nasıl işler, görüşmeden önce neler hazırlanmalı, sık sorulan sorular."
+>
+  <PageHero
+    title="Online Görüşme"
+    eyebrow="WhatsApp görüntülü görüşme"
+    lead="Nerede olursanız olun, birebir beslenme danışmanlığını online alabilirsiniz."
+    crumbs={[{ label: 'Online Görüşme' }]}
+  >
+    <div class="hero-cta">
+      <a href="/randevu-olustur/?tur=online#randevu-formu" class="btn btn-primary"><Icon name="video" size={18} />Online Randevu Oluştur</a>
+    </div>
+  </PageHero>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Adım adım</p>
+        <h2>Online görüşme nasıl işler?</h2>
+      </div>
+      <ol class="o-steps">
+        {
+          steps.map((s, i) => (
+            <li class="reveal">
+              <span class="num">{i + 1}</span>
+              <span class="icon-badge">
+                <Icon name={s.icon} size={24} />
+              </span>
+              <h3>{s.title}</h3>
+              <p>{s.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="section-sm bg-sage-soft">
+    <div class="container prep-grid">
+      <div class="card prep">
+        <h2>Görüşmeden önce hazırlayın</h2>
+        <ul class="ticks">
+          {prepare.map((p) => <li><Icon name="check" size={20} />{p}</li>)}
+        </ul>
+      </div>
+      <div class="card prep">
+        <h2>İhtiyacınız olanlar</h2>
+        <ul class="tech">
+          {
+            tech.map((t) => (
+              <li>
+                <span class="icon-badge">
+                  <Icon name={t.icon} size={22} />
+                </span>
+                {t.text}
+              </li>
+            ))
+          }
+        </ul>
+        <p class="pay-note">
+          <Icon name="info" size={18} />
+          Görüşme ücreti ve ödeme bilgileri, randevunuz netleştiğinde size ayrıca iletilir.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container-narrow">
+      <div class="section-head center">
+        <p class="eyebrow">Sık sorulan sorular</p>
+        <h2>Merak edilenler</h2>
+      </div>
+      <div class="faq">
+        {
+          faqs.map((f) => (
+            <details>
+              <summary>
+                {f.q}
+                <span class="plus" aria-hidden="true" />
+              </summary>
+              <p>{f.a}</p>
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <CtaBand
+    title="Online görüşme için randevu oluşturun"
+    text="Formda görüşme türü olarak “Online”ı seçmeniz yeterli; gün ve saati birlikte netleştirelim."
+  />
+</BaseLayout>
+
+<style>
+  .hero-cta {
+    margin-top: 28px;
+  }
+  .o-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .o-steps li {
+    position: relative;
+    padding: 28px 24px;
+    border-radius: var(--radius-lg);
+    background: var(--paper);
+    box-shadow: var(--shadow-sm);
+  }
+  .num {
+    position: absolute;
+    top: 20px;
+    right: 22px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--terracotta-50);
+    color: var(--terracotta-700);
+    font-weight: 800;
+    font-size: 0.9rem;
+  }
+  .o-steps h3 {
+    margin: 18px 0 8px;
+    font-size: 1.22rem;
+  }
+  .o-steps p {
+    margin: 0;
+    font-size: 0.94rem;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  .prep-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 20px;
+  }
+  .prep {
+    padding: clamp(24px, 3.5vw, 40px);
+  }
+  .prep h2 {
+    font-size: clamp(1.5rem, 2.4vw, 1.9rem);
+  }
+  .ticks,
+  .tech {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 14px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .ticks :global(svg) {
+    flex: none;
+    color: var(--sage-700);
+    margin-top: 3px;
+  }
+  .tech li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-weight: 600;
+  }
+  .tech .icon-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+  .pay-note {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 24px 0 0;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--terracotta-50);
+    color: var(--ink);
+    font-size: 0.92rem;
+    font-weight: 500;
+  }
+  .pay-note :global(svg) {
+    flex: none;
+    color: var(--terracotta-700);
+    margin-top: 2px;
+  }
+  .faq {
+    display: grid;
+    gap: 12px;
+  }
+  details {
+    background: var(--paper);
+    border-radius: var(--radius);
+    border: 1px solid rgb(41 44 41 / 0.07);
+    padding: 4px 22px;
+  }
+  summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 0;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  .plus {
+    position: relative;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--sage-100);
+  }
+  .plus::before,
+  .plus::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 12px;
+    height: 1.8px;
+    background: var(--ink);
+    transform: translate(-50%, -50%);
+    transition: transform 0.2s ease;
+  }
+  .plus::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  details[open] .plus::after {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  details p {
+    color: var(--ink-2);
+    margin: 0 0 18px;
+  }
+  @media (max-width: 1000px) {
+    .o-steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 800px) {
+    .prep-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 560px) {
+    .o-steps {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

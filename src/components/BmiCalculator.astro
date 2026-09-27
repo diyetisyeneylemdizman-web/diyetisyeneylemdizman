@@ -1,0 +1,410 @@
+---
+import Icon from './Icon.astro';
+interface Props {
+  variant?: 'full' | 'compact';
+}
+const { variant = 'full' } = Astro.props;
+---
+
+<div class:list={['bmi', `bmi--${variant}`]} data-bmi>
+  <form class="bmi-form" novalidate data-bmi-form>
+    <div class="bmi-fields">
+      <div class="field">
+        <label for="bmi-boy">Boy <span class="unit">(cm)</span></label>
+        <input class="input" id="bmi-boy" name="boy" inputmode="decimal" autocomplete="off" placeholder="Örn. 165" required />
+      </div>
+      <div class="field">
+        <label for="bmi-kilo">Kilo <span class="unit">(kg)</span></label>
+        <input class="input" id="bmi-kilo" name="kilo" inputmode="decimal" autocomplete="off" placeholder="Örn. 68,5" required />
+      </div>
+      <div class="field">
+        <label for="bmi-yas">Yaş</label>
+        <input class="input" id="bmi-yas" name="yas" inputmode="numeric" autocomplete="off" placeholder="Örn. 32" required />
+      </div>
+      <button type="submit" class="btn btn-primary bmi-submit">
+        <Icon name="sparkle" size={18} />Hesapla
+      </button>
+    </div>
+    <p class="field-error" data-bmi-error role="alert"></p>
+    <p class="bmi-privacy">
+      <Icon name="lock" size={15} />
+      Girdiğiniz bilgiler kaydedilmez, hiçbir yere gönderilmez; hesaplama yalnızca cihazınızda yapılır.
+    </p>
+  </form>
+
+  <div class="bmi-result" data-bmi-result aria-live="polite" hidden>
+    <div class="result-top">
+      <div>
+        <p class="result-label">Vücut kitle indeksiniz</p>
+        <p class="result-value" data-bmi-value>—</p>
+      </div>
+      <span class="result-chip" data-bmi-chip>—</span>
+    </div>
+
+    <div class="scale" data-bmi-scale aria-hidden="true">
+      <div class="scale-bar">
+        <span style="--w:11.67%;--c:#cfc4b3"></span>
+        <span style="--w:21.67%;--c:#8e9b82"></span>
+        <span style="--w:16.67%;--c:#dcae99"></span>
+        <span style="--w:16.67%;--c:#c4826b"></span>
+        <span style="--w:16.67%;--c:#a8654f"></span>
+        <span style="--w:16.66%;--c:#86493a"></span>
+      </div>
+      <span class="scale-marker" data-bmi-marker></span>
+      <div class="scale-ticks">
+        <span style="left:11.67%">18,5</span>
+        <span style="left:33.33%">25</span>
+        <span style="left:50%">30</span>
+        <span style="left:66.67%">35</span>
+        <span style="left:83.33%">40</span>
+      </div>
+    </div>
+
+    <p class="result-range" data-bmi-range></p>
+    <p class="result-text" data-bmi-text></p>
+    <p class="result-note" data-bmi-note hidden></p>
+    <div class="result-actions">
+      <a href="/randevu-olustur/" class="btn btn-primary" data-bmi-cta>
+        <Icon name="calendar" size={18} /><span data-bmi-cta-label>Randevu Oluştur</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .bmi {
+    background: var(--paper);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: clamp(22px, 3.4vw, 36px);
+    border: 1px solid rgb(41 44 41 / 0.06);
+  }
+  .bmi-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: end;
+  }
+  .bmi-submit {
+    grid-column: 1 / -1;
+  }
+  .bmi--compact .bmi-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  }
+  .bmi--compact .bmi-submit {
+    grid-column: auto;
+  }
+  .unit {
+    color: var(--ink-3);
+    font-weight: 500;
+  }
+  .field-error:empty {
+    display: none;
+  }
+  .field-error {
+    margin: 12px 0 0;
+  }
+  .bmi-privacy {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 14px 0 0;
+    font-size: 0.8rem;
+    color: var(--ink-3);
+    line-height: 1.5;
+  }
+  .bmi-privacy :global(svg) {
+    flex: none;
+    margin-top: 2px;
+  }
+
+  .bmi-result {
+    margin-top: 26px;
+    padding-top: 26px;
+    border-top: 1px dashed var(--beige);
+    animation: fadeUp 0.45s ease both;
+  }
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  .result-top {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .result-label {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+  }
+  .result-value {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: clamp(2.8rem, 6vw, 3.6rem);
+    line-height: 1;
+    color: var(--ink);
+  }
+  .result-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5em 1em;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.92rem;
+    background: var(--chip-bg, var(--sage-100));
+    color: var(--chip-fg, var(--ink));
+  }
+
+  .scale {
+    position: relative;
+    margin: 26px 0 30px;
+  }
+  .scale-bar {
+    display: flex;
+    height: 12px;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .scale-bar span {
+    width: var(--w);
+    background: var(--c);
+  }
+  .scale-marker {
+    position: absolute;
+    top: -6px;
+    left: var(--pos, 0%);
+    width: 24px;
+    height: 24px;
+    margin-left: -12px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 4px solid var(--ink);
+    box-shadow: var(--shadow-sm);
+    transition: left 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .scale-ticks {
+    position: relative;
+    height: 18px;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+  .scale-ticks span {
+    position: absolute;
+    transform: translateX(-50%);
+  }
+  .result-range {
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 0.6em;
+  }
+  .result-text {
+    color: var(--ink-2);
+  }
+  .result-note {
+    font-size: 0.9rem;
+    color: var(--ink-2);
+    background: var(--sage-50);
+    border-radius: 14px;
+    padding: 0.8em 1em;
+  }
+  .result-actions {
+    margin-top: 8px;
+  }
+  .result-actions .btn {
+    white-space: normal;
+    text-align: center;
+  }
+
+  @media (max-width: 760px) {
+    .bmi-fields,
+    .bmi--compact .bmi-fields {
+      grid-template-columns: 1fr 1fr;
+    }
+    .bmi-fields .field:nth-child(3) {
+      grid-column: 1 / -1;
+    }
+    .bmi-submit,
+    .bmi--compact .bmi-submit {
+      grid-column: 1 / -1;
+    }
+  }
+</style>
+
+<script>
+  type Cat = {
+    max: number;
+    key: string;
+    label: string;
+    bg: string;
+    fg: string;
+    text: string;
+    cta: { label: string; hizmet: string; primary: boolean };
+  };
+
+  const CATS: Cat[] = [
+    {
+      max: 18.5,
+      key: 'zayif',
+      label: 'Zayıf',
+      bg: '#ece5da',
+      fg: '#292c29',
+      text: 'VKİ değeriniz zayıf aralığında. Vücudunuzun ihtiyaç duyduğu enerji ve besin öğelerini yeterince alamıyor olabilirsiniz. Sağlıklı kilo alımı için kişiye özel bir beslenme planı faydalı olabilir.',
+      cta: { label: 'Kilo Alma Diyeti İçin Randevu Oluştur', hizmet: 'Kilo Alma Diyeti', primary: true },
+    },
+    {
+      max: 25,
+      key: 'normal',
+      label: 'Normal',
+      bg: '#e3e7dd',
+      fg: '#3d4636',
+      text: 'VKİ değeriniz normal aralıkta. Bu dengeyi korumak için düzenli, çeşitli ve dengeli beslenmeye devam etmeniz önemli.',
+      cta: { label: 'Sağlıklı Beslenme Danışmanlığı Al', hizmet: 'Sağlıklı Beslenme Önerileri', primary: false },
+    },
+    {
+      max: 30,
+      key: 'fazla',
+      label: 'Fazla Kilolu (Hafif Şişman)',
+      bg: '#f6ebe5',
+      fg: '#86493a',
+      text: 'VKİ değeriniz fazla kilolu (hafif şişman) aralığında. Kişiye özel bir beslenme planıyla sağlıklı ve sürdürülebilir bir kilo kaybı hedeflenebilir. Değerlendirme için hemen randevu oluşturabilirsiniz.',
+      cta: { label: 'Hemen Randevu Oluştur', hizmet: 'Zayıflama Diyeti', primary: true },
+    },
+    {
+      max: 35,
+      key: 'obez1',
+      label: '1. Derece Obez',
+      bg: '#f1ddd3',
+      fg: '#86493a',
+      text: 'VKİ değeriniz 1. derece obezite aralığında. Obezite; tip 2 diyabet, hipertansiyon ve kalp-damar hastalıkları gibi sorunlar için risk oluşturabilir. Uzman desteğiyle planlanan bir beslenme programı önemlidir.',
+      cta: { label: 'Hemen Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
+    },
+    {
+      max: 40,
+      key: 'obez2',
+      label: '2. Derece Obez',
+      bg: '#ecd0c4',
+      fg: '#7a4033',
+      text: 'VKİ değeriniz 2. derece obezite aralığında. Bu aralıkta sağlık riskleri artabilir; hekiminizle birlikte, uzman desteğiyle planlanan bir beslenme programı önemlidir.',
+      cta: { label: 'Hemen Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
+    },
+    {
+      max: Infinity,
+      key: 'obez3',
+      label: '3. Derece Obez (Morbid Obez)',
+      bg: '#e6c2b4',
+      fg: '#6e392d',
+      text: 'VKİ değeriniz 3. derece (morbid) obezite aralığında. Bu aralıkta sağlık riskleri belirgin şekilde artar; hekiminizle birlikte, uzman desteğiyle planlanan bir beslenme programı önemlidir.',
+      cta: { label: 'Hemen Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
+    },
+  ];
+
+  const fmt = (n: number, d = 1) =>
+    n.toLocaleString('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const parse = (v: string) => Number(v.trim().replace(/\s/g, '').replace(',', '.'));
+
+  document.querySelectorAll<HTMLElement>('[data-bmi]').forEach((root) => {
+    const form = root.querySelector<HTMLFormElement>('[data-bmi-form]')!;
+    const err = root.querySelector<HTMLElement>('[data-bmi-error]')!;
+    const out = root.querySelector<HTMLElement>('[data-bmi-result]')!;
+    const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
+    const inputs = {
+      boy: form.elements.namedItem('boy') as HTMLInputElement,
+      kilo: form.elements.namedItem('kilo') as HTMLInputElement,
+      yas: form.elements.namedItem('yas') as HTMLInputElement,
+    };
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      Object.values(inputs).forEach((i) => i.removeAttribute('aria-invalid'));
+      let boy = parse(inputs.boy.value);
+      const kilo = parse(inputs.kilo.value);
+      const yas = parse(inputs.yas.value);
+      if (boy > 0 && boy < 3) boy = boy * 100; // metre girildiyse cm'ye çevir
+
+      const problems: [HTMLInputElement, string][] = [];
+      if (!(boy >= 100 && boy <= 250)) problems.push([inputs.boy, 'Boyunuzu santimetre olarak girin (örn. 165).']);
+      if (!(kilo >= 20 && kilo <= 350)) problems.push([inputs.kilo, 'Kilonuzu kilogram olarak girin (örn. 68,5).']);
+      if (!(yas >= 2 && yas <= 120 && Number.isInteger(yas))) problems.push([inputs.yas, 'Yaşınızı tam sayı olarak girin (örn. 32).']);
+      if (problems.length) {
+        problems.forEach(([i]) => i.setAttribute('aria-invalid', 'true'));
+        err.textContent = problems.map((p) => p[1]).join(' ');
+        out.hidden = true;
+        problems[0][0].focus();
+        return;
+      }
+      err.textContent = '';
+
+      const h = boy / 100;
+      const bmi = kilo / (h * h);
+      const bmiText = fmt(bmi);
+      const minW = 18.5 * h * h;
+      const maxW = 24.9 * h * h;
+      const cat = CATS.find((c) => bmi < c.max)!;
+      const child = yas < 18;
+
+      $('[data-bmi-value]').textContent = bmiText;
+      const chip = $('[data-bmi-chip]');
+      const scale = $('[data-bmi-scale]');
+      const note = $('[data-bmi-note]');
+      const cta = $('[data-bmi-cta]') as HTMLAnchorElement;
+      const ctaLabel = $('[data-bmi-cta-label]');
+
+      let ctaInfo = cat.cta;
+      if (child) {
+        chip.textContent = '18 yaş altı';
+        chip.style.setProperty('--chip-bg', '#ece5da');
+        chip.style.setProperty('--chip-fg', '#292c29');
+        scale.hidden = true;
+        $('[data-bmi-range]').textContent = '';
+        $('[data-bmi-text]').textContent =
+          '18 yaş altındaki çocuk ve gençlerde VKİ, yetişkin sınıflamasıyla değil; yaşa ve cinsiyete özel büyüme eğrileriyle (persentil) değerlendirilir. Çocuğunuzun büyüme ve beslenme durumunu birlikte değerlendirebiliriz.';
+        ctaInfo = { label: 'Çocuk Beslenmesi İçin Randevu Oluştur', hizmet: 'Çocuk Beslenmesi', primary: true };
+        note.hidden = true;
+      } else {
+        chip.textContent = cat.label;
+        chip.style.setProperty('--chip-bg', cat.bg);
+        chip.style.setProperty('--chip-fg', cat.fg);
+        scale.hidden = false;
+        const pos = Math.min(Math.max((bmi - 15) / 30, 0.01), 0.99) * 100;
+        $('[data-bmi-marker]').style.setProperty('--pos', `${pos}%`);
+        $('[data-bmi-range]').textContent = `Boyunuza göre VKİ’nin normal aralıkta olduğu kilo: ${fmt(minW)} – ${fmt(maxW)} kg`;
+        $('[data-bmi-text]').textContent = cat.text;
+        if (yas >= 65) {
+          note.hidden = false;
+          note.textContent =
+            '65 yaş ve üzerinde VKİ değerlendirmesi farklılık gösterebilir; kas kaybı gibi etkenler nedeniyle kesin değerlendirme için uzman görüşü önerilir.';
+        } else {
+          note.hidden = true;
+        }
+      }
+
+      const params = new URLSearchParams({ hizmet: ctaInfo.hizmet });
+      if (!child) {
+        params.set('vki', bmiText);
+        params.set('durum', cat.label);
+      }
+      cta.href = `/randevu-olustur/?${params.toString()}#randevu-formu`;
+      ctaLabel.textContent = ctaInfo.label;
+      cta.classList.toggle('btn-primary', ctaInfo.primary);
+      cta.classList.toggle('btn-outline', !ctaInfo.primary);
+
+      out.hidden = false;
+      out.style.animation = 'none';
+      void out.offsetWidth;
+      out.style.animation = '';
+      const r = out.getBoundingClientRect();
+      if (r.top > window.innerHeight * 0.7 || r.top < 0) {
+        out.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  });
+</script>

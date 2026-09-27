@@ -1,0 +1,52 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import Icon from './Icon.astro';
+import BlogCover from './BlogCover.astro';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+}
+const { post } = Astro.props;
+const fmtDate = (d: Date) =>
+  d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' });
+---
+
+<article class="post-card reveal">
+  <a href={`/blog/${post.id}/`} class="post-link">
+    <BlogCover tone={post.data.tone} icon={post.data.icon} label={post.data.category} />
+    <div class="post-body">
+      <time datetime={post.data.date.toISOString()}>{fmtDate(post.data.date)}</time>
+      <h3>{post.data.title}</h3>
+      <p>{post.data.description}</p>
+      <span class="link-arrow">Devamını oku <Icon name="arrowRight" size={18} /></span>
+    </div>
+  </a>
+</article>
+
+<style>
+  .post-link {
+    display: block;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+  }
+  .post-body {
+    padding: 20px 4px 0;
+  }
+  .post-body time {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-3);
+  }
+  .post-body h3 {
+    margin: 8px 0 10px;
+    transition: color 0.2s ease;
+  }
+  .post-body p {
+    font-size: 0.95rem;
+    color: var(--ink-2);
+  }
+  .post-link:hover h3 {
+    color: var(--terracotta-700);
+  }
+</style>

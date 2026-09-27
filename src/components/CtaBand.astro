@@ -1,0 +1,78 @@
+---
+import Icon from './Icon.astro';
+import LeafDecor from './LeafDecor.astro';
+import { site } from '../data/site';
+
+interface Props {
+  title?: string;
+  text?: string;
+}
+const {
+  title = 'Sağlıklı bir başlangıç için ilk adımı birlikte atalım',
+  text = 'Yüz yüze ya da online görüşme için randevu talebinizi birkaç adımda iletebilirsiniz.',
+} = Astro.props;
+---
+
+<section class="section-sm">
+  <div class="container">
+    <div class="cta-band">
+      <LeafDecor class="cta-leaf" />
+      <div class="cta-copy">
+        <h2>{title}</h2>
+        <p>{text}</p>
+      </div>
+      <div class="cta-actions">
+        <a href="/randevu-olustur/" class="btn btn-primary"><Icon name="calendar" size={18} />Randevu Oluştur</a>
+        <a href={site.phoneHref} class="btn btn-light"><Icon name="phone" size={18} />{site.phoneDisplay}</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cta-band {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1.4fr auto;
+    align-items: center;
+    gap: 28px 48px;
+    padding: clamp(32px, 5vw, 60px);
+    border-radius: var(--radius-xl);
+    background: var(--sage);
+    color: var(--ink);
+  }
+  .cta-copy {
+    position: relative;
+    max-width: 620px;
+  }
+  .cta-band h2 {
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    margin-bottom: 0.4em;
+  }
+  .cta-band p {
+    margin: 0;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .cta-actions {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .cta-band :global(.cta-leaf) {
+    position: absolute;
+    right: -30px;
+    bottom: -80px;
+    width: 230px;
+    color: var(--sage-200);
+    opacity: 0.55;
+    transform: rotate(-24deg);
+  }
+  @media (max-width: 900px) {
+    .cta-band {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

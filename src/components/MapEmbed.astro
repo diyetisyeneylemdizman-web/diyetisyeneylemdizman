@@ -1,0 +1,122 @@
+---
+import Icon from './Icon.astro';
+import { site, fullAddress } from '../data/site';
+const src = `https://www.google.com/maps?q=${encodeURIComponent(site.mapsEmbedQuery)}&ll=${site.geo.lat},${site.geo.lng}&z=16&hl=tr&output=embed`;
+---
+
+<div class="map" data-map data-src={src}>
+  <div class="map-facade">
+    <svg class="map-art" viewBox="0 0 400 260" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
+      <rect width="400" height="260" fill="#e9ece4"></rect>
+      <path d="M-10 190C60 170 110 205 190 180S320 120 410 140" stroke="#fffdf9" stroke-width="16" fill="none"></path>
+      <path d="M120-10C130 60 110 130 150 270" stroke="#fffdf9" stroke-width="12" fill="none"></path>
+      <path d="M260-10C250 70 290 150 270 270" stroke="#fffdf9" stroke-width="9" fill="none"></path>
+      <path d="M-10 80C80 95 190 60 410 70" stroke="#fffdf9" stroke-width="8" fill="none"></path>
+      <rect x="20" y="20" width="80" height="45" rx="8" fill="#dde2d6"></rect>
+      <rect x="165" y="95" width="70" height="60" rx="8" fill="#dde2d6"></rect>
+      <rect x="300" y="170" width="80" height="70" rx="8" fill="#dde2d6"></rect>
+      <rect x="290" y="20" width="90" height="36" rx="8" fill="#dde2d6"></rect>
+      <circle cx="200" cy="118" r="34" fill="#b97862" opacity=".16"></circle>
+    </svg>
+    <span class="map-pin"><Icon name="pin" size={30} strokeWidth={1.6} /></span>
+    <div class="map-info">
+      <p><strong>{site.clinicName}</strong><br />{fullAddress}</p>
+      <div class="map-actions">
+        <button type="button" class="btn btn-sm btn-sage" data-map-load>
+          <Icon name="pin" size={17} />Haritayı Göster
+        </button>
+        <a class="btn btn-sm btn-light" href={site.mapsUrl} target="_blank" rel="noopener">
+          <Icon name="arrowUpRight" size={17} />Yol Tarifi Al
+        </a>
+      </div>
+      <p class="map-note">Harita yüklendiğinde Google tarafından çerez kullanılabilir.</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .map {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-height: 430px;
+    background: #e9ece4;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgb(41 44 41 / 0.06);
+  }
+  .map :global(iframe) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  .map-facade {
+    position: absolute;
+    inset: 0;
+  }
+  .map-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .map-pin {
+    position: absolute;
+    left: 50%;
+    top: 27%;
+    transform: translate(-50%, -50%);
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50% 50% 50% 8px;
+    rotate: -45deg;
+    background: var(--terracotta-700);
+    color: #fff;
+    box-shadow: var(--shadow);
+  }
+  .map-pin :global(svg) {
+    rotate: 45deg;
+  }
+  .map-info {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    background: rgb(255 253 249 / 0.95);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .map-info p {
+    margin: 0 0 12px;
+    font-size: 0.94rem;
+    line-height: 1.5;
+  }
+  .map-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .map-info .map-note {
+    margin: 10px 0 0;
+    font-size: 0.76rem;
+    color: var(--ink-3);
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-map]').forEach((map) => {
+    map.querySelector('[data-map-load]')?.addEventListener('click', () => {
+      const iframe = document.createElement('iframe');
+      iframe.src = map.dataset.src!;
+      iframe.title = 'Klinik konumu – Google Haritalar';
+      iframe.loading = 'lazy';
+      iframe.referrerPolicy = 'no-referrer-when-downgrade';
+      iframe.allowFullscreen = true;
+      map.querySelector('.map-facade')?.remove();
+      map.appendChild(iframe);
+    });
+  });
+</script>

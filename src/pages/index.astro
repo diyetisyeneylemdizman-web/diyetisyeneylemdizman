@@ -1,0 +1,928 @@
+---
+import { Picture } from 'astro:assets';
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import LeafDecor from '../components/LeafDecor.astro';
+import BmiCalculator from '../components/BmiCalculator.astro';
+import PostCard from '../components/PostCard.astro';
+import MapEmbed from '../components/MapEmbed.astro';
+import CtaBand from '../components/CtaBand.astro';
+import { serviceCategories } from '../data/services';
+import { site, fullAddress } from '../data/site';
+import portrait from '../assets/eylem-dizman.jpg';
+
+const posts = (await getCollection('blog'))
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime() || a.data.title.localeCompare(b.data.title, 'tr'))
+  .slice(0, 3);
+
+const steps = [
+  {
+    icon: 'calendar',
+    title: 'Randevunuzu oluşturun',
+    text: 'Formu doldurun, talebiniz WhatsApp üzerinden bize ulaşsın. Size uygun gün ve saati birlikte belirleyelim.',
+  },
+  {
+    icon: 'consult',
+    title: 'Tanışma ve değerlendirme',
+    text: 'Beslenme alışkanlıklarınızı, sağlık geçmişinizi ve hedeflerinizi konuşuyor; vücut analiziyle başlangıç noktanızı belirliyoruz.',
+  },
+  {
+    icon: 'clipboard',
+    title: 'Size özel beslenme planı',
+    text: 'Günlük rutininize, damak tadınıza ve ihtiyaçlarınıza uygun, uygulanabilir bir plan hazırlıyoruz.',
+  },
+  {
+    icon: 'chart',
+    title: 'Düzenli takip',
+    text: 'Kontrol görüşmeleriyle sürecinizi izliyor, planınızı ihtiyaçlarınıza göre güncelliyoruz.',
+  },
+] as const;
+---
+
+<BaseLayout>
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Diyetisyen · Seyhan / Adana & Online</p>
+        <h1>Size özel, <em class="accent">sürdürülebilir</em> bir beslenme düzeni</h1>
+        <p class="lead">
+          Yüz yüze ya da WhatsApp görüntülü görüşmeyle online; yaşam tarzınıza, sağlık durumunuza ve hedeflerinize uygun bir
+          beslenme planını birlikte oluşturalım.
+        </p>
+        <div class="hero-actions">
+          <a href="/randevu-olustur/" class="btn btn-primary"><Icon name="calendar" size={19} />Randevu Oluştur</a>
+          <a href="/vucut-kitle-indeksi-hesaplama/" class="btn btn-outline"><Icon name="scale" size={19} />VKİ’nizi Hesaplayın</a>
+        </div>
+        <ul class="hero-points">
+          <li><span><Icon name="video" size={18} /></span>Online & yüz yüze</li>
+          <li><span><Icon name="clipboard" size={18} /></span>Kişiye özel plan</li>
+          <li><span><Icon name="chart" size={18} /></span>Düzenli takip</li>
+        </ul>
+      </div>
+
+      <div class="hero-visual">
+        <div class="arch-bg" aria-hidden="true"></div>
+        <div class="arch-line" aria-hidden="true"></div>
+        <LeafDecor class="hero-leaf" />
+        <div class="arch">
+          <Picture
+            src={portrait}
+            alt="Diyetisyen Eylem Dizman, kliniğindeki çalışma masasında gülümsüyor"
+            widths={[420, 640, 900]}
+            sizes="(max-width: 900px) 86vw, 460px"
+            formats={['avif', 'webp']}
+            loading="eager"
+            fetchpriority="high"
+          />
+        </div>
+        <div class="float-card card-name">
+          <img src="/logo/logo-simge.svg" width="136" height="206" alt="" />
+          <div>
+            <strong>Dyt. Eylem Dizman</strong>
+            <span>İzmir Katip Çelebi Üniversitesi<br />Beslenme ve Diyetetik</span>
+          </div>
+        </div>
+        <div class="float-card card-online">
+          <span class="dot" aria-hidden="true"></span>
+          Online görüşme
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HAKKINDA ============ -->
+  <section class="section about">
+    <div class="container about-grid">
+      <div class="about-card reveal">
+        <img src="/logo/logo.svg" width="312" height="251" alt="Eylem Dizman Diyetisyen logosu" loading="lazy" />
+        <ul class="facts">
+          <li>
+            <Icon name="cap" size={22} />
+            <span><strong>Beslenme ve Diyetetik</strong>İzmir Katip Çelebi Üniversitesi, Sağlık Bilimleri Fakültesi</span>
+          </li>
+          <li>
+            <Icon name="clinic" size={22} />
+            <span><strong>{site.clinicName}</strong>Seyhan / Adana</span>
+          </li>
+          <li>
+            <Icon name="video" size={22} />
+            <span><strong>Online danışmanlık</strong>WhatsApp görüntülü görüşme ile</span>
+          </li>
+        </ul>
+      </div>
+      <div class="reveal">
+        <p class="eyebrow">Hakkında</p>
+        <h2>Diyetisyen Eylem Dizman</h2>
+        <p class="lead">
+          Lisans öncesi öğrenimlerinin ardından İzmir Katip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve
+          Diyetetik Bölümü’nde başladığı eğitimini başarıyla tamamlayarak Diyetisyen unvanını almıştır.
+        </p>
+        <p>Diyetisyen Eylem Dizman, mesleki çalışmalarına {site.clinicName}’nde devam etmektedir.</p>
+        <a href="/hakkinda/" class="link-arrow">Hakkında daha fazlası <Icon name="arrowRight" size={18} /></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HİZMETLER ============ -->
+  <section class="section bg-sage-soft services">
+    <div class="container">
+      <div class="section-head center">
+        <p class="eyebrow">Hizmetler</p>
+        <h2>Hangi konularda destek alabilirsiniz?</h2>
+        <p>Danışmanlıktan hastalıklarda beslenmeye, kilo yönetiminden özel dönemlere kadar kişiye özel beslenme desteği.</p>
+      </div>
+      <div class="service-grid">
+        {
+          serviceCategories.map((cat) => (
+            <article class="service-card reveal">
+              <span class="icon-badge">
+                <Icon name={cat.icon} size={26} />
+              </span>
+              <h3>{cat.title}</h3>
+              <p>{cat.intro}</p>
+              <ul>
+                {cat.services.map((s) => (
+                  <li>
+                    <a href={`/hizmetler/#${s.slug}`}>{s.name}</a>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))
+        }
+      </div>
+      <div class="center-link">
+        <a href="/hizmetler/" class="btn btn-outline">Tüm Hizmetleri İnceleyin <Icon name="arrowRight" size={18} /></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SÜREÇ ============ -->
+  <section class="section process">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Süreç</p>
+        <h2>Birlikte nasıl ilerliyoruz?</h2>
+      </div>
+      <ol class="steps">
+        {
+          steps.map((s, i) => (
+            <li class="step reveal">
+              <span class="step-no">0{i + 1}</span>
+              <span class="icon-badge terracotta">
+                <Icon name={s.icon} size={24} />
+              </span>
+              <h3>{s.title}</h3>
+              <p>{s.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ VKİ ============ -->
+  <section class="section bmi-band on-sage" id="vki">
+    <div class="container bmi-grid">
+      <div class="bmi-copy">
+        <p class="eyebrow">Vücut Kitle İndeksi</p>
+        <h2>VKİ’nizi hesaplayın, nerede olduğunuzu görün</h2>
+        <p>
+          Boyunuzu, kilonuzu ve yaşınızı girin; vücut kitle indeksinizi ve hangi aralıkta olduğunuzu hemen öğrenin. Sonucunuza
+          göre sizin için uygun hizmete kolayca randevu oluşturabilirsiniz.
+        </p>
+        <a href="/vucut-kitle-indeksi-hesaplama/" class="link-dark">VKİ hakkında detaylı bilgi <Icon name="arrowRight" size={18} /></a>
+      </div>
+      <BmiCalculator variant="full" />
+    </div>
+  </section>
+
+  <!-- ============ ONLİNE GÖRÜŞME ============ -->
+  <section class="section online">
+    <div class="container online-grid">
+      <div class="online-visual reveal" aria-hidden="true">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="call-top"><span></span>WhatsApp görüntülü görüşme</div>
+            <div class="call-avatar">
+              <img src="/logo/logo-simge.svg" width="136" height="206" alt="" />
+            </div>
+            <p class="call-name">Dyt. Eylem Dizman</p>
+            <p class="call-time">Beslenme danışmanlığı</p>
+            <div class="call-actions">
+              <span><Icon name="video" size={18} /></span>
+              <span class="end"><Icon name="phone" size={18} /></span>
+              <span><Icon name="consult" size={18} /></span>
+            </div>
+          </div>
+        </div>
+        <LeafDecor class="online-leaf" />
+      </div>
+      <div class="reveal">
+        <p class="eyebrow">Online Görüşme</p>
+        <h2>Nerede olursanız olun, <em class="accent">online</em> görüşme</h2>
+        <p class="lead">
+          Kliniğe gelemediğiniz durumlarda WhatsApp görüntülü görüşmeyle birebir beslenme danışmanlığı alabilirsiniz.
+        </p>
+        <ul class="checks">
+          <li><Icon name="check" size={20} />Randevu formunda görüşme türü olarak “Online”ı seçin</li>
+          <li><Icon name="check" size={20} />Size uygun gün ve saat birlikte netleştirilsin</li>
+          <li><Icon name="check" size={20} />Görüşme saatinde WhatsApp görüntülü arama ile bağlanın</li>
+        </ul>
+        <div class="hero-actions">
+          <a href="/randevu-olustur/?tur=online#randevu-formu" class="btn btn-primary"
+            ><Icon name="video" size={19} />Online Randevu Oluştur</a
+          >
+          <a href="/online-gorusme/" class="btn btn-outline">Nasıl İşliyor?</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SERTİFİKALAR ============ -->
+  <section class="section-sm">
+    <div class="container">
+      <div class="cert-band reveal">
+        <div class="cert-art" aria-hidden="true">
+          <span class="frame f1"><Icon name="cap" size={26} /></span>
+          <span class="frame f2"><Icon name="book" size={26} /></span>
+          <span class="frame f3"><Icon name="leaf" size={26} /></span>
+        </div>
+        <div>
+          <p class="eyebrow">Eğitimler ve Sertifikalar</p>
+          <h2>Mesleki gelişim hiç durmaz</h2>
+          <p>Eylem Dizman’ın tamamladığı mesleki eğitim ve sertifika programlarını inceleyin.</p>
+          <a href="/sertifikalar/" class="btn btn-sage">Sertifikaları Görüntüle <Icon name="arrowRight" size={18} /></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BLOG ============ -->
+  <section class="section blog-preview">
+    <div class="container">
+      <div class="head-row">
+        <div class="section-head">
+          <p class="eyebrow">Blog</p>
+          <h2>Beslenme üzerine yazılar</h2>
+        </div>
+        <a href="/blog/" class="link-arrow">Tüm yazılar <Icon name="arrowRight" size={18} /></a>
+      </div>
+      <div class="post-grid">
+        {posts.map((p) => <PostCard post={p} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ İLETİŞİM ============ -->
+  <section class="section bg-beige contact-band">
+    <div class="container contact-grid">
+      <div>
+        <p class="eyebrow">İletişim</p>
+        <h2>Kliniğimize bekleriz</h2>
+        <ul class="contact-list">
+          <li>
+            <span class="icon-badge"><Icon name="pin" /></span>
+            <div><strong>Adres</strong><a href={site.mapsUrl} target="_blank" rel="noopener">{fullAddress}</a></div>
+          </li>
+          <li>
+            <span class="icon-badge"><Icon name="phone" /></span>
+            <div><strong>Telefon & WhatsApp</strong><a href={site.phoneHref}>{site.phoneDisplay}</a></div>
+          </li>
+          <li>
+            <span class="icon-badge"><Icon name="mail" /></span>
+            <div><strong>E-posta</strong><a href={`mailto:${site.email}`}>{site.email}</a></div>
+          </li>
+          <li>
+            <span class="icon-badge"><Icon name="clock" /></span>
+            <div>
+              <strong>Çalışma saatleri</strong>
+              <span>Pazartesi – Cuma: 09:00 – 18:00<br />Cumartesi: 09:00 – 15:00 · Pazar: Kapalı</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <MapEmbed />
+    </div>
+  </section>
+
+  <CtaBand />
+</BaseLayout>
+
+<style>
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding-block: clamp(40px, 6vw, 84px) clamp(64px, 8vw, 110px);
+  }
+  .hero-glow {
+    position: absolute;
+    inset: -20% -10% auto auto;
+    width: 70vw;
+    height: 70vw;
+    max-width: 900px;
+    max-height: 900px;
+    background: radial-gradient(closest-side, rgb(142 155 130 / 0.22), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.08fr 0.92fr;
+    gap: clamp(36px, 6vw, 88px);
+    align-items: center;
+  }
+  .hero h1 {
+    margin-bottom: 0.45em;
+  }
+  .hero .lead {
+    max-width: 560px;
+    margin-bottom: 2rem;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .hero-points {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 26px;
+    list-style: none;
+    padding: 0;
+    margin: 2.4rem 0 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ink-2);
+  }
+  .hero-points li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hero-points span {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: var(--sage-100);
+    color: var(--sage-800);
+  }
+
+  .hero-visual {
+    position: relative;
+    justify-self: center;
+    width: min(100%, 470px);
+    padding: 0 0 26px 26px;
+  }
+  .arch {
+    position: relative;
+    z-index: 2;
+    aspect-ratio: 4 / 5;
+    border-radius: 999px 999px 32px 32px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    background: var(--beige);
+  }
+  .arch :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+  .arch-bg {
+    position: absolute;
+    z-index: 0;
+    inset: 26px 26px 0 0;
+    border-radius: 999px 999px 32px 32px;
+    background: var(--sage);
+    opacity: 0.9;
+  }
+  .arch-line {
+    position: absolute;
+    z-index: 3;
+    inset: -14px -14px 12px 12px;
+    border-radius: 999px 999px 40px 40px;
+    border: 1.5px solid var(--terracotta);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .hero-visual :global(.hero-leaf) {
+    position: absolute;
+    z-index: 1;
+    width: 180px;
+    right: -92px;
+    top: 36%;
+    color: var(--sage-700);
+    opacity: 0.5;
+    transform: rotate(24deg);
+  }
+  .float-card {
+    position: absolute;
+    z-index: 4;
+    background: rgb(255 253 249 / 0.96);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgb(41 44 41 / 0.05);
+  }
+  .card-name {
+    left: -30px;
+    bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px 12px 12px;
+  }
+  .card-name img {
+    width: 34px;
+    height: auto;
+    padding: 4px;
+    background: var(--ivory);
+    border-radius: 12px;
+    box-sizing: content-box;
+  }
+  .card-name strong {
+    display: block;
+    font-size: 0.95rem;
+  }
+  .card-name span {
+    display: block;
+    font-size: 0.76rem;
+    color: var(--ink-3);
+    line-height: 1.35;
+  }
+  .card-online {
+    right: -10px;
+    top: 16%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+  .card-online .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--leaf);
+    box-shadow: 0 0 0 5px rgb(141 198 63 / 0.22);
+  }
+
+  /* ---------- Hakkında ---------- */
+  .about-grid {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: clamp(32px, 6vw, 90px);
+    align-items: center;
+  }
+  .about-card {
+    background: var(--paper);
+    border-radius: var(--radius-xl);
+    padding: clamp(28px, 4vw, 48px);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgb(41 44 41 / 0.05);
+  }
+  .about-card > img {
+    width: min(100%, 250px);
+    margin: 0 auto 28px;
+  }
+  .facts {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 14px;
+  }
+  .facts li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--sage-50);
+    color: var(--sage-800);
+  }
+  .facts li :global(svg) {
+    flex: none;
+    margin-top: 2px;
+  }
+  .facts span {
+    color: var(--ink-2);
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+  .facts strong {
+    display: block;
+    color: var(--ink);
+    font-size: 0.97rem;
+  }
+
+  /* ---------- Hizmetler ---------- */
+  .service-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .service-card {
+    background: var(--paper);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgb(41 44 41 / 0.05);
+  }
+  .service-card h3 {
+    margin: 18px 0 8px;
+  }
+  .service-card > p {
+    font-size: 0.93rem;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  .service-card ul {
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--beige-soft);
+    display: grid;
+    gap: 8px;
+  }
+  .service-card li a {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    padding-left: 16px;
+    position: relative;
+  }
+  .service-card li a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sage);
+  }
+  .service-card li a:hover {
+    color: var(--terracotta-700);
+  }
+  .center-link {
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+  }
+
+  /* ---------- Süreç ---------- */
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+    counter-reset: step;
+  }
+  .step {
+    position: relative;
+    padding: 28px 24px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--beige);
+    background: var(--ivory-soft);
+  }
+  .step-no {
+    position: absolute;
+    right: 22px;
+    top: 18px;
+    font-family: var(--font-serif);
+    font-size: 2.2rem;
+    color: var(--beige);
+    line-height: 1;
+  }
+  .step h3 {
+    margin: 18px 0 8px;
+    font-size: 1.22rem;
+  }
+  .step p {
+    margin: 0;
+    font-size: 0.93rem;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+
+  /* ---------- VKİ bandı ---------- */
+  .bmi-band {
+    background: var(--sage);
+  }
+  .bmi-grid {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: clamp(32px, 5vw, 72px);
+    align-items: center;
+  }
+  .bmi-copy p {
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .link-dark {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* ---------- Online ---------- */
+  .online-grid {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: clamp(32px, 6vw, 90px);
+    align-items: center;
+  }
+  .online-visual {
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: 30px 0;
+  }
+  .online-visual::before {
+    content: '';
+    position: absolute;
+    width: 78%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--sage-100);
+  }
+  .online-visual :global(.online-leaf) {
+    position: absolute;
+    left: 2%;
+    bottom: -10px;
+    width: 150px;
+    color: var(--sage);
+    opacity: 0.7;
+    transform: rotate(-20deg);
+  }
+  .phone {
+    position: relative;
+    width: 250px;
+    padding: 12px;
+    border-radius: 42px;
+    background: var(--ink);
+    box-shadow: var(--shadow);
+    transform: rotate(-4deg);
+  }
+  .phone-screen {
+    border-radius: 32px;
+    background: linear-gradient(180deg, #4a5543, #3d4636);
+    color: var(--ivory);
+    padding: 26px 18px 22px;
+    text-align: center;
+    min-height: 440px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .call-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    opacity: 0.85;
+    margin-bottom: 42px;
+  }
+  .call-top span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--leaf);
+  }
+  .call-avatar {
+    width: 118px;
+    height: 118px;
+    border-radius: 50%;
+    background: var(--ivory);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 0 0 10px rgb(247 243 236 / 0.08), 0 0 0 22px rgb(247 243 236 / 0.05);
+  }
+  .call-avatar img {
+    width: 50px;
+    height: auto;
+  }
+  .call-name {
+    margin: 30px 0 2px;
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+  }
+  .call-time {
+    margin: 0;
+    font-size: 0.8rem;
+    opacity: 0.75;
+  }
+  .call-actions {
+    margin-top: auto;
+    display: flex;
+    gap: 16px;
+  }
+  .call-actions span {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgb(247 243 236 / 0.14);
+  }
+  .call-actions .end {
+    background: var(--terracotta);
+    transform: rotate(135deg);
+  }
+  .checks {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem;
+    display: grid;
+    gap: 12px;
+  }
+  .checks li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .checks :global(svg) {
+    flex: none;
+    color: var(--sage-700);
+    margin-top: 3px;
+  }
+
+  /* ---------- Sertifika bandı ---------- */
+  .cert-band {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: clamp(28px, 5vw, 64px);
+    align-items: center;
+    padding: clamp(32px, 5vw, 56px);
+    border-radius: var(--radius-xl);
+    background: var(--beige-soft);
+  }
+  .cert-band h2 {
+    font-size: clamp(1.7rem, 3vw, 2.3rem);
+  }
+  .cert-art {
+    position: relative;
+    height: 220px;
+  }
+  .frame {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 150px;
+    height: 110px;
+    background: var(--paper);
+    border: 8px solid var(--ink);
+    border-radius: 4px;
+    color: var(--sage-700);
+    box-shadow: var(--shadow-sm);
+  }
+  .frame::after {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border: 1px solid var(--beige);
+  }
+  .f1 {
+    left: 6%;
+    top: 0;
+    transform: rotate(-6deg);
+  }
+  .f2 {
+    left: 36%;
+    top: 34px;
+    transform: rotate(4deg);
+    border-color: var(--sage-800);
+  }
+  .f3 {
+    left: 14%;
+    top: 104px;
+    transform: rotate(-2deg);
+    border-color: #6b5d4b;
+  }
+
+  /* ---------- Blog ---------- */
+  .head-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: clamp(32px, 4vw, 48px);
+  }
+  .head-row .section-head {
+    margin-bottom: 0;
+  }
+  .post-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  /* ---------- İletişim ---------- */
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 0.95fr 1.05fr;
+    gap: clamp(32px, 5vw, 72px);
+    align-items: center;
+  }
+  .contact-list {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+    display: grid;
+    gap: 20px;
+  }
+  .contact-list li {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .contact-list .icon-badge {
+    background: var(--paper);
+  }
+  .contact-list strong {
+    display: block;
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 2px;
+  }
+  .contact-list a,
+  .contact-list span {
+    color: var(--ink);
+    font-weight: 600;
+    text-decoration: none;
+    line-height: 1.55;
+  }
+  .contact-list a:hover {
+    text-decoration: underline;
+  }
+
+  /* ---------- Duyarlı ---------- */
+  @media (max-width: 1100px) {
+    .service-grid,
+    .steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 900px) {
+    .hero-grid,
+    .about-grid,
+    .bmi-grid,
+    .online-grid,
+    .contact-grid,
+    .cert-band {
+      grid-template-columns: 1fr;
+    }
+    .hero-visual {
+      width: min(86%, 420px);
+      margin-top: 12px;
+    }
+    .online-visual {
+      order: 2;
+    }
+    .post-grid {
+      grid-template-columns: 1fr;
+      max-width: 560px;
+    }
+    .cert-art {
+      height: 200px;
+      max-width: 360px;
+    }
+  }
+  @media (max-width: 620px) {
+    .service-grid,
+    .steps {
+      grid-template-columns: 1fr;
+    }
+    .card-name {
+      left: -8px;
+      bottom: 22px;
+    }
+    .card-online {
+      right: -4px;
+    }
+    .hero-visual :global(.hero-leaf) {
+      display: none;
+    }
+    .head-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

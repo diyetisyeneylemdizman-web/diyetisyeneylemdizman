@@ -1,0 +1,171 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import CtaBand from '../components/CtaBand.astro';
+import { serviceCategories } from '../data/services';
+---
+
+<BaseLayout
+  title="Hizmetler"
+  description="Online ve yüz yüze beslenme danışmanlığı, vücut analizi, zayıflama ve kilo alma diyeti, PKOS, diyabet, insülin direnci, gebelik ve çocuk beslenmesi gibi hizmetler."
+>
+  <PageHero
+    title="Hizmetler"
+    eyebrow="Size nasıl destek olabiliriz?"
+    lead="Danışmanlıktan hastalıklarda beslenmeye, kilo yönetiminden özel dönemlere kadar kişiye özel beslenme desteği."
+    crumbs={[{ label: 'Hizmetler' }]}
+  >
+    <nav class="cat-nav" aria-label="Hizmet kategorileri">
+      {
+        serviceCategories.map((c) => (
+          <a href={`#${c.id}`} class="chip">
+            <Icon name={c.icon} size={16} />
+            {c.title}
+          </a>
+        ))
+      }
+    </nav>
+  </PageHero>
+
+  {
+    serviceCategories.map((cat, i) => (
+      <section id={cat.id} class:list={['section-sm', 'cat', { 'bg-paper': i % 2 === 1 }]}>
+        <div class="container cat-grid">
+          <header class="cat-head">
+            <span class="icon-badge">
+              <Icon name={cat.icon} size={26} />
+            </span>
+            <h2>{cat.title}</h2>
+            <p>{cat.intro}</p>
+            {cat.id === 'hastaliklarda-beslenme' && (
+              <p class="note">
+                <Icon name="info" size={16} />
+                Hastalıklarda beslenme, hekiminizin önerdiği tedaviyi desteklemek amacıyla uygulanır; ilaç tedavisinin yerine
+                geçmez.
+              </p>
+            )}
+          </header>
+          <div class="svc-list">
+            {cat.services.map((s) => (
+              <article id={s.slug} class="svc reveal">
+                <h3>{s.name}</h3>
+                <p>{s.description}</p>
+                <a href={`/randevu-olustur/?hizmet=${encodeURIComponent(s.name)}#randevu-formu`} class="link-arrow">
+                  Randevu oluştur <Icon name="arrowRight" size={17} />
+                </a>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    ))
+  }
+
+  <CtaBand
+    title="Hangi hizmetin size uygun olduğundan emin değil misiniz?"
+    text="Randevu formunda “Emin değilim” seçeneğini işaretleyin; ilk görüşmede ihtiyacınızı birlikte belirleyelim."
+  />
+</BaseLayout>
+
+<style>
+  .cat-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 28px;
+  }
+  .cat-nav a {
+    text-decoration: none;
+    background: var(--paper);
+    border: 1px solid var(--beige);
+    padding: 0.55em 1em;
+  }
+  .cat-nav a:hover {
+    border-color: var(--sage);
+  }
+  .cat {
+    scroll-margin-top: calc(var(--header-h) + 8px);
+  }
+  .cat-grid {
+    display: grid;
+    grid-template-columns: 0.75fr 1.25fr;
+    gap: clamp(28px, 5vw, 72px);
+    align-items: start;
+  }
+  .cat-head {
+    position: sticky;
+    top: calc(var(--header-h) + 24px);
+  }
+  .cat-head h2 {
+    margin-top: 18px;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+  }
+  .cat-head p {
+    color: var(--ink-2);
+  }
+  .note {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 0.88rem;
+    background: var(--sage-50);
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+  .note :global(svg) {
+    flex: none;
+    margin-top: 3px;
+    color: var(--sage-700);
+  }
+  .svc-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .svc {
+    scroll-margin-top: calc(var(--header-h) + 24px);
+    background: var(--ivory-soft);
+    border: 1px solid var(--beige);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .bg-paper .svc {
+    background: var(--ivory);
+  }
+  .svc:target {
+    border-color: var(--terracotta);
+    box-shadow: 0 0 0 4px rgb(185 120 98 / 0.15);
+  }
+  .svc h3 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+  }
+  .svc p {
+    color: var(--ink-2);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    flex: 1;
+  }
+  .svc:hover {
+    border-color: var(--sage);
+  }
+  @media (max-width: 900px) {
+    .cat-grid {
+      grid-template-columns: 1fr;
+    }
+    .cat-head {
+      position: static;
+    }
+  }
+  @media (max-width: 620px) {
+    .svc-list {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

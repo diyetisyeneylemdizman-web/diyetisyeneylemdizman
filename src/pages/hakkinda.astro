@@ -1,0 +1,298 @@
+---
+import { Picture } from 'astro:assets';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import CtaBand from '../components/CtaBand.astro';
+import { site } from '../data/site';
+import portrait from '../assets/eylem-dizman.jpg';
+
+const timeline = [
+  {
+    when: 'Lisans',
+    title: 'Beslenme ve Diyetetik Bölümü',
+    place: 'İzmir Katip Çelebi Üniversitesi, Sağlık Bilimleri Fakültesi',
+    icon: 'cap',
+  },
+  {
+    when: '2021 – 2022',
+    title: 'Diyetisyen',
+    place: 'İzmir Katip Çelebi Üniversitesi Atatürk Eğitim ve Araştırma Hastanesi',
+    icon: 'clinic',
+  },
+  {
+    when: '2023 – Günümüz',
+    title: site.clinicName,
+    place: 'Seyhan / Adana · Yüz yüze ve online danışmanlık',
+    icon: 'leaf',
+  },
+] as const;
+
+const values = [
+  {
+    icon: 'book',
+    title: 'Bilimsel temelli',
+    text: 'Öneriler, güncel bilimsel kanıtlara ve ulusal ile uluslararası beslenme rehberlerine dayanır.',
+  },
+  {
+    icon: 'user',
+    title: 'Kişiye özel',
+    text: 'Yaşam tarzınız, damak tadınız, sağlık durumunuz ve hedefleriniz birlikte değerlendirilir.',
+  },
+  {
+    icon: 'leaf',
+    title: 'Sürdürülebilir',
+    text: 'Yasaklar yerine uzun vadede uygulanabilecek, dengeli beslenme alışkanlıkları hedeflenir.',
+  },
+  {
+    icon: 'chart',
+    title: 'Düzenli takip',
+    text: 'Kontrol görüşmeleriyle süreç izlenir, plan ihtiyaçlarınıza göre güncellenir.',
+  },
+] as const;
+---
+
+<BaseLayout
+  title="Hakkında"
+  description="Diyetisyen Eylem Dizman kimdir? İzmir Katip Çelebi Üniversitesi Beslenme ve Diyetetik mezunu Eylem Dizman, Seyhan/Adana’daki kliniğinde ve online olarak beslenme danışmanlığı vermektedir."
+>
+  <PageHero
+    title="Hakkında"
+    eyebrow="Diyetisyen Eylem Dizman"
+    lead="Bilimsel temelli, kişiye özel ve sürdürülebilir beslenme danışmanlığı."
+    crumbs={[{ label: 'Hakkında' }]}
+  />
+
+  <section class="section">
+    <div class="container about-main">
+      <div class="portrait">
+        <div class="portrait-bg" aria-hidden="true"></div>
+        <Picture
+          src={portrait}
+          alt="Diyetisyen Eylem Dizman"
+          widths={[420, 640, 900]}
+          sizes="(max-width: 900px) 90vw, 440px"
+          formats={['avif', 'webp']}
+        />
+      </div>
+      <div class="bio">
+        <p class="eyebrow">Merhaba</p>
+        <h2>Diyetisyen Eylem Dizman</h2>
+        <p class="lead">
+          Lisans öncesi öğrenimlerinin ardından İzmir Katip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve
+          Diyetetik Bölümü’nde başladığı eğitimini başarıyla tamamlayarak Diyetisyen unvanını almıştır.
+        </p>
+        <p>Diyetisyen Eylem Dizman, mesleki çalışmalarına {site.clinicName}’nde devam etmektedir.</p>
+        <p>
+          Seyhan/Adana’daki kliniğinde yüz yüze, WhatsApp görüntülü görüşmeyle de online olarak danışanlarıyla buluşmakta;
+          kilo yönetimi, hastalıklarda beslenme, gebelik ve çocuk beslenmesi gibi alanlarda kişiye özel beslenme
+          danışmanlığı vermektedir.
+        </p>
+        <div class="bio-actions">
+          <a href="/randevu-olustur/" class="btn btn-primary"><Icon name="calendar" size={18} />Randevu Oluştur</a>
+          <a href="/sertifikalar/" class="btn btn-outline"><Icon name="cap" size={18} />Sertifikalar</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bg-sage-soft">
+    <div class="container narrow-grid">
+      <div class="section-head">
+        <p class="eyebrow">Eğitim ve Deneyim</p>
+        <h2>Mesleki yolculuk</h2>
+        <p>Akademik eğitimden hastane deneyimine, oradan da kendi kliniğine uzanan bir yol.</p>
+      </div>
+      <ol class="timeline">
+        {
+          timeline.map((t) => (
+            <li class="reveal">
+              <span class="t-icon">
+                <Icon name={t.icon} size={22} />
+              </span>
+              <div class="t-card">
+                <span class="t-when">{t.when}</span>
+                <h3>{t.title}</h3>
+                <p>{t.place}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head center">
+        <p class="eyebrow">Yaklaşım</p>
+        <h2>Nasıl çalışıyoruz?</h2>
+        <p>Her danışanın hikâyesi, ihtiyacı ve hedefi farklıdır. Beslenme planı da buna göre şekillenir.</p>
+      </div>
+      <div class="values">
+        {
+          values.map((v) => (
+            <article class="value reveal">
+              <span class="icon-badge">
+                <Icon name={v.icon} size={24} />
+              </span>
+              <h3>{v.title}</h3>
+              <p>{v.text}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <CtaBand />
+</BaseLayout>
+
+<style>
+  .about-main {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: clamp(36px, 6vw, 96px);
+    align-items: center;
+  }
+  .portrait {
+    position: relative;
+    padding: 0 22px 22px 0;
+    max-width: 460px;
+  }
+  .portrait :global(img) {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    object-position: 50% 30%;
+    border-radius: var(--radius-xl) var(--radius-xl) var(--radius-xl) 120px;
+    box-shadow: var(--shadow);
+  }
+  .portrait-bg {
+    position: absolute;
+    inset: 22px 0 0 22px;
+    border-radius: var(--radius-xl) var(--radius-xl) var(--radius-xl) 120px;
+    background: var(--sage);
+  }
+  .bio p {
+    color: var(--ink-2);
+  }
+  .bio .lead {
+    color: var(--ink);
+  }
+  .bio-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+  }
+
+  .narrow-grid {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: clamp(28px, 5vw, 80px);
+    align-items: start;
+  }
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    display: grid;
+    gap: 18px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 25px;
+    top: 26px;
+    bottom: 26px;
+    width: 1.5px;
+    background: var(--sage);
+  }
+  .timeline li {
+    position: relative;
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  .t-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--paper);
+    color: var(--sage-800);
+    border: 1.5px solid var(--sage);
+  }
+  .t-card {
+    background: var(--paper);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .t-when {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--terracotta-700);
+  }
+  .t-card h3 {
+    margin: 4px 0 4px;
+    font-size: 1.2rem;
+  }
+  .t-card p {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 0.95rem;
+  }
+
+  .values {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .value {
+    padding: 28px 24px;
+    border-radius: var(--radius-lg);
+    background: var(--ivory-soft);
+    border: 1px solid var(--beige);
+  }
+  .value h3 {
+    margin: 18px 0 8px;
+    font-size: 1.22rem;
+  }
+  .value p {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 0.94rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 1000px) {
+    .values {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 900px) {
+    .about-main,
+    .narrow-grid {
+      grid-template-columns: 1fr;
+    }
+    .portrait {
+      max-width: 400px;
+      margin-inline: auto;
+    }
+  }
+  @media (max-width: 560px) {
+    .values {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

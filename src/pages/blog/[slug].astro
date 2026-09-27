@@ -1,0 +1,217 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import BlogCover from '../../components/BlogCover.astro';
+import PostCard from '../../components/PostCard.astro';
+import Icon from '../../components/Icon.astro';
+import { site } from '../../data/site';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+}
+const { post } = Astro.props;
+const { Content } = await render(post);
+const others = (await getCollection('blog')).filter((p) => p.id !== post.id).slice(0, 2);
+
+const words = (post.body ?? '').split(/\s+/).filter(Boolean).length;
+const minutes = Math.max(1, Math.round(words / 200));
+const fmt = (d: Date) =>
+  d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul' });
+const updated = post.data.updated ?? post.data.date;
+const serviceLink = post.data.relatedService
+  ? `/randevu-olustur/?hizmet=${encodeURIComponent(post.data.relatedService)}#randevu-formu`
+  : '/randevu-olustur/';
+
+const articleLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.date.toISOString(),
+  dateModified: updated.toISOString(),
+  inLanguage: 'tr-TR',
+  author: { '@type': 'Person', name: 'Eylem Dizman', jobTitle: 'Diyetisyen', url: new URL('/hakkinda/', site.url).href },
+  publisher: { '@type': 'Organization', name: site.name, logo: new URL('/icon-512.png', site.url).href },
+  mainEntityOfPage: new URL(`/blog/${post.id}/`, site.url).href,
+};
+---
+
+<BaseLayout title={post.data.title} description={post.data.description} type="article" jsonLd={articleLd}>
+  <article>
+    <header class="post-head bg-sage-faint">
+      <div class="container-narrow">
+        <nav aria-label="Sayfa konumu">
+          <ol class="breadcrumb">
+            <li><a href="/">Ana Sayfa</a></li>
+            <li><a href="/blog/">Blog</a></li>
+            <li><span aria-current="page">{post.data.category}</span></li>
+          </ol>
+        </nav>
+        <span class="chip">{post.data.category}</span>
+        <h1>{post.data.title}</h1>
+        <p class="lead">{post.data.description}</p>
+        <div class="meta">
+          <span class="author">
+            <img src="/logo/logo-simge.svg" width="136" height="206" alt="" />
+            <span><strong>Dyt. Eylem Dizman</strong>Diyetisyen</span>
+          </span>
+          <span><Icon name="calendar" size={16} /><time datetime={post.data.date.toISOString()}>{fmt(post.data.date)}</time></span>
+          <span><Icon name="clock" size={16} />{minutes} dk okuma</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="container-narrow cover-wrap">
+      <BlogCover tone={post.data.tone} icon={post.data.icon} large />
+    </div>
+
+    <div class="container-narrow prose post-content">
+      <Content />
+    </div>
+
+    <div class="container-narrow">
+      <aside class="post-note">
+        <Icon name="info" size={20} />
+        <p>
+          Bu yazı genel bilgilendirme amaçlıdır; tanı ve tedavinin yerine geçmez. Sağlık durumunuza özel değerlendirme için
+          hekiminize ve diyetisyeninize danışınız.<br />
+          <span class="muted">Son güncelleme: {fmt(updated)}</span>
+        </p>
+      </aside>
+
+      <div class="post-cta">
+        <div>
+          <h2>Bu konuda destek almak ister misiniz?</h2>
+          <p>Size özel bir beslenme planı için randevu talebinizi hemen iletebilirsiniz.</p>
+        </div>
+        <a href={serviceLink} class="btn btn-primary"><Icon name="calendar" size={18} />Randevu Oluştur</a>
+      </div>
+    </div>
+  </article>
+
+  {
+    others.length > 0 && (
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <p class="eyebrow">Diğer yazılar</p>
+            <h2>Bunlar da ilginizi çekebilir</h2>
+          </div>
+          <div class="others">
+            {others.map((p) => (
+              <PostCard post={p} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .post-head {
+    padding-block: clamp(48px, 7vw, 88px) clamp(100px, 12vw, 150px);
+  }
+  .post-head .chip {
+    background: var(--paper);
+    margin-bottom: 18px;
+  }
+  .post-head h1 {
+    font-size: clamp(2.1rem, 4.4vw, 3.2rem);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 26px;
+    margin-top: 26px;
+    font-size: 0.9rem;
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+  .meta > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .author img {
+    width: 40px;
+    height: 40px;
+    padding: 5px 9px;
+    border-radius: 50%;
+    background: var(--paper);
+    object-fit: contain;
+    box-shadow: var(--shadow-sm);
+  }
+  .author > span {
+    display: grid;
+    line-height: 1.3;
+  }
+  .author strong {
+    color: var(--ink);
+  }
+  .author > span {
+    font-weight: 500;
+    font-size: 0.82rem;
+  }
+  .cover-wrap {
+    margin-top: calc(-1 * clamp(70px, 9vw, 110px));
+    position: relative;
+  }
+  .post-content {
+    padding-block: clamp(36px, 5vw, 56px) 8px;
+  }
+  .post-note {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 18px 20px;
+    border-radius: var(--radius);
+    background: var(--sage-50);
+    color: var(--ink-2);
+    font-size: 0.92rem;
+  }
+  .post-note :global(svg) {
+    flex: none;
+    color: var(--sage-700);
+    margin-top: 2px;
+  }
+  .post-note p {
+    margin: 0;
+  }
+  .post-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 28px 0 clamp(40px, 6vw, 72px);
+    padding: clamp(24px, 3.5vw, 36px);
+    border-radius: var(--radius-lg);
+    background: var(--sage);
+  }
+  .post-cta h2 {
+    font-size: 1.55rem;
+    margin-bottom: 0.25em;
+  }
+  .post-cta p {
+    margin: 0;
+    font-weight: 500;
+  }
+  .others {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    max-width: 860px;
+  }
+  @media (max-width: 700px) {
+    .others {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

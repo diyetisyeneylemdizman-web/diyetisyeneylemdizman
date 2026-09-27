@@ -1,0 +1,99 @@
+---
+import Icon from './Icon.astro';
+import LeafDecor from './LeafDecor.astro';
+
+interface Props {
+  tone?: 'sage' | 'beige' | 'terracotta';
+  icon?: 'leaf' | 'heart' | 'bloom' | 'scale' | 'chart' | 'flask' | 'clipboard';
+  label?: string;
+  large?: boolean;
+}
+const { tone = 'sage', icon = 'leaf', label, large = false } = Astro.props;
+---
+
+<div class:list={['cover', `cover--${tone}`, { 'cover--large': large }]} aria-hidden="true">
+  <span class="blob"></span>
+  <LeafDecor class="cover-leaf" />
+  <span class="cover-icon"><Icon name={icon} size={large ? 46 : 34} strokeWidth={1.4} /></span>
+  {label && <span class="cover-label">{label}</span>}
+</div>
+
+<style>
+  .cover {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius-lg);
+    display: grid;
+    place-items: center;
+    --bg: var(--sage-100);
+    --blob: var(--sage-200);
+    --leaf: var(--sage);
+    --ic: var(--sage-800);
+    background: var(--bg);
+  }
+  .cover--beige {
+    --bg: var(--beige-soft);
+    --blob: var(--beige);
+    --leaf: #b9ad9c;
+    --ic: #6b5d4b;
+  }
+  .cover--terracotta {
+    --bg: var(--terracotta-50);
+    --blob: #ecd3c7;
+    --leaf: var(--terracotta);
+    --ic: var(--terracotta-700);
+  }
+  .cover--large {
+    aspect-ratio: 21 / 9;
+  }
+  .blob {
+    position: absolute;
+    width: 62%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--blob);
+    left: -12%;
+    bottom: -38%;
+    opacity: 0.8;
+  }
+  .cover :global(.cover-leaf) {
+    position: absolute;
+    right: 4%;
+    top: -8%;
+    height: 118%;
+    width: auto;
+    color: var(--leaf);
+    opacity: 0.7;
+    transform: rotate(14deg);
+  }
+  .cover-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 84px;
+    height: 84px;
+    border-radius: 26px;
+    background: var(--paper);
+    color: var(--ic);
+    box-shadow: var(--shadow-sm);
+  }
+  .cover--large .cover-icon {
+    width: 110px;
+    height: 110px;
+    border-radius: 32px;
+  }
+  .cover-label {
+    position: absolute;
+    left: 18px;
+    top: 16px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ic);
+    background: rgb(255 253 249 / 0.75);
+    padding: 0.4em 0.8em;
+    border-radius: 999px;
+  }
+</style>

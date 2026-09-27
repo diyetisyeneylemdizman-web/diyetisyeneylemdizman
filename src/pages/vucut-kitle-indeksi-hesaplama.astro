@@ -1,0 +1,257 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import BmiCalculator from '../components/BmiCalculator.astro';
+import Icon from '../components/Icon.astro';
+import CtaBand from '../components/CtaBand.astro';
+
+const ranges = [
+  { range: '18,5’in altı', label: 'Zayıf', color: '#cfc4b3' },
+  { range: '18,5 – 24,9', label: 'Normal', color: '#8e9b82' },
+  { range: '25,0 – 29,9', label: 'Fazla kilolu (hafif şişman)', color: '#dcae99' },
+  { range: '30,0 – 34,9', label: '1. derece obez', color: '#c4826b' },
+  { range: '35,0 – 39,9', label: '2. derece obez', color: '#a8654f' },
+  { range: '40 ve üzeri', label: '3. derece obez (morbid obez)', color: '#86493a' },
+];
+---
+
+<BaseLayout
+  title="Vücut Kitle İndeksi Hesaplama"
+  description="Boyunuzu, kilonuzu ve yaşınızı girerek vücut kitle indeksinizi (VKİ) hesaplayın; hangi aralıkta olduğunuzu ve boyunuza göre sağlıklı kilo aralığınızı öğrenin."
+>
+  <PageHero
+    title="Vücut Kitle İndeksi Hesaplama"
+    eyebrow="VKİ hesaplayıcı"
+    lead="Boyunuzu, kilonuzu ve yaşınızı girin; vücut kitle indeksinizi, hangi aralıkta olduğunuzu ve boyunuza göre sağlıklı kilo aralığınızı hemen görün."
+    crumbs={[{ label: 'Vücut Kitle İndeksi Hesaplama' }]}
+  />
+
+  <section class="section">
+    <div class="container bmi-page">
+      <div>
+        <BmiCalculator />
+      </div>
+      <aside class="info card">
+        <h2>VKİ nedir?</h2>
+        <p>
+          Vücut kitle indeksi (VKİ), vücut ağırlığının boy uzunluğuna göre değerlendirilmesini sağlayan ve Dünya Sağlık
+          Örgütü tarafından da kullanılan basit bir tarama ölçüsüdür.
+        </p>
+        <p class="formula">
+          <span>VKİ</span> = Kilo (kg) ÷ Boy² (m²)
+        </p>
+        <h3>Yetişkinler için VKİ sınıflaması</h3>
+        <table>
+          <thead>
+            <tr><th scope="col">VKİ (kg/m²)</th><th scope="col">Sınıflama</th></tr>
+          </thead>
+          <tbody>
+            {
+              ranges.map((r) => (
+                <tr>
+                  <td>
+                    <span class="swatch" style={`background:${r.color}`} />
+                    {r.range}
+                  </td>
+                  <td>{r.label}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+        <p class="source">Kaynak: Dünya Sağlık Örgütü (DSÖ) yetişkin VKİ sınıflaması.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section-sm bg-sage-soft">
+    <div class="container limits">
+      <div>
+        <p class="eyebrow">Bilmekte fayda var</p>
+        <h2>VKİ her şeyi göstermez</h2>
+        <p>
+          VKİ hızlı ve kullanışlı bir göstergedir; ancak vücut yağı ile kas kütlesini birbirinden ayırmaz ve yağın vücutta
+          nerede toplandığını göstermez. Aşağıdaki durumlarda sonuç yanıltıcı olabilir:
+        </p>
+      </div>
+      <ul class="limit-list">
+        <li><Icon name="user" size={20} /><span><strong>Kas kütlesi yüksek kişiler ve sporcular:</strong> VKİ olduğundan yüksek çıkabilir.</span></li>
+        <li><Icon name="bloom" size={20} /><span><strong>Gebelik ve emzirme dönemi:</strong> VKİ tek başına değerlendirme için uygun değildir.</span></li>
+        <li><Icon name="heart" size={20} /><span><strong>18 yaş altı:</strong> Yaşa ve cinsiyete özel büyüme eğrileri kullanılır.</span></li>
+        <li><Icon name="clock" size={20} /><span><strong>İleri yaş:</strong> Kas kaybı nedeniyle değerlendirme farklılık gösterebilir.</span></li>
+        <li><Icon name="ruler" size={20} /><span><strong>Bel çevresi:</strong> Karın bölgesinde yağlanma, VKİ normal olsa bile sağlık riskini artırabilir.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section-sm">
+    <div class="container">
+      <div class="analysis card">
+        <span class="icon-badge terracotta"><Icon name="scale" size={26} /></span>
+        <div>
+          <h2>Daha ayrıntılı bir değerlendirme için: vücut analizi</h2>
+          <p>
+            Vücut analiziyle kilonuzun ne kadarının yağ, kas ve sıvıdan oluştuğunu görebilir; beslenme planınızı bu
+            ölçümlere göre şekillendirebiliriz.
+          </p>
+        </div>
+        <a href="/randevu-olustur/?hizmet=V%C3%BCcut%20Analizi#randevu-formu" class="btn btn-primary">
+          <Icon name="calendar" size={18} />Randevu Oluştur
+        </a>
+      </div>
+      <p class="disclaimer">
+        <Icon name="info" size={16} />
+        Bu hesaplayıcı yalnızca genel bilgilendirme amaçlıdır ve tıbbi tanı yerine geçmez. Kişisel değerlendirme için bir
+        sağlık profesyoneline danışınız.
+      </p>
+    </div>
+  </section>
+
+  <CtaBand />
+</BaseLayout>
+
+<style>
+  .bmi-page {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: clamp(24px, 4vw, 48px);
+    align-items: start;
+  }
+  .info {
+    padding: clamp(24px, 3vw, 34px);
+  }
+  .info h2 {
+    font-size: 1.7rem;
+  }
+  .info h3 {
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 26px 0 12px;
+  }
+  .info p {
+    color: var(--ink-2);
+    font-size: 0.97rem;
+  }
+  .formula {
+    font-family: var(--font-serif);
+    font-size: 1.25rem !important;
+    color: var(--ink) !important;
+    background: var(--sage-50);
+    border-radius: 14px;
+    padding: 14px 18px;
+    text-align: center;
+  }
+  .formula span {
+    color: var(--terracotta-700);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+  th {
+    text-align: left;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 0 0 8px;
+    border-bottom: 1px solid var(--beige);
+  }
+  td {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--beige-soft);
+    color: var(--ink);
+  }
+  td:first-child {
+    font-weight: 700;
+    white-space: nowrap;
+    padding-right: 12px;
+  }
+  .swatch {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: 0;
+  }
+  .source {
+    font-size: 0.8rem !important;
+    color: var(--ink-3) !important;
+    margin: 14px 0 0;
+  }
+
+  .limits {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: clamp(24px, 5vw, 72px);
+    align-items: center;
+  }
+  .limits p {
+    color: var(--ink-2);
+  }
+  .limit-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .limit-list li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--paper);
+    border-radius: 16px;
+    padding: 14px 18px;
+    color: var(--ink-2);
+    font-size: 0.95rem;
+  }
+  .limit-list :global(svg) {
+    flex: none;
+    color: var(--sage-700);
+    margin-top: 2px;
+  }
+  .limit-list strong {
+    color: var(--ink);
+  }
+
+  .analysis {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 24px;
+    align-items: center;
+    padding: clamp(24px, 3.5vw, 40px);
+  }
+  .analysis h2 {
+    font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+    margin-bottom: 0.3em;
+  }
+  .analysis p {
+    margin: 0;
+    color: var(--ink-2);
+  }
+  .disclaimer {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin: 20px 4px 0;
+    font-size: 0.85rem;
+    color: var(--ink-3);
+  }
+  .disclaimer :global(svg) {
+    flex: none;
+    margin-top: 3px;
+  }
+  @media (max-width: 960px) {
+    .bmi-page,
+    .limits {
+      grid-template-columns: 1fr;
+    }
+    .analysis {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

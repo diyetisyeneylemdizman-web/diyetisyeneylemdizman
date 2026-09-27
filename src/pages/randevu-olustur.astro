@@ -1,0 +1,447 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import { serviceCategories } from '../data/services';
+import { site } from '../data/site';
+
+const days = ['Farketmez', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)', 'Öğleden sonra (15:00 – 18:00)'];
+---
+
+<BaseLayout
+  title="Randevu Oluştur"
+  description="Diyetisyen Eylem Dizman ile yüz yüze veya online görüşme için randevu talebinizi birkaç adımda iletin."
+>
+  <PageHero
+    title="Randevu Oluştur"
+    eyebrow="Yüz yüze veya online"
+    lead="Formu doldurun; bilgileriniz hazır bir mesaj olarak WhatsApp üzerinden bize ulaşsın. Size en kısa sürede dönüş yapalım."
+    crumbs={[{ label: 'Randevu Oluştur' }]}
+  />
+
+  <section class="section">
+    <div class="container booking">
+      <form class="card booking-form" id="randevu-formu" novalidate data-booking data-wa={site.whatsappNumber}>
+        <div class="bmi-note" data-bmi-note hidden>
+          <Icon name="scale" size={20} />
+          <span data-bmi-note-text></span>
+        </div>
+
+        <div class="grid-fields">
+          <div class="field">
+            <label for="ad">Ad Soyad <span aria-hidden="true">*</span></label>
+            <input class="input" id="ad" name="ad" autocomplete="name" required />
+            <p class="field-error" data-error-for="ad"></p>
+          </div>
+          <div class="field">
+            <label for="telefon">Telefon <span aria-hidden="true">*</span></label>
+            <input class="input" id="telefon" name="telefon" type="tel" inputmode="tel" autocomplete="tel" placeholder="05XX XXX XX XX" required />
+            <p class="field-error" data-error-for="telefon"></p>
+          </div>
+        </div>
+
+        <fieldset class="field type">
+          <legend class="label">Görüşme türü <span aria-hidden="true">*</span></legend>
+          <div class="type-options">
+            <label class="type-option">
+              <input type="radio" name="tur" value="yuz-yuze" checked />
+              <span class="type-card">
+                <Icon name="clinic" size={24} />
+                <span><strong>Yüz yüze</strong><small>Seyhan / Adana’daki klinikte</small></span>
+              </span>
+            </label>
+            <label class="type-option">
+              <input type="radio" name="tur" value="online" />
+              <span class="type-card">
+                <Icon name="video" size={24} />
+                <span><strong>Online</strong><small>WhatsApp görüntülü görüşme</small></span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label for="hizmet">İlgilendiğiniz konu</label>
+          <select class="select" id="hizmet" name="hizmet">
+            <option value="">Emin değilim / Genel danışmanlık</option>
+            {
+              serviceCategories.map((c) => (
+                <optgroup label={c.title}>
+                  {c.services.map((s) => (
+                    <option value={s.name}>{s.name}</option>
+                  ))}
+                </optgroup>
+              ))
+            }
+          </select>
+        </div>
+
+        <div class="grid-fields">
+          <div class="field">
+            <label for="gun">Tercih ettiğiniz gün</label>
+            <select class="select" id="gun" name="gun">
+              {days.map((d) => <option value={d}>{d}</option>)}
+            </select>
+          </div>
+          <div class="field">
+            <label for="saat">Tercih ettiğiniz saat</label>
+            <select class="select" id="saat" name="saat">
+              {times.map((t) => <option value={t}>{t}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="not">Eklemek istedikleriniz <span class="hint">(isteğe bağlı)</span></label>
+          <textarea class="textarea" id="not" name="not" maxlength="500" placeholder="Kısaca belirtmek istediğiniz bir not varsa yazabilirsiniz."></textarea>
+          <p class="hint">Lütfen ayrıntılı sağlık bilgilerinizi burada paylaşmayın; bunları görüşmede birlikte konuşacağız.</p>
+        </div>
+
+        <label class="consent">
+          <input type="checkbox" name="kvkk" required />
+          <span>
+            Randevu talebimin iletilmesi için bilgilerimin WhatsApp üzerinden paylaşılacağını biliyorum.
+            <a href="/kvkk-aydinlatma-metni/" target="_blank">KVKK Aydınlatma Metni</a>’ni okudum.
+          </span>
+        </label>
+        <p class="field-error" data-error-for="kvkk"></p>
+
+        <button type="submit" class="btn btn-primary btn-block submit">
+          <Icon name="whatsapp" size={20} />WhatsApp ile Randevu Talebi Gönder
+        </button>
+        <p class="after-note">
+          Butona bastığınızda WhatsApp, bilgileriniz hazır bir mesaj olarak açılır. Mesajı göndermek için WhatsApp’ta
+          <strong>Gönder</strong>’e basmanız yeterli.
+        </p>
+      </form>
+
+      <aside class="side">
+        <div class="card side-card">
+          <h2>Nasıl işliyor?</h2>
+          <ol class="mini-steps">
+            <li><span>1</span>Formu doldurun ve gönderin.</li>
+            <li><span>2</span>WhatsApp’ta hazır mesajı gönderin.</li>
+            <li><span>3</span>Size uygun gün ve saati birlikte netleştirelim.</li>
+          </ol>
+        </div>
+        <div class="card side-card">
+          <h2>WhatsApp kullanmıyor musunuz?</h2>
+          <p>Bizi doğrudan arayabilir veya e-posta gönderebilirsiniz.</p>
+          <a href={site.phoneHref} class="side-link"><Icon name="phone" size={20} />{site.phoneDisplay}</a>
+          <a href={`mailto:${site.email}`} class="side-link"><Icon name="mail" size={20} />{site.email}</a>
+        </div>
+        <div class="card side-card">
+          <h2>Çalışma saatleri</h2>
+          <p class="hours">
+            Pazartesi – Cuma: <strong>09:00 – 18:00</strong><br />
+            Cumartesi: <strong>09:00 – 15:00</strong><br />
+            Pazar: <strong>Kapalı</strong>
+          </p>
+        </div>
+      </aside>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .booking {
+    display: grid;
+    grid-template-columns: 1.3fr 0.7fr;
+    gap: clamp(24px, 4vw, 48px);
+    align-items: start;
+  }
+  .booking-form {
+    padding: clamp(22px, 3.6vw, 44px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    gap: 22px;
+    scroll-margin-top: calc(var(--header-h) + 20px);
+  }
+  .grid-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .field label span[aria-hidden],
+  .label span[aria-hidden] {
+    color: var(--terracotta-700);
+  }
+  fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  legend {
+    padding: 0;
+    margin-bottom: 10px;
+  }
+  .type-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .type-option {
+    position: relative;
+    cursor: pointer;
+  }
+  .type-option input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    cursor: pointer;
+  }
+  .type-card {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 16px 18px;
+    border-radius: 16px;
+    border: 1.5px solid var(--beige);
+    background: var(--paper);
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  .type-card :global(svg) {
+    flex: none;
+    color: var(--sage-700);
+  }
+  .type-card strong {
+    display: block;
+    font-size: 1rem;
+  }
+  .type-card small {
+    display: block;
+    color: var(--ink-3);
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+  .type-option input:checked + .type-card {
+    border-color: var(--sage-700);
+    background: var(--sage-50);
+    box-shadow: 0 0 0 3px rgb(142 155 130 / 0.25);
+  }
+  .type-option input:focus-visible + .type-card {
+    outline: 2.5px solid var(--terracotta-700);
+    outline-offset: 3px;
+  }
+  .consent {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 0.9rem;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .consent input {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: var(--sage-800);
+  }
+  .consent a {
+    color: var(--terracotta-700);
+    font-weight: 700;
+  }
+  .submit {
+    min-height: 56px;
+    font-size: 1rem;
+    white-space: normal;
+    text-align: center;
+  }
+  .after-note {
+    margin: -8px 0 0;
+    font-size: 0.84rem;
+    color: var(--ink-3);
+    text-align: center;
+  }
+  .bmi-note {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--terracotta-50);
+    color: var(--ink);
+    font-size: 0.93rem;
+    font-weight: 600;
+  }
+  .bmi-note :global(svg) {
+    flex: none;
+    color: var(--terracotta-700);
+  }
+
+  .side {
+    display: grid;
+    gap: 16px;
+    position: sticky;
+    top: calc(var(--header-h) + 24px);
+  }
+  .side-card {
+    padding: 24px;
+  }
+  .side-card h2 {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+  }
+  .side-card p {
+    color: var(--ink-2);
+    font-size: 0.95rem;
+  }
+  .mini-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+    font-size: 0.95rem;
+    color: var(--ink-2);
+  }
+  .mini-steps li {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .mini-steps span {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--sage-100);
+    color: var(--sage-900);
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+  .side-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  .side-link :global(svg) {
+    flex: none;
+    color: var(--sage-700);
+  }
+  .side-link:hover {
+    color: var(--terracotta-700);
+  }
+  .hours {
+    margin: 0;
+    line-height: 1.9;
+  }
+  @media (max-width: 960px) {
+    .booking {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .side {
+      position: static;
+    }
+  }
+  @media (max-width: 560px) {
+    .grid-fields,
+    .type-options {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-booking]');
+  if (form) {
+    const el = <T extends Element = HTMLInputElement>(name: string) => form.elements.namedItem(name) as unknown as T;
+    const params = new URLSearchParams(location.search);
+
+    // Adres çubuğundan gelen bilgileri forma yerleştir (VKİ hesaplayıcı ve hizmet sayfalarından)
+    const hizmet = params.get('hizmet');
+    const select = el<HTMLSelectElement>('hizmet');
+    if (hizmet && Array.from(select.options).some((o) => o.value === hizmet)) select.value = hizmet;
+    if (params.get('tur') === 'online') {
+      form.querySelector<HTMLInputElement>('input[name="tur"][value="online"]')!.checked = true;
+    }
+    const vki = params.get('vki');
+    const durum = params.get('durum');
+    if (vki && durum) {
+      const note = form.querySelector<HTMLElement>('[data-bmi-note]')!;
+      form.querySelector<HTMLElement>('[data-bmi-note-text]')!.textContent =
+        `VKİ sonucunuz (${vki} – ${durum}) randevu talebinize eklenecek.`;
+      note.hidden = false;
+    }
+
+    const setError = (name: string, msg: string) => {
+      const p = form.querySelector<HTMLElement>(`[data-error-for="${name}"]`);
+      if (p) p.textContent = msg;
+      const input = form.elements.namedItem(name) as HTMLInputElement | null;
+      if (input && 'setAttribute' in input) {
+        if (msg) input.setAttribute('aria-invalid', 'true');
+        else input.removeAttribute('aria-invalid');
+      }
+    };
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const ad = el('ad').value.trim();
+      const tel = el('telefon').value.trim();
+      const telDigits = tel.replace(/\D/g, '');
+      const kvkk = el('kvkk').checked;
+      let firstInvalid: HTMLElement | null = null;
+
+      setError('ad', '');
+      setError('telefon', '');
+      setError('kvkk', '');
+      if (ad.length < 3) {
+        setError('ad', 'Lütfen adınızı ve soyadınızı yazın.');
+        firstInvalid ??= el('ad');
+      }
+      if (telDigits.length < 10 || telDigits.length > 13) {
+        setError('telefon', 'Lütfen geçerli bir telefon numarası yazın (örn. 0532 123 45 67).');
+        firstInvalid ??= el('telefon');
+      }
+      if (!kvkk) {
+        setError('kvkk', 'Devam etmek için onay kutusunu işaretleyin.');
+        firstInvalid ??= el('kvkk');
+      }
+      if (firstInvalid) {
+        firstInvalid.focus();
+        return;
+      }
+
+      const tur = (form.querySelector<HTMLInputElement>('input[name="tur"]:checked')?.value ?? 'yuz-yuze') === 'online'
+        ? 'Online (WhatsApp görüntülü)'
+        : 'Yüz yüze (klinik)';
+      const konu = el<HTMLSelectElement>('hizmet').value || 'Emin değilim / Genel danışmanlık';
+      const gun = el<HTMLSelectElement>('gun').value;
+      const saat = el<HTMLSelectElement>('saat').value;
+      const not = el<HTMLTextAreaElement>('not').value.trim();
+
+      const lines = [
+        'Merhaba, web sitesi üzerinden randevu talebinde bulunmak istiyorum.',
+        '',
+        `• Ad Soyad: ${ad}`,
+        `• Telefon: ${tel}`,
+        `• Görüşme türü: ${tur}`,
+        `• Konu: ${konu}`,
+        `• Tercih ettiğim gün: ${gun}`,
+        `• Tercih ettiğim saat: ${saat}`,
+      ];
+      if (vki && durum) lines.push(`• VKİ sonucum: ${vki} (${durum})`);
+      if (not) lines.push(`• Not: ${not}`);
+
+      const url = `https://wa.me/${form.dataset.wa}?text=${encodeURIComponent(lines.join('\n'))}`;
+      const win = window.open(url, '_blank');
+      if (win) win.opener = null;
+      else location.href = url;
+    });
+  }
+</script>

@@ -1,0 +1,50 @@
+---
+import LeafDecor from './LeafDecor.astro';
+
+interface Props {
+  title: string;
+  eyebrow?: string;
+  lead?: string;
+  crumbs?: { label: string; href?: string }[];
+}
+const { title, eyebrow, lead, crumbs = [] } = Astro.props;
+---
+
+<section class="page-hero bg-sage-faint">
+  <LeafDecor class="ph-leaf" />
+  <div class="container">
+    <nav aria-label="Sayfa konumu">
+      <ol class="breadcrumb">
+        <li><a href="/">Ana Sayfa</a></li>
+        {crumbs.map((c) => <li>{c.href ? <a href={c.href}>{c.label}</a> : <span aria-current="page">{c.label}</span>}</li>)}
+      </ol>
+    </nav>
+    {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+    <h1>{title}</h1>
+    {lead && <p class="lead">{lead}</p>}
+    <slot />
+  </div>
+</section>
+
+<style>
+  .page-hero {
+    border-bottom: 1px solid rgb(41 44 41 / 0.05);
+  }
+  .page-hero :global(.ph-leaf) {
+    position: absolute;
+    right: max(-40px, calc(50% - 720px));
+    top: -10px;
+    width: clamp(160px, 20vw, 250px);
+    height: auto;
+    color: var(--sage);
+    opacity: 0.55;
+    transform: rotate(18deg);
+    pointer-events: none;
+  }
+  @media (max-width: 760px) {
+    .page-hero :global(.ph-leaf) {
+      opacity: 0.25;
+      right: -70px;
+    }
+  }
+</style>

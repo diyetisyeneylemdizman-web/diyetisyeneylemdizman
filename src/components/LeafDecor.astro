@@ -1,0 +1,36 @@
+---
+// Logodaki yapraklardan esinlenen dekoratif dal çizimi
+interface Props {
+  class?: string;
+  style?: string;
+}
+const { class: cls, style } = Astro.props;
+const id = `yaprak-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<svg
+  class={cls}
+  style={style}
+  viewBox="0 0 220 330"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.3"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  <defs>
+    <g id={id}>
+      <path d="M0 0C11-11.5 35-13 54 0C35 13 11 11.5 0 0Z"></path>
+      <path d="M3 0H48M16 0l7-5M28 0l7-6M16 0l7 5M28 0l7 6"></path>
+    </g>
+  </defs>
+  <path d="M110 326C104 252 86 150 150 22"></path>
+  <use href={`#${id}`} transform="translate(105 254) rotate(-150) scale(1.05)"></use>
+  <use href={`#${id}`} transform="translate(104 212) rotate(-28)"></use>
+  <use href={`#${id}`} transform="translate(108 166) rotate(-156) scale(0.95)"></use>
+  <use href={`#${id}`} transform="translate(116 122) rotate(-24) scale(0.9)"></use>
+  <use href={`#${id}`} transform="translate(128 80) rotate(-150) scale(0.8)"></use>
+  <use href={`#${id}`} transform="translate(139 48) rotate(-36) scale(0.7)"></use>
+  <use href={`#${id}`} transform="translate(150 22) rotate(-80) scale(0.55)"></use>
+</svg>

@@ -1,0 +1,222 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import MapEmbed from '../components/MapEmbed.astro';
+import CtaBand from '../components/CtaBand.astro';
+import { site, fullAddress, whatsappLink } from '../data/site';
+---
+
+<BaseLayout
+  title="İletişim"
+  description="Diyetisyen Eylem Dizman iletişim bilgileri: Reşatbey Mah., Seyhan/Adana. Telefon ve WhatsApp: 0 505 825 87 45. Çalışma saatleri ve yol tarifi."
+>
+  <PageHero
+    title="İletişim"
+    eyebrow="Bize ulaşın"
+    lead="Sorularınız ve randevu talepleriniz için telefon, WhatsApp veya e-posta ile ulaşabilirsiniz."
+    crumbs={[{ label: 'İletişim' }]}
+  />
+
+  <section class="section">
+    <div class="container contact-page">
+      <div class="contact-cards">
+        <a class="c-card" href={site.phoneHref}>
+          <span class="icon-badge"><Icon name="phone" /></span>
+          <span>
+            <strong>Telefon</strong>
+            <span>{site.phoneDisplay}</span>
+            <em>Hemen ara →</em>
+          </span>
+        </a>
+        <a class="c-card" href={whatsappLink('Merhaba, web sitenizden ulaşıyorum. Bilgi almak istiyorum.')} target="_blank" rel="noopener">
+          <span class="icon-badge"><Icon name="whatsapp" /></span>
+          <span>
+            <strong>WhatsApp</strong>
+            <span>{site.phoneDisplay}</span>
+            <em>Mesaj gönder →</em>
+          </span>
+        </a>
+        <a class="c-card wide" href={site.mapsUrl} target="_blank" rel="noopener">
+          <span class="icon-badge"><Icon name="pin" /></span>
+          <span>
+            <strong>Adres</strong>
+            <span>{fullAddress}</span>
+            <em>Yol tarifi al →</em>
+          </span>
+        </a>
+        <a class="c-card wide" href={`mailto:${site.email}`}>
+          <span class="icon-badge"><Icon name="mail" /></span>
+          <span>
+            <strong>E-posta</strong>
+            <span>{site.email}</span>
+            <em>E-posta yaz →</em>
+          </span>
+        </a>
+        <div class="hours card">
+          <h2><Icon name="clock" size={22} />Çalışma saatleri</h2>
+          <table>
+            <tbody>
+              {
+                site.hours.map((h) => (
+                  <tr class:list={{ closed: !h.open }}>
+                    <th scope="row">{h.day}</th>
+                    <td>{h.open ? `${h.open} – ${h.close}` : 'Kapalı'}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="social card">
+          <h2>Sosyal medya</h2>
+          <a href={site.instagram} target="_blank" rel="noopener"><Icon name="instagram" />{site.instagramHandle}</a>
+          <a href={site.linkedin} target="_blank" rel="noopener"><Icon name="linkedin" />Eylem Dizman</a>
+        </div>
+      </div>
+
+      <div class="map-col">
+        <MapEmbed />
+      </div>
+    </div>
+  </section>
+
+  <CtaBand />
+</BaseLayout>
+
+<style>
+  .contact-page {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: clamp(24px, 4vw, 48px);
+    align-items: start;
+  }
+  .contact-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .c-card {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 22px;
+    border-radius: var(--radius-lg);
+    background: var(--paper);
+    border: 1px solid rgb(41 44 41 / 0.06);
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: var(--ink);
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .c-card.wide {
+    grid-column: 1 / -1;
+  }
+  .c-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+  .c-card > span:last-child {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .c-card strong {
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .c-card span span {
+    font-weight: 600;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .c-card em {
+    font-style: normal;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--terracotta-700);
+    margin-top: 6px;
+  }
+  .hours,
+  .social {
+    padding: 24px;
+  }
+  .hours h2,
+  .social h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.3rem;
+    margin-bottom: 14px;
+  }
+  .hours table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .hours th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--ink-2);
+    padding: 7px 0;
+  }
+  .hours td {
+    text-align: right;
+    font-weight: 700;
+    padding: 7px 0;
+  }
+  .hours tr + tr th,
+  .hours tr + tr td {
+    border-top: 1px solid var(--beige-soft);
+  }
+  .hours .closed td {
+    color: var(--terracotta-700);
+  }
+  .social {
+    display: grid;
+    align-content: start;
+    gap: 12px;
+  }
+  .social a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--sage-50);
+  }
+  .social a:hover {
+    background: var(--sage-100);
+  }
+  .map-col {
+    position: sticky;
+    top: calc(var(--header-h) + 24px);
+  }
+  .map-col :global(.map) {
+    min-height: 560px;
+  }
+  @media (max-width: 1000px) {
+    .contact-page {
+      grid-template-columns: 1fr;
+    }
+    .map-col {
+      position: static;
+    }
+    .map-col :global(.map) {
+      min-height: 420px;
+    }
+  }
+  @media (max-width: 560px) {
+    .contact-cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,320 @@
+---
+import { Image, getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import CtaBand from '../components/CtaBand.astro';
+import { certificateInfo } from '../data/certificates';
+
+const files = import.meta.glob<{ default: ImageMetadata }>('../assets/sertifikalar/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', {
+  eager: true,
+});
+
+const certificates = await Promise.all(
+  Object.entries(files)
+    .sort(([a], [b]) => a.localeCompare(b, 'tr', { numeric: true }))
+    .map(async ([path, mod]) => {
+      const file = path.split('/').pop()!;
+      const info = certificateInfo[file];
+      const large = await getImage({ src: mod.default, width: 1600, format: 'webp' });
+      return { file, image: mod.default, large: large.src, info };
+    }),
+);
+---
+
+<BaseLayout
+  title="Sertifikalar"
+  description="Diyetisyen Eylem Dizman’ın tamamladığı mesleki eğitimler ve sertifika programları."
+>
+  <PageHero
+    title="Sertifikalar"
+    eyebrow="Eğitimler ve sertifikalar"
+    lead="Mesleki gelişim için tamamlanan eğitim ve sertifika programları."
+    crumbs={[{ label: 'Sertifikalar' }]}
+  />
+
+  <section class="section">
+    <div class="container">
+      {
+        certificates.length > 0 ? (
+          <ul class="cert-grid" data-gallery>
+            {certificates.map((c, i) => (
+              <li class="reveal">
+                <button
+                  type="button"
+                  class="cert"
+                  data-index={i}
+                  data-large={c.large}
+                  data-title={c.info?.title ?? ''}
+                  aria-label={`${c.info?.title ?? `Sertifika ${i + 1}`} – büyüt`}
+                >
+                  <span class="cert-frame">
+                    <Image src={c.image} alt={c.info?.title ?? `Sertifika ${i + 1}`} width={520} loading="lazy" />
+                  </span>
+                  {c.info && (
+                    <span class="cert-meta">
+                      <strong>{c.info.title}</strong>
+                      {(c.info.institution || c.info.year) && (
+                        <span>{[c.info.institution, c.info.year].filter(Boolean).join(' · ')}</span>
+                      )}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div class="empty">
+            <div class="empty-art" aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5].map((n) => (
+                <span class={`ph ph-${n}`}>
+                  <Icon name={(['cap', 'book', 'leaf', 'heart', 'chart', 'bloom'] as const)[n]} size={24} />
+                </span>
+              ))}
+            </div>
+            <div class="empty-copy">
+              <span class="icon-badge">
+                <Icon name="cap" size={26} />
+              </span>
+              <h2>Sertifikalar çok yakında burada</h2>
+              <p>
+                Eylem Dizman’ın tamamladığı eğitim ve sertifika programları bu sayfada yer alacak. Görselleri büyüterek
+                inceleyebileceksiniz.
+              </p>
+              <a href="/hakkinda/" class="link-arrow">
+                Eğitim ve deneyim bilgilerini inceleyin <Icon name="arrowRight" size={18} />
+              </a>
+            </div>
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  <dialog class="lightbox" data-lightbox aria-label="Sertifika görüntüleyici">
+    <form method="dialog" class="lb-close-form">
+      <button class="lb-btn lb-close" aria-label="Kapat"><Icon name="close" size={24} /></button>
+    </form>
+    <button type="button" class="lb-btn lb-prev" data-prev aria-label="Önceki"><Icon name="arrowRight" size={24} /></button>
+    <figure>
+      <img data-lb-img alt="" />
+      <figcaption data-lb-caption></figcaption>
+    </figure>
+    <button type="button" class="lb-btn lb-next" data-next aria-label="Sonraki"><Icon name="arrowRight" size={24} /></button>
+  </dialog>
+
+  <CtaBand />
+</BaseLayout>
+
+<style>
+  .cert-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 24px;
+  }
+  .cert {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+  }
+  .cert-frame {
+    display: block;
+    padding: 12px;
+    background: var(--paper);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgb(41 44 41 / 0.06);
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .cert-frame :global(img) {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: contain;
+    background: var(--ivory);
+    border-radius: 10px;
+  }
+  .cert:hover .cert-frame {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+  }
+  .cert-meta {
+    display: grid;
+    gap: 2px;
+    padding: 12px 4px 0;
+    font-size: 0.92rem;
+  }
+  .cert-meta span {
+    color: var(--ink-3);
+    font-size: 0.84rem;
+  }
+
+  .empty {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(28px, 5vw, 72px);
+    align-items: center;
+  }
+  .empty-art {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .ph {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 4 / 3;
+    border-radius: 8px;
+    background: var(--paper);
+    border: 7px solid var(--ink);
+    color: var(--sage-700);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+  }
+  .ph::after {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border: 1px solid var(--beige);
+  }
+  .ph-1,
+  .ph-5 {
+    border-color: var(--sage-800);
+  }
+  .ph-2,
+  .ph-3 {
+    border-color: #6b5d4b;
+  }
+  .ph-0 {
+    rotate: -3deg;
+  }
+  .ph-2 {
+    rotate: 2deg;
+  }
+  .ph-4 {
+    rotate: -2deg;
+  }
+  .empty-copy h2 {
+    margin-top: 18px;
+    font-size: clamp(1.7rem, 3vw, 2.3rem);
+  }
+  .empty-copy p {
+    color: var(--ink-2);
+  }
+
+  .lightbox {
+    width: min(96vw, 1100px);
+    max-height: 94vh;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: var(--ink);
+    color: var(--ivory);
+    overflow: visible;
+  }
+  .lightbox::backdrop {
+    background: rgb(20 22 20 / 0.82);
+  }
+  .lightbox figure {
+    margin: 0;
+    padding: 56px 64px 20px;
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+  }
+  .lightbox img {
+    max-height: 76vh;
+    width: auto;
+    border-radius: 8px;
+  }
+  .lightbox figcaption {
+    font-size: 0.95rem;
+    min-height: 1.4em;
+  }
+  .lb-btn {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 0;
+    background: rgb(247 243 236 / 0.12);
+    color: var(--ivory);
+    cursor: pointer;
+  }
+  .lb-btn:hover {
+    background: rgb(247 243 236 / 0.24);
+  }
+  .lb-close {
+    top: 10px;
+    right: 10px;
+  }
+  .lb-prev {
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%) scaleX(-1);
+  }
+  .lb-next {
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  @media (max-width: 800px) {
+    .empty {
+      grid-template-columns: 1fr;
+    }
+    .lightbox figure {
+      padding: 56px 12px 16px;
+    }
+    .lb-prev,
+    .lb-next {
+      top: auto;
+      bottom: -60px;
+    }
+  }
+</style>
+
+<script>
+  const gallery = document.querySelector('[data-gallery]');
+  const dialog = document.querySelector<HTMLDialogElement>('[data-lightbox]');
+  if (gallery && dialog) {
+    const items = Array.from(gallery.querySelectorAll<HTMLButtonElement>('button[data-large]'));
+    const img = dialog.querySelector<HTMLImageElement>('[data-lb-img]')!;
+    const cap = dialog.querySelector<HTMLElement>('[data-lb-caption]')!;
+    let current = 0;
+    const show = (i: number) => {
+      current = (i + items.length) % items.length;
+      const b = items[current];
+      img.src = b.dataset.large!;
+      img.alt = b.dataset.title || `Sertifika ${current + 1}`;
+      cap.textContent = `${b.dataset.title ? b.dataset.title + ' · ' : ''}${current + 1} / ${items.length}`;
+    };
+    items.forEach((b, i) =>
+      b.addEventListener('click', () => {
+        show(i);
+        dialog.showModal();
+      }),
+    );
+    dialog.querySelector('[data-prev]')?.addEventListener('click', () => show(current - 1));
+    dialog.querySelector('[data-next]')?.addEventListener('click', () => show(current + 1));
+    dialog.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') show(current - 1);
+      if (e.key === 'ArrowRight') show(current + 1);
+    });
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+  }
+</script>

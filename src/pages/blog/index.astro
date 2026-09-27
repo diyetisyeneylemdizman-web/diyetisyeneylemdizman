@@ -1,0 +1,49 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import PostCard from '../../components/PostCard.astro';
+import CtaBand from '../../components/CtaBand.astro';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime() || a.data.title.localeCompare(b.data.title, 'tr'),
+);
+---
+
+<BaseLayout
+  title="Blog"
+  description="Sağlıklı beslenme, kilo yönetimi, insülin direnci, PKOS ve daha birçok konuda Diyetisyen Eylem Dizman’ın bilgilendirici yazıları."
+>
+  <PageHero
+    title="Blog"
+    eyebrow="Beslenme üzerine yazılar"
+    lead="Sağlıklı beslenme, kilo yönetimi ve hastalıklarda beslenme üzerine bilgilendirici yazılar."
+    crumbs={[{ label: 'Blog' }]}
+  />
+  <section class="section">
+    <div class="container">
+      <div class="post-grid">
+        {posts.map((p) => <PostCard post={p} />)}
+      </div>
+    </div>
+  </section>
+  <CtaBand />
+</BaseLayout>
+
+<style>
+  .post-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 36px 24px;
+  }
+  @media (max-width: 1000px) {
+    .post-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .post-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

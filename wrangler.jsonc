@@ -1,0 +1,11 @@
+{
+  // Cloudflare ayarları: site, derlenen "dist" klasöründen statik olarak yayınlanır.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "diyetisyeneylemdizman",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
+}

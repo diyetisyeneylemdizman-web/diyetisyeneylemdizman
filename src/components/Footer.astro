@@ -1,0 +1,217 @@
+---
+import Icon from './Icon.astro';
+import { nav, site, fullAddress, whatsappLink } from '../data/site';
+import { serviceCategories } from '../data/services';
+
+interface Props {
+  updatedAt: string;
+}
+const { updatedAt } = Astro.props;
+const year = new Date().getFullYear();
+const featured = [
+  'Zayıflama Diyeti',
+  'İnsülin Direncinde Beslenme',
+  'Polikistik Over Diyeti',
+  'Diyabet (Şeker) Beslenmesi',
+  'Gebelikte Beslenme',
+  'Çocuk Beslenmesi',
+];
+const services = serviceCategories.flatMap((c) => c.services).filter((s) => featured.includes(s.name));
+---
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <a href="/" aria-label="Ana sayfa">
+        <img src="/logo/logo-yatay-acik.svg" width="654" height="206" alt="Diyetisyen Eylem Dizman logosu" loading="lazy" />
+      </a>
+      <p>
+        Kişiye özel ve sürdürülebilir beslenme danışmanlığı. Seyhan/Adana’daki kliniğimizde yüz yüze, WhatsApp görüntülü
+        görüşmeyle online.
+      </p>
+      <div class="social">
+        <a href={site.instagram} target="_blank" rel="noopener" aria-label="Instagram"><Icon name="instagram" size={20} /></a>
+        <a href={site.linkedin} target="_blank" rel="noopener" aria-label="LinkedIn"><Icon name="linkedin" size={20} /></a>
+        <a href={whatsappLink('Merhaba, bilgi almak istiyorum.')} target="_blank" rel="noopener" aria-label="WhatsApp"
+          ><Icon name="whatsapp" size={20} /></a
+        >
+        <a href={`mailto:${site.email}`} aria-label="E-posta"><Icon name="mail" size={20} /></a>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="footer-title">Sayfalar</h2>
+      <ul class="footer-list">
+        <li><a href="/">Ana Sayfa</a></li>
+        {nav.map((n) => <li><a href={n.href}>{n.title ?? n.label}</a></li>)}
+        <li><a href="/randevu-olustur/">Randevu Oluştur</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="footer-title">Hizmetler</h2>
+      <ul class="footer-list">
+        {services.map((s) => <li><a href={`/hizmetler/#${s.slug}`}>{s.name}</a></li>)}
+        <li><a href="/hizmetler/" class="more">Tüm hizmetler →</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="footer-title">İletişim</h2>
+      <ul class="footer-contact">
+        <li>
+          <Icon name="pin" size={19} />
+          <a href={site.mapsUrl} target="_blank" rel="noopener">{fullAddress}</a>
+        </li>
+        <li><Icon name="phone" size={19} /><a href={site.phoneHref}>{site.phoneDisplay}</a></li>
+        <li><Icon name="mail" size={19} /><a href={`mailto:${site.email}`}>{site.email}</a></li>
+        <li>
+          <Icon name="clock" size={19} />
+          <span>Pzt–Cuma 09:00–18:00<br />Cumartesi 09:00–15:00<br />Pazar kapalı</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="container footer-bottom">
+    <p class="disclaimer">
+      <Icon name="info" size={16} />
+      <span>
+        Bu sitedeki içerikler genel bilgilendirme amaçlıdır; tanı ve tedavinin yerini tutmaz. Sağlık sorunlarınız için
+        hekiminize danışınız.
+      </span>
+    </p>
+    <div class="footer-meta">
+      <span>© {year} {site.name}</span>
+      <a href="/kvkk-aydinlatma-metni/">KVKK Aydınlatma Metni</a>
+      <span>Son güncelleme: <time>{updatedAt}</time></span>
+      <span>Site editörü: {site.editor.name} · <a href={`mailto:${site.editor.email}`}>{site.editor.email}</a></span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background: var(--sage-900);
+    color: var(--sage-100);
+    padding-top: clamp(56px, 7vw, 88px);
+    margin-top: 0;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.35fr 0.8fr 1fr 1.25fr;
+    gap: clamp(28px, 4vw, 56px);
+    padding-bottom: 48px;
+  }
+  .footer-brand img {
+    height: 64px;
+    width: auto;
+    margin-bottom: 20px;
+  }
+  .footer-brand p {
+    color: var(--sage-200);
+    font-size: 0.95rem;
+    max-width: 340px;
+  }
+  .social {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .social a {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgb(247 243 236 / 0.08);
+    color: var(--ivory);
+    transition: background-color 0.2s ease;
+  }
+  .social a:hover {
+    background: rgb(247 243 236 / 0.18);
+  }
+  .footer-title {
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--sage-200);
+    margin-bottom: 18px;
+  }
+  .footer-list,
+  .footer-contact {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+    font-size: 0.95rem;
+  }
+  .footer-list a,
+  .footer-contact a {
+    color: var(--ivory);
+    text-decoration: none;
+  }
+  .footer-list a:hover,
+  .footer-contact a:hover {
+    text-decoration: underline;
+  }
+  .footer-list .more {
+    color: var(--sage-200);
+    font-weight: 600;
+  }
+  .footer-contact li {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 12px;
+    align-items: start;
+    color: var(--ivory);
+    line-height: 1.55;
+  }
+  .footer-contact :global(svg) {
+    color: var(--sage-200);
+    margin-top: 2px;
+  }
+  .footer-bottom {
+    border-top: 1px solid rgb(247 243 236 / 0.12);
+    padding-block: 22px 28px;
+    display: grid;
+    gap: 12px;
+    font-size: 0.84rem;
+    color: var(--sage-200);
+  }
+  .disclaimer {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin: 0;
+  }
+  .disclaimer :global(svg) {
+    margin-top: 3px;
+    flex: none;
+  }
+  .footer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+  }
+  .footer-meta a {
+    color: var(--ivory);
+  }
+
+  @media (max-width: 1000px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 620px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+    }
+    .site-footer {
+      padding-bottom: 76px;
+    }
+  }
+</style>
