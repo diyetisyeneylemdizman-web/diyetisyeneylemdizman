@@ -1,13 +1,36 @@
 ---
+// Vücut kitle indeksi (VKİ) hesaplayıcı
+// - Yetişkinler (18+): Dünya Sağlık Örgütü (DSÖ) sınıfları; bu sınıflar kadın ve erkekte aynıdır.
+// - 2–17 yaş: DSÖ'nün yaşa ve cinsiyete özel VKİ tabloları (public/veri/vki-referans.json) ile persentil.
+// - Bel çevresi (isteğe bağlı): cinsiyete göre risk sınırları (erkek 94/102 cm, kadın 80/88 cm).
+// - Gebelikte VKİ sınıflaması yapılmaz; Gebelikte Beslenme'ye yönlendirilir.
+// Hesaplama tarayıcıda yapılır; bilgiler hiçbir yere gönderilmez.
 import Icon from './Icon.astro';
 interface Props {
   variant?: 'full' | 'compact';
+  /** Bel çevresi alanı gösterilsin mi? */
+  waist?: boolean;
 }
-const { variant = 'full' } = Astro.props;
+const { variant = 'full', waist = true } = Astro.props;
+const months = Array.from({ length: 12 }, (_, i) => i);
 ---
 
 <div class:list={['bmi', `bmi--${variant}`]} data-bmi>
   <form class="bmi-form" novalidate data-bmi-form>
+    <fieldset class="bmi-sex" data-bmi-sex>
+      <legend class="label">Cinsiyet</legend>
+      <div class="seg">
+        <label class="seg-opt">
+          <input type="radio" name="cinsiyet" value="kadin" />
+          <span>Kadın</span>
+        </label>
+        <label class="seg-opt">
+          <input type="radio" name="cinsiyet" value="erkek" />
+          <span>Erkek</span>
+        </label>
+      </div>
+    </fieldset>
+
     <div class="bmi-fields">
       <div class="field">
         <label for="bmi-boy">Boy <span class="unit">(cm)</span></label>
@@ -21,10 +44,35 @@ const { variant = 'full' } = Astro.props;
         <label for="bmi-yas">Yaş</label>
         <input class="input" id="bmi-yas" name="yas" inputmode="numeric" autocomplete="off" placeholder="Örn. 32" required />
       </div>
-      <button type="submit" class="btn btn-primary bmi-submit">
-        <Icon name="sparkle" size={18} />Hesapla
-      </button>
     </div>
+
+    <div class="bmi-extra" data-bmi-extra>
+      <div class="field" data-show="ay" hidden>
+        <label for="bmi-ay">Ay <span class="unit">(yaşın üzerine, isteğe bağlı)</span></label>
+        <select class="select" id="bmi-ay" name="ay">
+          <option value="">Bilmiyorum</option>
+          {months.map((m) => <option value={m}>{m} ay</option>)}
+        </select>
+      </div>
+      {
+        waist && (
+          <div class="field" data-show="bel" hidden>
+            <label for="bmi-bel">
+              Bel çevresi <span class="unit">(cm, isteğe bağlı)</span>
+            </label>
+            <input class="input" id="bmi-bel" name="bel" inputmode="decimal" autocomplete="off" placeholder="Örn. 82" />
+          </div>
+        )
+      }
+      <label class="check" data-show="gebe" hidden>
+        <input type="checkbox" name="gebe" />
+        <span>Gebeyim</span>
+      </label>
+    </div>
+
+    <button type="submit" class="btn btn-primary bmi-submit">
+      <Icon name="scale" size={18} />Hesapla
+    </button>
     <p class="field-error" data-bmi-error role="alert"></p>
     <p class="bmi-privacy">
       <Icon name="lock" size={15} />
@@ -35,13 +83,13 @@ const { variant = 'full' } = Astro.props;
   <div class="bmi-result" data-bmi-result aria-live="polite" hidden>
     <div class="result-top">
       <div>
-        <p class="result-label">Vücut kitle indeksiniz</p>
+        <p class="result-label" data-bmi-label>Vücut kitle indeksiniz</p>
         <p class="result-value" data-bmi-value>—</p>
       </div>
       <span class="result-chip" data-bmi-chip>—</span>
     </div>
 
-    <div class="scale" data-bmi-scale aria-hidden="true">
+    <div class="scale" data-scale="adult" aria-hidden="true">
       <div class="scale-bar">
         <span style="--w:11.67%;--c:#cfc4b3"></span>
         <span style="--w:21.67%;--c:#8e9b82"></span>
@@ -50,7 +98,7 @@ const { variant = 'full' } = Astro.props;
         <span style="--w:16.67%;--c:#a8654f"></span>
         <span style="--w:16.66%;--c:#86493a"></span>
       </div>
-      <span class="scale-marker" data-bmi-marker></span>
+      <span class="scale-marker" data-marker></span>
       <div class="scale-ticks">
         <span style="left:11.67%">18,5</span>
         <span style="left:33.33%">25</span>
@@ -60,9 +108,31 @@ const { variant = 'full' } = Astro.props;
       </div>
     </div>
 
+    <div class="scale" data-scale="child" aria-hidden="true" hidden>
+      <div class="scale-bar">
+        <span style="--w:2.3%;--c:#cfc4b3"></span>
+        <span style="--w:81.8%;--c:#8e9b82"></span>
+        <span style="--w:13.6%;--c:#dcae99"></span>
+        <span style="--w:2.3%;--c:#a8654f"></span>
+      </div>
+      <span class="scale-marker" data-marker></span>
+      <div class="scale-ticks">
+        <span style="left:2.3%">3.</span>
+        <span style="left:50%">50.</span>
+        <span style="left:84.1%">85.</span>
+        <span style="left:97.7%">97.</span>
+      </div>
+      <p class="scale-caption">Persentil</p>
+    </div>
+
     <p class="result-range" data-bmi-range></p>
     <p class="result-text" data-bmi-text></p>
+    <div class="result-waist" data-bmi-waist hidden>
+      <span class="waist-chip" data-waist-chip></span>
+      <span data-waist-text></span>
+    </div>
     <p class="result-note" data-bmi-note hidden></p>
+    <p class="result-source" data-bmi-source></p>
     <div class="result-actions">
       <a href="/randevu-olustur/" class="btn btn-primary" data-bmi-cta>
         <Icon name="calendar" size={18} /><span data-bmi-cta-label>Randevu Oluştur</span>
@@ -79,20 +149,101 @@ const { variant = 'full' } = Astro.props;
     padding: clamp(22px, 3.4vw, 36px);
     border: 1px solid rgb(41 44 41 / 0.06);
   }
+
+  /* ---------- Cinsiyet seçimi ---------- */
+  .bmi-sex {
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .bmi-sex legend {
+    padding: 0;
+    margin-bottom: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .seg {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 5px;
+    border-radius: 16px;
+    background: var(--sage-50);
+    border: 1px solid var(--sage-100);
+  }
+  .seg-opt {
+    position: relative;
+    display: block;
+    cursor: pointer;
+  }
+  .seg-opt input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .seg-opt span {
+    display: grid;
+    place-items: center;
+    min-height: 44px;
+    border-radius: 12px;
+    font-weight: 700;
+    color: var(--ink-2);
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .seg-opt input:checked + span {
+    background: var(--sage-800);
+    color: #fff;
+    box-shadow: 0 6px 14px -8px rgb(41 44 41 / 0.6);
+  }
+  .seg-opt input:focus-visible + span {
+    outline: 2.5px solid var(--terracotta-700);
+    outline-offset: 2px;
+  }
+  .bmi-sex.invalid .seg {
+    border-color: var(--terracotta-700);
+  }
+
   .bmi-fields {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
     align-items: end;
   }
+  .bmi-extra {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px 16px;
+  }
+  .bmi-extra .field {
+    flex: 1 1 200px;
+    margin: 16px 0 0;
+  }
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    margin-top: 16px;
+    padding: 0 16px;
+    border-radius: 14px;
+    background: var(--terracotta-50);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .check input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--terracotta-700);
+  }
   .bmi-submit {
-    grid-column: 1 / -1;
-  }
-  .bmi--compact .bmi-fields {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-  }
-  .bmi--compact .bmi-submit {
-    grid-column: auto;
+    width: 100%;
+    margin-top: 18px;
   }
   .unit {
     color: var(--ink-3);
@@ -118,6 +269,7 @@ const { variant = 'full' } = Astro.props;
     margin-top: 2px;
   }
 
+  /* ---------- Sonuç ---------- */
   .bmi-result {
     margin-top: 26px;
     padding-top: 26px;
@@ -166,6 +318,9 @@ const { variant = 'full' } = Astro.props;
     position: relative;
     margin: 26px 0 30px;
   }
+  .scale[hidden] {
+    display: none;
+  }
   .scale-bar {
     display: flex;
     height: 12px;
@@ -201,13 +356,45 @@ const { variant = 'full' } = Astro.props;
     position: absolute;
     transform: translateX(-50%);
   }
+  .scale-caption {
+    margin: 2px 0 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--ink-3);
+  }
   .result-range {
     font-weight: 600;
     color: var(--ink);
     margin-bottom: 0.6em;
   }
+  .result-range:empty {
+    display: none;
+  }
   .result-text {
     color: var(--ink-2);
+  }
+  .result-waist {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin: 0 0 1em;
+    padding: 0.8em 1em;
+    border-radius: 14px;
+    background: var(--ivory);
+    font-size: 0.93rem;
+    color: var(--ink-2);
+  }
+  .result-waist[hidden] {
+    display: none;
+  }
+  .waist-chip {
+    padding: 0.25em 0.75em;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: var(--chip-bg, var(--sage-100));
+    color: var(--chip-fg, var(--ink));
   }
   .result-note {
     font-size: 0.9rem;
@@ -215,6 +402,14 @@ const { variant = 'full' } = Astro.props;
     background: var(--sage-50);
     border-radius: 14px;
     padding: 0.8em 1em;
+  }
+  .result-source {
+    font-size: 0.8rem;
+    color: var(--ink-3);
+    line-height: 1.5;
+  }
+  .result-source:empty {
+    display: none;
   }
   .result-actions {
     margin-top: 8px;
@@ -225,31 +420,22 @@ const { variant = 'full' } = Astro.props;
   }
 
   @media (max-width: 760px) {
-    .bmi-fields,
-    .bmi--compact .bmi-fields {
+    .bmi-fields {
       grid-template-columns: 1fr 1fr;
     }
     .bmi-fields .field:nth-child(3) {
-      grid-column: 1 / -1;
-    }
-    .bmi-submit,
-    .bmi--compact .bmi-submit {
       grid-column: 1 / -1;
     }
   }
 </style>
 
 <script>
-  type Cat = {
-    max: number;
-    key: string;
-    label: string;
-    bg: string;
-    fg: string;
-    text: string;
-    cta: { label: string; hizmet: string; primary: boolean };
-  };
+  type Sex = 'kadin' | 'erkek';
+  type Cta = { label: string; hizmet: string; primary: boolean };
+  type Cat = { max: number; key: string; label: string; bg: string; fg: string; text: string; cta: Cta };
+  type Ref = { baslangicAy: number; bitisAy: number; erkek: [number, number, number][]; kadin: [number, number, number][] };
 
+  // Yetişkin VKİ sınıfları (Dünya Sağlık Örgütü) – kadın ve erkekte aynıdır
   const CATS: Cat[] = [
     {
       max: 18.5,
@@ -307,104 +493,281 @@ const { variant = 'full' } = Astro.props;
     },
   ];
 
+  const CHILD_CTA = (primary: boolean): Cta => ({
+    label: 'Çocuk Beslenmesi İçin Randevu Oluştur',
+    hizmet: 'Çocuk Beslenmesi',
+    primary,
+  });
+
   const fmt = (n: number, d = 1) =>
     n.toLocaleString('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d });
   const parse = (v: string) => Number(v.trim().replace(/\s/g, '').replace(',', '.'));
+
+  // ---------- DSÖ yaşa göre VKİ tabloları (yalnızca çocuk hesabında indirilir) ----------
+  let refLoad: Promise<Ref | null> | null = null;
+  const loadRef = () =>
+    (refLoad ??= fetch('/veri/vki-referans.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null));
+
+  // Standart normal dağılım (persentil için)
+  const erf = (x: number) => {
+    const s = Math.sign(x);
+    const a = Math.abs(x);
+    const t = 1 / (1 + 0.3275911 * a);
+    const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a);
+    return s * y;
+  };
+  const cdf = (z: number) => 0.5 * (1 + erf(z / Math.SQRT2));
+
+  // DSÖ LMS yöntemi (±3 SD dışında DSÖ'nün önerdiği düzeltmeyle)
+  const zScore = (bmi: number, L: number, M: number, S: number) => {
+    const tiny = Math.abs(L) < 1e-10;
+    const sd = (k: number) => (tiny ? M * Math.exp(S * k) : M * Math.pow(1 + L * S * k, 1 / L));
+    let z = tiny ? Math.log(bmi / M) / S : (Math.pow(bmi / M, L) - 1) / (L * S);
+    if (z > 3) z = 3 + (bmi - sd(3)) / (sd(3) - sd(2));
+    else if (z < -3) z = -3 + (bmi - sd(-3)) / (sd(-2) - sd(-3));
+    return z;
+  };
+
+  type ChildCat = { label: string; bg: string; fg: string; text: string; normal: boolean };
+  const childCat = (z: number, under5: boolean): ChildCat => {
+    const base = 'Aynı yaş ve cinsiyetteki çocuk ve gençlerle karşılaştırıldığında VKİ değeri';
+    if (z < -3)
+      return { label: 'Ciddi Zayıf', bg: '#ece5da', fg: '#292c29', normal: false, text: `${base} ciddi zayıflık aralığında. Büyüme ve beslenme durumunun hekim ve diyetisyen tarafından değerlendirilmesi önerilir.` };
+    if (z < -2)
+      return { label: 'Zayıf', bg: '#ece5da', fg: '#292c29', normal: false, text: `${base} zayıf aralığında. Büyümeyi destekleyen, yaşa uygun bir beslenme düzeninin birlikte değerlendirilmesi faydalı olabilir.` };
+    const over = under5 ? [1, 2, 3] : [Infinity, 1, 2];
+    if (z > over[2])
+      return { label: 'Obez', bg: '#f1ddd3', fg: '#86493a', normal: false, text: `${base} obezite aralığında. Hekimle birlikte, yaşa uygun ve kişiye özel bir beslenme planıyla değerlendirilmesi önemlidir.` };
+    if (z > over[1])
+      return { label: 'Fazla Kilolu', bg: '#f6ebe5', fg: '#86493a', normal: false, text: `${base} fazla kilolu aralığında. Büyümeyi destekleyen, yaşa uygun ve kişiye özel bir beslenme planı faydalı olabilir.` };
+    if (z > over[0])
+      return { label: 'Fazla Kilo Riski', bg: '#f6ebe5', fg: '#86493a', normal: false, text: `${base} fazla kilo riski aralığında. Beslenme alışkanlıklarının erken dönemde değerlendirilmesi faydalı olabilir.` };
+    return { label: 'Normal', bg: '#e3e7dd', fg: '#3d4636', normal: true, text: `${base} normal aralıkta. Dengeli ve çeşitli beslenme alışkanlıklarını sürdürmek önemlidir.` };
+  };
+
+  const waistRisk = (sex: Sex, w: number) => {
+    const [inc, high] = sex === 'erkek' ? [94, 102] : [80, 88];
+    const who = sex === 'erkek' ? 'Erkeklerde' : 'Kadınlarda';
+    const rule = `${who} ${inc} cm üzeri artmış, ${high} cm üzeri yüksek risk olarak kabul edilir.`;
+    if (w > high) return { key: 'yuksek', label: 'Yüksek risk', bg: '#f1ddd3', fg: '#86493a', text: `Bel çevreniz ${fmt(w, 0)} cm. ${rule}` };
+    if (w > inc) return { key: 'artmis', label: 'Artmış risk', bg: '#f6ebe5', fg: '#86493a', text: `Bel çevreniz ${fmt(w, 0)} cm. ${rule}` };
+    return { key: 'normal', label: 'Risk sınırının altında', bg: '#e3e7dd', fg: '#3d4636', text: `Bel çevreniz ${fmt(w, 0)} cm. ${rule}` };
+  };
 
   document.querySelectorAll<HTMLElement>('[data-bmi]').forEach((root) => {
     const form = root.querySelector<HTMLFormElement>('[data-bmi-form]')!;
     const err = root.querySelector<HTMLElement>('[data-bmi-error]')!;
     const out = root.querySelector<HTMLElement>('[data-bmi-result]')!;
+    const sexBox = root.querySelector<HTMLElement>('[data-bmi-sex]')!;
     const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
+    const field = <T extends Element>(name: string) => form.elements.namedItem(name) as unknown as T | null;
     const inputs = {
-      boy: form.elements.namedItem('boy') as HTMLInputElement,
-      kilo: form.elements.namedItem('kilo') as HTMLInputElement,
-      yas: form.elements.namedItem('yas') as HTMLInputElement,
+      boy: field<HTMLInputElement>('boy')!,
+      kilo: field<HTMLInputElement>('kilo')!,
+      yas: field<HTMLInputElement>('yas')!,
+      ay: field<HTMLSelectElement>('ay')!,
+      bel: field<HTMLInputElement>('bel'),
+      gebe: field<HTMLInputElement>('gebe')!,
+    };
+    const show = (key: string, on: boolean) => {
+      const el = root.querySelector<HTMLElement>(`[data-show="${key}"]`);
+      if (el) el.hidden = !on;
+    };
+    const sexValue = () => (form.querySelector<HTMLInputElement>('input[name="cinsiyet"]:checked')?.value ?? '') as Sex | '';
+
+    // Yaşa ve cinsiyete göre ek alanları göster/gizle
+    const refresh = () => {
+      const yas = parse(inputs.yas.value);
+      const known = inputs.yas.value.trim() !== '' && Number.isFinite(yas);
+      const child = known && yas >= 2 && yas < 18;
+      show('ay', child);
+      show('bel', !known || yas >= 18);
+      show('gebe', sexValue() === 'kadin' && (!known || yas >= 15));
+      if (child) void loadRef();
+    };
+    form.addEventListener('input', refresh);
+    form.addEventListener('change', refresh);
+    refresh();
+
+    const setCta = (info: Cta, extra: Record<string, string> = {}) => {
+      const cta = $('[data-bmi-cta]') as HTMLAnchorElement;
+      const params = new URLSearchParams({ hizmet: info.hizmet, ...extra });
+      cta.href = `/randevu-olustur/?${params.toString()}#randevu-formu`;
+      $('[data-bmi-cta-label]').textContent = info.label;
+      cta.classList.toggle('btn-primary', info.primary);
+      cta.classList.toggle('btn-outline', !info.primary);
     };
 
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      Object.values(inputs).forEach((i) => i.removeAttribute('aria-invalid'));
-      let boy = parse(inputs.boy.value);
-      const kilo = parse(inputs.kilo.value);
-      const yas = parse(inputs.yas.value);
-      if (boy > 0 && boy < 3) boy = boy * 100; // metre girildiyse cm'ye çevir
-
-      const problems: [HTMLInputElement, string][] = [];
-      if (!(boy >= 100 && boy <= 250)) problems.push([inputs.boy, 'Boyunuzu santimetre olarak girin (örn. 165).']);
-      if (!(kilo >= 20 && kilo <= 350)) problems.push([inputs.kilo, 'Kilonuzu kilogram olarak girin (örn. 68,5).']);
-      if (!(yas >= 2 && yas <= 120 && Number.isInteger(yas))) problems.push([inputs.yas, 'Yaşınızı tam sayı olarak girin (örn. 32).']);
-      if (problems.length) {
-        problems.forEach(([i]) => i.setAttribute('aria-invalid', 'true'));
-        err.textContent = problems.map((p) => p[1]).join(' ');
-        out.hidden = true;
-        problems[0][0].focus();
-        return;
-      }
-      err.textContent = '';
-
-      const h = boy / 100;
-      const bmi = kilo / (h * h);
-      const bmiText = fmt(bmi);
-      const minW = 18.5 * h * h;
-      const maxW = 24.9 * h * h;
-      const cat = CATS.find((c) => bmi < c.max)!;
-      const child = yas < 18;
-
-      $('[data-bmi-value]').textContent = bmiText;
+    const setChip = (label: string, bg: string, fg: string) => {
       const chip = $('[data-bmi-chip]');
-      const scale = $('[data-bmi-scale]');
-      const note = $('[data-bmi-note]');
-      const cta = $('[data-bmi-cta]') as HTMLAnchorElement;
-      const ctaLabel = $('[data-bmi-cta-label]');
+      chip.textContent = label;
+      chip.style.setProperty('--chip-bg', bg);
+      chip.style.setProperty('--chip-fg', fg);
+    };
 
-      let ctaInfo = cat.cta;
-      if (child) {
-        chip.textContent = '18 yaş altı';
-        chip.style.setProperty('--chip-bg', '#ece5da');
-        chip.style.setProperty('--chip-fg', '#292c29');
-        scale.hidden = true;
-        $('[data-bmi-range]').textContent = '';
-        $('[data-bmi-text]').textContent =
-          '18 yaş altındaki çocuk ve gençlerde VKİ, yetişkin sınıflamasıyla değil; yaşa ve cinsiyete özel büyüme eğrileriyle (persentil) değerlendirilir. Çocuğunuzun büyüme ve beslenme durumunu birlikte değerlendirebiliriz.';
-        ctaInfo = { label: 'Çocuk Beslenmesi İçin Randevu Oluştur', hizmet: 'Çocuk Beslenmesi', primary: true };
-        note.hidden = true;
-      } else {
-        chip.textContent = cat.label;
-        chip.style.setProperty('--chip-bg', cat.bg);
-        chip.style.setProperty('--chip-fg', cat.fg);
-        scale.hidden = false;
-        const pos = Math.min(Math.max((bmi - 15) / 30, 0.01), 0.99) * 100;
-        $('[data-bmi-marker]').style.setProperty('--pos', `${pos}%`);
-        $('[data-bmi-range]').textContent = `Boyunuza göre VKİ’nin normal aralıkta olduğu kilo: ${fmt(minW)} – ${fmt(maxW)} kg`;
-        $('[data-bmi-text]').textContent = cat.text;
-        if (yas >= 65) {
-          note.hidden = false;
-          note.textContent =
-            '65 yaş ve üzerinde VKİ değerlendirmesi farklılık gösterebilir; kas kaybı gibi etkenler nedeniyle kesin değerlendirme için uzman görüşü önerilir.';
-        } else {
-          note.hidden = true;
-        }
-      }
+    const scales = root.querySelectorAll<HTMLElement>('[data-scale]');
+    const useScale = (kind: 'adult' | 'child' | 'none', pos = 0) => {
+      scales.forEach((s) => {
+        const on = s.dataset.scale === kind;
+        s.hidden = !on;
+        if (on) s.querySelector<HTMLElement>('[data-marker]')!.style.setProperty('--pos', `${pos}%`);
+      });
+    };
 
-      const params = new URLSearchParams({ hizmet: ctaInfo.hizmet });
-      if (!child) {
-        params.set('vki', bmiText);
-        params.set('durum', cat.label);
-      }
-      cta.href = `/randevu-olustur/?${params.toString()}#randevu-formu`;
-      ctaLabel.textContent = ctaInfo.label;
-      cta.classList.toggle('btn-primary', ctaInfo.primary);
-      cta.classList.toggle('btn-outline', !ctaInfo.primary);
-
+    const reveal = () => {
       out.hidden = false;
       out.style.animation = 'none';
       void out.offsetWidth;
       out.style.animation = '';
       const r = out.getBoundingClientRect();
-      if (r.top > window.innerHeight * 0.7 || r.top < 0) {
-        out.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (r.top > window.innerHeight * 0.7 || r.top < 0) out.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    const resetResult = () => {
+      $('[data-bmi-label]').textContent = 'Vücut kitle indeksiniz';
+      $('[data-bmi-range]').textContent = '';
+      $('[data-bmi-text]').textContent = '';
+      $('[data-bmi-note]').hidden = true;
+      $('[data-bmi-source]').textContent = '';
+      $('[data-bmi-waist]').hidden = true;
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      [...Object.values(inputs)].forEach((i) => i?.removeAttribute('aria-invalid'));
+      sexBox.classList.remove('invalid');
+
+      const sex = sexValue();
+      let boy = parse(inputs.boy.value);
+      const kilo = parse(inputs.kilo.value);
+      const yas = parse(inputs.yas.value);
+      const belRaw = inputs.bel && !root.querySelector<HTMLElement>('[data-show="bel"]')!.hidden ? inputs.bel.value.trim() : '';
+      const bel = belRaw ? parse(belRaw) : NaN;
+      if (boy > 0 && boy < 3) boy = boy * 100; // metre girildiyse cm'ye çevir
+
+      const problems: [HTMLElement, string][] = [];
+      if (!sex) problems.push([sexBox, 'Cinsiyet seçin.']);
+      const yasOk = Number.isInteger(yas) && yas >= 0 && yas <= 120;
+      if (!yasOk) problems.push([inputs.yas, 'Yaşı tam sayı olarak girin (örn. 32).']);
+      const adult = yasOk && yas >= 18;
+      const baby = yasOk && yas < 2;
+      if (!baby) {
+        const [bMin, bMax, kMin, kMax] = adult ? [100, 250, 25, 350] : [60, 220, 7, 200];
+        if (!(boy >= bMin && boy <= bMax)) problems.push([inputs.boy, 'Boyu santimetre olarak girin (örn. 165).']);
+        if (!(kilo >= kMin && kilo <= kMax)) problems.push([inputs.kilo, 'Kiloyu kilogram olarak girin (örn. 68,5).']);
       }
+      if (belRaw && !(bel >= 40 && bel <= 250) && inputs.bel) problems.push([inputs.bel, 'Bel çevresini santimetre olarak girin (örn. 82) ya da boş bırakın.']);
+      if (problems.length) {
+        problems.forEach(([i]) => (i === sexBox ? sexBox.classList.add('invalid') : i.setAttribute('aria-invalid', 'true')));
+        err.textContent = problems.map((p) => p[1]).join(' ');
+        out.hidden = true;
+        const first = problems[0][0];
+        (first === sexBox ? sexBox.querySelector<HTMLInputElement>('input') : first)?.focus();
+        return;
+      }
+      err.textContent = '';
+      resetResult();
+
+      // 2 yaş altı: VKİ yerine büyüme eğrileri
+      if (baby) {
+        $('[data-bmi-value]').textContent = '—';
+        setChip('2 Yaş Altı', '#ece5da', '#292c29');
+        useScale('none');
+        $('[data-bmi-text]').textContent =
+          '2 yaşından küçük bebeklerde beslenme ve büyüme durumu, boya göre ağırlık ve büyüme eğrileriyle çocuk doktoru tarafından değerlendirilir. Ek gıda dönemi ve beslenme alışkanlıkları için birlikte değerlendirme yapabiliriz.';
+        setCta(CHILD_CTA(true));
+        reveal();
+        return;
+      }
+
+      const h = boy / 100;
+      const bmi = kilo / (h * h);
+      const bmiText = fmt(bmi);
+      $('[data-bmi-value]').textContent = bmiText;
+
+      // Gebelik: VKİ sınıflaması yapılmaz (kutucuk yalnızca görünürken dikkate alınır)
+      const gebeShown = !root.querySelector<HTMLElement>('[data-show="gebe"]')!.hidden;
+      if (sex === 'kadin' && gebeShown && inputs.gebe.checked) {
+        setChip('Gebelik', '#f6ebe5', '#86493a');
+        useScale('none');
+        $('[data-bmi-text]').textContent =
+          'Gebelikte VKİ sınıflaması yapılmaz; değerlendirme gebelik öncesi kilonuza göre yapılır ve gebelik boyunca alınması önerilen kilo da buna ve gebelik haftasına göre değişir. Gebelik sürecinize uygun beslenme için birlikte değerlendirme yapabiliriz.';
+        setCta({ label: 'Gebelikte Beslenme İçin Randevu Oluştur', hizmet: 'Gebelikte Beslenme', primary: true });
+        reveal();
+        return;
+      }
+
+      // 2–17 yaş: DSÖ yaşa ve cinsiyete özel tablolar
+      if (!adult) {
+        const ayVal = inputs.ay.value;
+        const ageMonths = yas * 12 + (ayVal === '' ? 6 : Number(ayVal));
+        const ref = (await loadRef()) as Ref | null;
+        const row = ref && sex ? ref[sex][ageMonths - ref.baslangicAy] : null;
+        $('[data-bmi-label]').textContent = 'Vücut kitle indeksi';
+        if (!row) {
+          setChip('18 Yaş Altı', '#ece5da', '#292c29');
+          useScale('none');
+          $('[data-bmi-text]').textContent =
+            '18 yaş altındaki çocuk ve gençlerde VKİ, yaşa ve cinsiyete özel büyüme tablolarıyla (persentil) değerlendirilir. Büyüme ve beslenme durumunu birlikte değerlendirebiliriz.';
+          setCta(CHILD_CTA(true));
+          reveal();
+          return;
+        }
+        const [L, M, S] = row;
+        const z = zScore(bmi, L, M, S);
+        const p = cdf(z) * 100;
+        const pShort = p < 1 ? '<1' : p > 99 ? '>99' : String(Math.round(p));
+        const cat = childCat(z, ageMonths <= 60);
+        setChip(cat.label, cat.bg, cat.fg);
+        useScale('child', Math.min(Math.max(p, 1), 99));
+        const ageText = `${yas} yaş${ayVal === '' ? '' : ` ${ayVal} ay`}`;
+        $('[data-bmi-range]').textContent =
+          p < 1
+            ? 'Yaşa ve cinsiyete göre 1. persentilin altında'
+            : p > 99
+              ? 'Yaşa ve cinsiyete göre 99. persentilin üzerinde'
+              : `Yaşa ve cinsiyete göre ${pShort}. persentilde`;
+        $('[data-bmi-text]').textContent = cat.text;
+        $('[data-bmi-source]').textContent =
+          `${ageText}, ${sex === 'kadin' ? 'kız' : 'erkek'}${yas < 12 ? ' çocuk' : ''} için Dünya Sağlık Örgütü’nün yaşa ve cinsiyete özel VKİ tablolarına göre değerlendirilmiştir${ayVal === '' ? ' (ay bilgisi girilmediği için yaşın ortası esas alındı)' : ''}. Tek bir ölçüm yerine düzenli büyüme takibi önemlidir; kesin değerlendirme için çocuk doktorunuza danışın.`;
+        setCta(CHILD_CTA(!cat.normal), { vki: bmiText, durum: `${cat.label}, persentil ${pShort}, ${ageText}` });
+        reveal();
+        return;
+      }
+
+      // Yetişkin
+      const cat = CATS.find((c) => bmi < c.max)!;
+      setChip(cat.label, cat.bg, cat.fg);
+      useScale('adult', Math.min(Math.max((bmi - 15) / 30, 0.01), 0.99) * 100);
+      $('[data-bmi-range]').textContent = `Boyunuza göre VKİ’nin normal aralıkta olduğu kilo: ${fmt(18.5 * h * h)} – ${fmt(24.9 * h * h)} kg`;
+      $('[data-bmi-text]').textContent = cat.text;
+      $('[data-bmi-source]').textContent =
+        'VKİ sınıfları Dünya Sağlık Örgütü’ne göredir ve yetişkinlerde kadın ile erkek için aynıdır; cinsiyet, bel çevresi değerlendirmesinde dikkate alınır.';
+
+      let cta = cat.cta;
+      if (belRaw && sex) {
+        const wr = waistRisk(sex, bel);
+        const box = $('[data-bmi-waist]');
+        const chip = $('[data-waist-chip]');
+        chip.textContent = wr.label;
+        chip.style.setProperty('--chip-bg', wr.bg);
+        chip.style.setProperty('--chip-fg', wr.fg);
+        $('[data-waist-text]').textContent = wr.text;
+        box.hidden = false;
+        if (cat.key === 'normal' && wr.key !== 'normal') {
+          cta = { label: 'Değerlendirme İçin Randevu Oluştur', hizmet: 'Online & Yüz Yüze Beslenme Danışmanlığı', primary: true };
+        }
+      }
+      if (yas >= 65) {
+        const note = $('[data-bmi-note]');
+        note.hidden = false;
+        note.textContent =
+          '65 yaş ve üzerinde VKİ değerlendirmesi farklılık gösterebilir; kas kaybı gibi etkenler nedeniyle kesin değerlendirme için uzman görüşü önerilir.';
+      }
+      setCta(cta, { vki: bmiText, durum: cat.label });
+      reveal();
     });
   });
 </script>

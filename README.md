@@ -19,6 +19,7 @@ derlenip yayına alınır.
 | Site asistanı: karşılama, hazır sorular ve kurallar | `src/data/assistant.ts` |
 | Online görüşme adımları ve sık sorulanlar | `src/data/online-gorusme.ts` |
 | Ana sayfadaki süreç adımları | `src/data/process.ts` |
+| Sayfa geçişi ve açılış animasyonları | `src/styles/global.css` (“Hafif animasyonlar” bölümü) |
 
 ## Sayfalar
 
@@ -36,6 +37,17 @@ Sağ alt köşedeki asistan yapay zekâ kullanmaz ve ücretsizdir:
 - Metinler, hazır sorular ve anahtar kelimeler `src/data/assistant.ts` dosyasındadır. Hizmetler ve blog yazıları
   asistana otomatik eklenir; bilgiler site derlenirken `/asistan-bilgi.json` dosyasına yazılır.
 - Kişiye özel sağlık tavsiyesi, fiyat ve sonuç vaadi verilmez; acil durum ifadelerinde 112'ye yönlendirir.
+
+## VKİ hesaplayıcı
+
+- **18 yaş ve üzeri:** Dünya Sağlık Örgütü (DSÖ) VKİ sınıfları kullanılır; bu sınıflar kadın ve erkekte aynıdır.
+  Cinsiyet, isteğe bağlı bel çevresi değerlendirmesinde dikkate alınır (kadın 80/88 cm, erkek 94/102 cm üzeri
+  artmış/yüksek risk).
+- **2–17 yaş:** VKİ, DSÖ’nün yaşa ve cinsiyete özel tablolarıyla persentil olarak değerlendirilir (2–5 yaş: DSÖ 2006
+  büyüme standartları, 5–19 yaş: DSÖ 2007 referansları). Tablo değerleri `public/veri/vki-referans.json` dosyasındadır;
+  yalnızca çocuk hesabında indirilir.
+- **2 yaş altı ve gebelik:** VKİ sınıflaması yapılmaz; Çocuk Beslenmesi / Gebelikte Beslenme hizmetine yönlendirilir.
+- Hesaplama tarayıcıda yapılır; girilen bilgiler hiçbir yere gönderilmez.
 
 ## Mevzuat notları
 

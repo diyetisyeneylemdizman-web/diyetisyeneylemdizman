@@ -183,21 +183,12 @@ em.accent,
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 0.7em;
   font-family: var(--font-sans);
-  font-size: 0.78rem;
+  font-size: 0.98rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--sage-700);
-  margin-bottom: 1.1rem;
-}
-.eyebrow::before {
-  content: '';
-  width: 26px;
-  height: 1.5px;
-  background: currentColor;
-  opacity: 0.7;
+  margin-bottom: 0.8rem;
 }
 .on-sage .eyebrow {
   color: var(--ink);
@@ -560,6 +551,73 @@ em.accent,
   }
 }
 
+/* ---------- Hafif animasyonlar ---------- */
+/* Sayfalar arası yumuşak geçiş (destekleyen tarayıcılarda; diğerlerinde sayfa normal açılır) */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root) {
+  animation: vt-out 0.18s ease both;
+}
+::view-transition-new(root) {
+  animation: vt-in 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+/* Üst menü ve köşedeki butonlar geçiş sırasında yerinde kalır */
+.site-header {
+  view-transition-name: site-header;
+}
+.wa-float {
+  view-transition-name: wa-float;
+}
+.asst-launcher {
+  view-transition-name: asst-launcher;
+}
+.mobile-bar {
+  view-transition-name: mobile-bar;
+}
+
+/* Sayfa açılışında başlık alanı hafifçe belirir */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+.hero-copy > *,
+.page-hero .container > * {
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.hero-copy > :nth-child(2),
+.page-hero .container > :nth-child(2) {
+  animation-delay: 0.06s;
+}
+.hero-copy > :nth-child(3),
+.page-hero .container > :nth-child(3) {
+  animation-delay: 0.12s;
+}
+.hero-copy > :nth-child(4),
+.page-hero .container > :nth-child(4) {
+  animation-delay: 0.18s;
+}
+.hero-copy > :nth-child(n + 5),
+.page-hero .container > :nth-child(n + 5) {
+  animation-delay: 0.24s;
+}
+.hero-visual {
+  animation: rise 0.9s 0.12s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
 .js .reveal {
   opacity: 0;
   transform: translateY(18px);
@@ -573,6 +631,9 @@ em.accent,
 }
 
 @media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
   html {
     scroll-behavior: auto;
   }
@@ -580,6 +641,7 @@ em.accent,
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
