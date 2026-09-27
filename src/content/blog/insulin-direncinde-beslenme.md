@@ -1,7 +1,7 @@
 ---
 title: 'İnsülin Direncinde Beslenme: Bilmeniz Gereken 7 Temel Nokta'
 description: 'İnsülin direnci nedir, beslenme bu süreçte nasıl destek olur? Öğün düzeninden lif tüketimine, hareketten uykuya kadar 7 temel noktayı derledik.'
-date: 2026-09-27
+date: 2026-09-24
 category: 'Hastalıklarda Beslenme'
 tone: 'sage'
 icon: 'chart'
@@ -30,15 +30,15 @@ Her öğünde karbonhidratın yanında **protein** (yumurta, yoğurt, peynir, ba
 
 ## 4. Lif tüketiminizi artırın
 
-Lif, sindirimi yavaşlatarak kan şekerindeki ani yükselmelerin önüne geçmeye yardımcı olur ve tokluk hissini uzatır. Dünya Sağlık Örgütü, yetişkinlerin günde **en az 25 gram** doğal kaynaklı lif almasını önermektedir. Sebze, kabuğuyla tüketilen meyve, kuru baklagil ve tam tahıllar iyi birer lif kaynağıdır.
+Lif, sindirimi yavaşlatarak kan şekerindeki ani yükselmelerin önüne geçmeye yardımcı olur ve tokluk hissini uzatır. Dünya Sağlık Örgütü, yetişkinlerin günde **en az 25 gram** doğal kaynaklı lif almasını önermektedir. Sebzeler, kabuğuyla tüketilen meyveler, kuru baklagiller ve tam tahıllar iyi birer lif kaynağıdır.
 
 ## 5. Şekerli içecekleri sınırlayın
 
-Gazlı içecekler, hazır meyve suları ve şekerli kahveler kan şekerini hızla yükseltir ve fark etmeden fazla enerji almanıza neden olur. Susadığınızda su, maden suyu, ayran veya şekersiz bitki çayları tercih edin.
+Şekerli gazlı içecekler, hazır meyve suları ve şekerli kahveler kan şekerini hızla yükseltir ve fark etmeden fazla enerji almanıza neden olur. Susadığınızda su, maden suyu, ayran veya şekersiz bitki çayları tercih edin.
 
 ## 6. Hareketi hayatınızın bir parçası yapın
 
-Düzenli fiziksel aktivite, kasların glikozu kullanmasını kolaylaştırır ve insülin duyarlılığını destekler. Dünya Sağlık Örgütü yetişkinler için haftada **150–300 dakika** orta şiddetli fiziksel aktiviteyi (örneğin tempolu yürüyüş) ve haftada en az 2 gün kas güçlendirici egzersizleri önermektedir. Yemeklerden sonra yapılan kısa yürüyüşler bile iyi bir başlangıç olabilir.
+Düzenli fiziksel aktivite, kasların glikozu kullanmasını kolaylaştırır ve insülin duyarlılığını destekler. Dünya Sağlık Örgütü, yetişkinler için haftada **150–300 dakika** orta şiddetli fiziksel aktiviteyi (örneğin tempolu yürüyüş) ve haftada en az 2 gün kas güçlendirici egzersizleri önermektedir. Yemeklerden sonra yapılan kısa yürüyüşler bile iyi bir başlangıç olabilir.
 
 ## 7. Uyku ve stresi göz ardı etmeyin
 

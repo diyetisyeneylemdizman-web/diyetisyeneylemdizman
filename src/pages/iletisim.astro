@@ -26,7 +26,7 @@ import { site, fullAddress, whatsappLink } from '../data/site';
           <span>
             <strong>Telefon</strong>
             <span>{site.phoneDisplay}</span>
-            <em>Hemen ara →</em>
+            <em>Hemen Ara →</em>
           </span>
         </a>
         <a class="c-card" href={whatsappLink('Merhaba, web sitenizden ulaşıyorum. Bilgi almak istiyorum.')} target="_blank" rel="noopener">
@@ -34,7 +34,7 @@ import { site, fullAddress, whatsappLink } from '../data/site';
           <span>
             <strong>WhatsApp</strong>
             <span>{site.phoneDisplay}</span>
-            <em>Mesaj gönder →</em>
+            <em>Mesaj Gönder →</em>
           </span>
         </a>
         <a class="c-card wide" href={site.mapsUrl} target="_blank" rel="noopener">
@@ -42,7 +42,7 @@ import { site, fullAddress, whatsappLink } from '../data/site';
           <span>
             <strong>Adres</strong>
             <span>{fullAddress}</span>
-            <em>Yol tarifi al →</em>
+            <em>Yol Tarifi Al →</em>
           </span>
         </a>
         <a class="c-card wide" href={`mailto:${site.email}`}>
@@ -50,7 +50,7 @@ import { site, fullAddress, whatsappLink } from '../data/site';
           <span>
             <strong>E-posta</strong>
             <span>{site.email}</span>
-            <em>E-posta yaz →</em>
+            <em>E-posta Yaz →</em>
           </span>
         </a>
         <div class="hours card">
@@ -61,7 +61,7 @@ import { site, fullAddress, whatsappLink } from '../data/site';
                 site.hours.map((h) => (
                   <tr class:list={{ closed: !h.open }}>
                     <th scope="row">{h.day}</th>
-                    <td>{h.open ? `${h.open} – ${h.close}` : 'Kapalı'}</td>
+                    <td>{h.open ? `${h.open}–${h.close}` : 'Kapalı'}</td>
                   </tr>
                 ))
               }
@@ -125,9 +125,8 @@ import { site, fullAddress, whatsappLink } from '../data/site';
     min-width: 0;
   }
   .c-card strong {
-    font-size: 0.78rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: 0.88rem;
+    letter-spacing: 0.01em;
     color: var(--ink-3);
   }
   .c-card span span {
@@ -192,6 +191,9 @@ import { site, fullAddress, whatsappLink } from '../data/site';
     padding: 12px 14px;
     border-radius: 14px;
     background: var(--sage-50);
+  }
+  .social a :global(svg) {
+    flex: none;
   }
   .social a:hover {
     background: var(--sage-100);

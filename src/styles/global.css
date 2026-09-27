@@ -587,6 +587,11 @@ em.accent,
   view-transition-name: mobile-bar;
 }
 
+/* Mobil menü açıkken köşedeki butonlar ve alt çubuk menünün üstüne binmesin */
+body:has(.mobile-menu:not([hidden])) :is(.asst-launcher, .asst-teaser, .wa-float, .mobile-bar) {
+  display: none;
+}
+
 /* Sayfa açılışında başlık alanı hafifçe belirir */
 @keyframes rise {
   from {

@@ -20,11 +20,12 @@ derlenip yayına alınır.
 | Online görüşme adımları ve sık sorulanlar | `src/data/online-gorusme.ts` |
 | Ana sayfadaki süreç adımları | `src/data/process.ts` |
 | Sayfa geçişi ve açılış animasyonları | `src/styles/global.css` (“Hafif animasyonlar” bölümü) |
+| Menü sırası ve adları | `src/data/site.ts` (`nav`) |
 
 ## Sayfalar
 
-Ana sayfa · Hakkında · Hizmetler · Vücut Kitle İndeksi Hesaplama · Sertifikalar · Blog · İletişim · Online Görüşme ·
-Randevu Oluştur (form → WhatsApp) · KVKK Aydınlatma Metni
+Ana sayfa · Hakkında · Sertifikalar · Hizmetler · Vücut Kitle İndeksi Hesaplama · Online Görüşme · Blog & Reels ·
+İletişim · Randevu Oluştur (form → WhatsApp) · KVKK Aydınlatma Metni
 
 ## Site asistanı
 
@@ -37,6 +38,25 @@ Sağ alt köşedeki asistan yapay zekâ kullanmaz ve ücretsizdir:
 - Metinler, hazır sorular ve anahtar kelimeler `src/data/assistant.ts` dosyasındadır. Hizmetler ve blog yazıları
   asistana otomatik eklenir; bilgiler site derlenirken `/asistan-bilgi.json` dosyasına yazılır.
 - Kişiye özel sağlık tavsiyesi, fiyat ve sonuç vaadi verilmez; acil durum ifadelerinde 112'ye yönlendirir.
+
+## Instagram Reels (Blog & Reels)
+
+Ana sayfadaki ve Blog & Reels sayfasındaki videolar Instagram hesabından otomatik gelir:
+
+- `worker/index.ts` her 3 saatte bir Instagram API'den son videoları (Reels) alır, önizleme görsellerini saklar ve
+  sitede `/api/reels` adresinden sunar. Ziyaretçiler görselleri sitemizden görür; videoya tıklayınca Instagram açılır.
+- Gerekli tek ayar: Cloudflare panelinde Worker → Settings → Variables and Secrets → **Secret** türünde
+  `INSTAGRAM_TOKEN` (Instagram erişim anahtarı). Anahtar koda veya GitHub'a yazılmaz.
+- Anahtar 60 gün geçerlidir; Worker haftada bir kendiliğinden yeniler. Panelde yeni bir anahtar girilirse otomatik
+  olarak ona geçilir.
+- Anahtar yoksa ya da çalışmazsa sitede “Reels Videolarımızı Instagram’da İzleyin” kartı görünür; site etkilenmez.
+- Hata ayıklama: Cloudflare panelinde Worker → Logs (“Reels eşitleme: …” satırları).
+
+## Google yorumları
+
+Eklenmedi: Sağlık Hizmetlerinde Tanıtım ve Bilgilendirme Faaliyetleri Hakkında Yönetmelik (12.11.2025) md. 5(1)(e)
+ve 7(1)(ğ), hasta/danışan teşekkür ve memnuniyet ifadelerinin internet sitesinde paylaşılmasını, başka mecralarda
+yapılmış olsa bile, yasaklıyor.
 
 ## VKİ hesaplayıcı
 
@@ -63,4 +83,5 @@ npm run dev      # http://localhost:4321 adresinde önizleme
 npm run build    # yayın dosyalarını dist/ klasörüne üretir
 ```
 
-Cloudflare ayarları: `wrangler.jsonc` (derleme komutu `npm run build`, yayın komutu `npx wrangler deploy`).
+Cloudflare ayarları: `wrangler.jsonc` (derleme komutu `npm run build`, yayın komutu `npx wrangler deploy`). Sayfalar
+statik dosya olarak sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır (Instagram Reels).

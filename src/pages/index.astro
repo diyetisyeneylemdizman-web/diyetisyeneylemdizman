@@ -7,6 +7,7 @@ import Icon from '../components/Icon.astro';
 import LeafDecor from '../components/LeafDecor.astro';
 import BmiCalculator from '../components/BmiCalculator.astro';
 import PostCard from '../components/PostCard.astro';
+import ReelsGrid from '../components/ReelsGrid.astro';
 import MapEmbed from '../components/MapEmbed.astro';
 import CtaBand from '../components/CtaBand.astro';
 import { serviceCategories } from '../data/services';
@@ -51,9 +52,9 @@ const steps = processSteps;
           <a href="/vucut-kitle-indeksi-hesaplama/" class="btn btn-outline"><Icon name="scale" size={19} />VKİ’nizi Hesaplayın</a>
         </div>
         <ul class="hero-points">
-          <li><span><Icon name="video" size={18} /></span>Online & yüz yüze</li>
-          <li><span><Icon name="clipboard" size={18} /></span>Kişiye özel plan</li>
-          <li><span><Icon name="chart" size={18} /></span>Düzenli takip</li>
+          <li><span><Icon name="video" size={18} /></span>Online & Yüz Yüze</li>
+          <li><span><Icon name="clipboard" size={18} /></span>Kişiye Özel Plan</li>
+          <li><span><Icon name="chart" size={18} /></span>Düzenli Takip</li>
         </ul>
       </div>
 
@@ -76,12 +77,12 @@ const steps = processSteps;
           <img src="/logo/logo-simge.svg" width="136" height="206" alt="" />
           <div>
             <strong>Dyt. Eylem Dizman</strong>
-            <span>Dengeli beslenme,<br />sağlıklı alışkanlıklar</span>
+            <span>Dengeli beslenme<br />Sağlıklı alışkanlıklar</span>
           </div>
         </div>
         <div class="float-card card-online">
           <span class="dot" aria-hidden="true"></span>
-          Online görüşme
+          Online Görüşme
         </div>
       </div>
     </div>
@@ -95,15 +96,15 @@ const steps = processSteps;
         <ul class="facts">
           <li>
             <Icon name="cap" size={22} />
-            <span><strong>Beslenme ve Diyetetik</strong>İzmir Katip Çelebi Üniversitesi, Sağlık Bilimleri Fakültesi</span>
+            <span><strong>Beslenme ve Diyetetik</strong>İzmir Kâtip Çelebi Üniversitesi, Sağlık Bilimleri Fakültesi</span>
           </li>
           <li>
             <Icon name="clinic" size={22} />
-            <span><strong>{site.clinicName}</strong>Seyhan / Adana</span>
+            <span><strong>{site.clinicName}</strong>Seyhan/Adana</span>
           </li>
           <li>
             <Icon name="video" size={22} />
-            <span><strong>Online danışmanlık</strong>WhatsApp görüntülü görüşme ile</span>
+            <span><strong>Online Danışmanlık</strong>WhatsApp görüntülü görüşme ile</span>
           </li>
         </ul>
       </div>
@@ -111,11 +112,11 @@ const steps = processSteps;
         <p class="eyebrow">Hakkında</p>
         <h2>Diyetisyen Eylem Dizman</h2>
         <p class="lead">
-          Lisans öncesi öğrenimlerinin ardından İzmir Katip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve
-          Diyetetik Bölümü’nde başladığı eğitimini başarıyla tamamlayarak Diyetisyen unvanını almıştır.
+          Eylem Dizman, lisans öncesi öğreniminin ardından İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi
+          Beslenme ve Diyetetik Bölümünde başladığı eğitimini başarıyla tamamlayarak diyetisyen unvanını almıştır.
         </p>
-        <p>Diyetisyen Eylem Dizman, mesleki çalışmalarına {site.clinicName}’nde devam etmektedir.</p>
-        <a href="/hakkinda/" class="link-arrow">Hakkında daha fazlası <Icon name="arrowRight" size={18} /></a>
+        <p>Mesleki çalışmalarına {site.clinicName}nde devam etmektedir.</p>
+        <a href="/hakkinda/" class="link-arrow">Hakkında Daha Fazlası <Icon name="arrowRight" size={18} /></a>
       </div>
     </div>
   </section>
@@ -188,7 +189,7 @@ const steps = processSteps;
           Boyunuzu, kilonuzu ve yaşınızı girin; vücut kitle indeksinizi ve hangi aralıkta olduğunuzu hemen öğrenin. Sonucunuza
           göre sizin için uygun hizmete kolayca randevu oluşturabilirsiniz.
         </p>
-        <a href="/vucut-kitle-indeksi-hesaplama/" class="link-dark">VKİ hakkında detaylı bilgi <Icon name="arrowRight" size={18} /></a>
+        <a href="/vucut-kitle-indeksi-hesaplama/" class="link-dark">VKİ Hakkında Ayrıntılı Bilgi <Icon name="arrowRight" size={18} /></a>
       </div>
       <BmiCalculator variant="full" waist={false} />
     </div>
@@ -223,8 +224,8 @@ const steps = processSteps;
         </p>
         <ul class="checks">
           <li><Icon name="check" size={20} />Randevu formunda görüşme türü olarak “Online”ı seçin</li>
-          <li><Icon name="check" size={20} />Size uygun gün ve saat birlikte netleştirilsin</li>
-          <li><Icon name="check" size={20} />Görüşme saatinde WhatsApp görüntülü arama ile bağlanın</li>
+          <li><Icon name="check" size={20} />Size uygun gün ve saati birlikte netleştirelim</li>
+          <li><Icon name="check" size={20} />Görüşme saatinde WhatsApp görüntülü görüşmeyle bağlanın</li>
         </ul>
         <div class="hero-actions">
           <a href="/randevu-olustur/?tur=online#randevu-formu" class="btn btn-primary"
@@ -257,7 +258,7 @@ const steps = processSteps;
           <p>
             {
               certCount > 0
-                ? `Lisans diploması ve katıldığı eğitim, kongre ve seminerlere ait ${certCount} belgeyi inceleyin.`
+                ? `Eylem Dizman’ın lisans diploması ile katıldığı eğitim, kongre ve seminerlere ait ${certCount} belgeyi inceleyin.`
                 : 'Eylem Dizman’ın tamamladığı mesleki eğitim ve sertifika programlarını inceleyin.'
             }
           </p>
@@ -272,13 +273,16 @@ const steps = processSteps;
     <div class="container">
       <div class="head-row">
         <div class="section-head">
-          <p class="eyebrow">Blog</p>
-          <h2>Beslenme üzerine yazılar</h2>
+          <p class="eyebrow">Blog &amp; Reels</p>
+          <h2>Beslenme üzerine içerikler</h2>
         </div>
-        <a href="/blog/" class="link-arrow">Tüm yazılar <Icon name="arrowRight" size={18} /></a>
+        <a href="/blog/" class="link-arrow">Tüm İçerikler <Icon name="arrowRight" size={18} /></a>
       </div>
       <div class="post-grid">
         {posts.map((p) => <PostCard post={p} />)}
+      </div>
+      <div class="reels-wrap">
+        <ReelsGrid limit={4} />
       </div>
     </div>
   </section>
@@ -305,8 +309,8 @@ const steps = processSteps;
           <li>
             <span class="icon-badge"><Icon name="clock" /></span>
             <div>
-              <strong>Çalışma saatleri</strong>
-              <span>Pazartesi – Cuma: 09:00 – 18:00<br />Cumartesi: 09:00 – 15:00 · Pazar: Kapalı</span>
+              <strong>Çalışma Saatleri</strong>
+              <span>Pazartesi–Cuma: 09:00–18:00<br />Cumartesi: 09:00–15:00 · Pazar: Kapalı</span>
             </div>
           </li>
         </ul>
@@ -854,6 +858,9 @@ const steps = processSteps;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 24px;
   }
+  .reels-wrap {
+    margin-top: clamp(44px, 5vw, 60px);
+  }
   /* ---------- İletişim ---------- */
   .contact-grid {
     display: grid;
@@ -878,9 +885,8 @@ const steps = processSteps;
   }
   .contact-list strong {
     display: block;
-    font-size: 0.82rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 0.88rem;
+    letter-spacing: 0.01em;
     color: var(--ink-3);
     margin-bottom: 2px;
   }

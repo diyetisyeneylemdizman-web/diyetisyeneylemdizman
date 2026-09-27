@@ -5,7 +5,7 @@ export const site = {
   shortName: 'Dyt. Eylem Dizman',
   clinicName: 'Diyetisyen Eylem Dizman Kliniği',
   url: 'https://www.diyetisyeneylemdizman.com',
-  defaultTitle: 'Diyetisyen Eylem Dizman | Seyhan, Adana ve Online Beslenme Danışmanlığı',
+  defaultTitle: 'Diyetisyen Eylem Dizman | Seyhan/Adana ve Online Beslenme Danışmanlığı',
   defaultDescription:
     'Diyetisyen Eylem Dizman ile Seyhan/Adana’da yüz yüze veya WhatsApp görüntülü görüşmeyle online beslenme danışmanlığı. Kişiye özel beslenme planı, vücut analizi ve düzenli takip.',
 
@@ -16,7 +16,7 @@ export const site = {
 
   address: {
     line1: 'Reşatbey Mah. Ordu Cad. 62013. Sk.',
-    line2: 'Demir Apt. No:5 Kat:1 Daire:2',
+    line2: 'Demir Apt. No: 5 Kat: 1 Daire: 2',
     postalCode: '01120',
     district: 'Seyhan',
     city: 'Adana',
@@ -56,10 +56,10 @@ export const whatsappLink = (text?: string) =>
 
 export const nav = [
   { label: 'Hakkında', href: '/hakkinda/' },
+  { label: 'Sertifikalar', href: '/sertifikalar/' },
   { label: 'Hizmetler', href: '/hizmetler/' },
   { label: 'VKİ Hesaplama', href: '/vucut-kitle-indeksi-hesaplama/', title: 'Vücut Kitle İndeksi Hesaplama' },
-  { label: 'Sertifikalar', href: '/sertifikalar/' },
-  { label: 'Blog', href: '/blog/' },
-  { label: 'İletişim', href: '/iletisim/' },
   { label: 'Online Görüşme', href: '/online-gorusme/' },
+  { label: 'Blog & Reels', href: '/blog/' },
+  { label: 'İletişim', href: '/iletisim/' },
 ];

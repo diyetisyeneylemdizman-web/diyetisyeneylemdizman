@@ -1,7 +1,7 @@
 ---
 title: 'Sağlıklı ve Sürdürülebilir Kilo Kaybı İçin 8 Öneri'
-description: 'Şok diyetler yerine kalıcı alışkanlıklar: Gerçekçi hedeflerden tabak modeline, sıvı kalorilerden uykuya kadar sağlıklı kilo kaybını destekleyen 8 öneri.'
-date: 2026-09-27
+description: 'Şok diyetler yerine kalıcı alışkanlıklar: gerçekçi hedeflerden tabak modeline, sıvı kalorilerden uykuya kadar sağlıklı kilo kaybını destekleyen 8 öneri.'
+date: 2026-09-06
 category: 'Kilo Yönetimi'
 tone: 'beige'
 icon: 'scale'
@@ -26,7 +26,7 @@ Kalori saymak yerine basit bir görsel yöntem işinizi kolaylaştırabilir: Tab
 
 - Daha küçük tabak ve kaseler kullanın.
 - Yavaş yiyin ve lokmalarınızı iyi çiğneyin; doygunluk sinyallerinin beyne ulaşması zaman alır.
-- Ekran karşısında yemek yemek, ne kadar yediğinizi fark etmenizi zorlaştırır.
+- Ekran karşısında yemek yemekten kaçının; bu, ne kadar yediğinizi fark etmenizi zorlaştırır.
 
 ## 5. Sıvı kalorileri gözden kaçırmayın
 
@@ -48,4 +48,4 @@ Yetersiz uyku ve stres, iştah düzenini olumsuz etkileyebilir. Ayrıca tek bir 
 
 Tartıdaki sayı; sıvı dengesi, hormonal değişimler ve kas kütlesindeki artış gibi nedenlerle günden güne değişebilir. Bel çevreniz, enerji düzeyiniz, uyku kaliteniz ve kan değerleriniz de sürecin önemli göstergeleridir. Vücut analizi, kilonuzun ne kadarının yağ, ne kadarının kas ve sıvı olduğunu görmenize yardımcı olur.
 
-> Kronik bir hastalığınız varsa, düzenli ilaç kullanıyorsanız, gebe veya emziriyorsanız ya da 18 yaşından küçükseniz kilo vermeye yönelik bir programa başlamadan önce mutlaka hekiminize ve diyetisyeninize danışın.
+> Kronik bir hastalığınız varsa, düzenli ilaç kullanıyorsanız, gebeyseniz veya emziriyorsanız ya da 18 yaşından küçükseniz kilo vermeye yönelik bir programa başlamadan önce mutlaka hekiminize ve diyetisyeninize danışın.

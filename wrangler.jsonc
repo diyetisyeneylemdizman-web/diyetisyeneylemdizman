@@ -1,11 +1,29 @@
 {
-  // Cloudflare ayarları: site, derlenen "dist" klasöründen statik olarak yayınlanır.
+  // Cloudflare ayarları:
+  // - Site, derlenen "dist" klasöründen statik olarak yayınlanır.
+  // - Yalnızca /api/* adresleri worker/index.ts dosyasına gider (Instagram Reels bölümü).
+  // - Instagram erişim anahtarı burada DEĞİL, Cloudflare panelinde gizli değişken (INSTAGRAM_TOKEN) olarak tutulur.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "diyetisyeneylemdizman",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-09-01",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  },
+  // Reels listesi, önizleme görselleri ve yenilenen anahtar burada saklanır (ek kurulum gerekmez)
+  "durable_objects": {
+    "bindings": [{ "name": "REELS", "class_name": "ReelsStore" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReelsStore"] }],
+  // Instagram'daki yeni videolar her 3 saatte bir kontrol edilir
+  "triggers": {
+    "crons": ["17 */3 * * *"]
+  },
+  "observability": {
+    "enabled": true
   }
 }

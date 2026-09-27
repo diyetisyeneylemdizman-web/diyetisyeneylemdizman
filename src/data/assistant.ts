@@ -74,7 +74,7 @@ export const assistant = {
   /** Köşede birkaç saniye sonra beliren karşılama balonu */
   teaser: 'Merhaba! Size nasıl yardımcı olabilirim?',
   teaserDelayMs: 6000,
-  welcome: `Merhaba! Ben ${site.clinicName}’nin site asistanıyım. Randevu, online görüşme, hizmetler ve çalışma saatleriyle ilgili sorularınızı yanıtlayabilirim.`,
+  welcome: `Merhaba! Ben ${site.clinicName}nin site asistanıyım. Randevu, online görüşme, hizmetler ve çalışma saatleriyle ilgili sorularınızı yanıtlayabilirim.`,
   hint: 'Aşağıdan bir konu seçebilir ya da sorunuzu yazabilirsiniz.',
   inputPlaceholder: 'Sorunuzu yazın…',
   privacyNote: 'Asistan hazır bilgilerle yanıt verir, kişisel sağlık değerlendirmesi yapmaz. Yazdıklarınız hiçbir yere gönderilmez.',
@@ -95,7 +95,7 @@ export const topics: Topic[] = [
     id: 'online',
     chip: true,
     q: 'Online görüşme nasıl oluyor?',
-    a: 'Online görüşmeler WhatsApp görüntülü arama ile yapılır. Randevu formunda görüşme türü olarak “Online”ı seçmeniz yeterli; gün ve saat birlikte netleştirilir. Değerlendirme ve planlama süreci yüz yüze görüşmeyle aynıdır, yalnızca cihazla yapılan vücut analizi online yapılamaz. Başka bir şehirden veya yurt dışından da görüşebilirsiniz.',
+    a: 'Online görüşmeler WhatsApp görüntülü görüşmeyle yapılır. Randevu formunda görüşme türü olarak “Online”ı seçmeniz yeterli; gün ve saat birlikte netleştirilir. Değerlendirme ve planlama süreci yüz yüze görüşmeyle aynıdır; yalnızca cihazla yapılan vücut analizi için kliniğe gelmeniz gerekir. Başka bir şehirden veya yurt dışından da görüşebilirsiniz.',
     actions: ['online', 'sayfa:/online-gorusme/'],
     k: ['online', 'online randevu', 'online görüşme', 'onlain', 'uzaktan', 'internetten', 'internet üzerinden', 'görüntülü', 'video', 'şehir dışı', 'başka şehir', 'başka ilde', 'yurt dışı', 'yurtdışı', 'gelemiyorum', 'gelemem', 'evden'],
   },
@@ -111,7 +111,7 @@ export const topics: Topic[] = [
     id: 'hizmetler',
     chip: true,
     q: 'Hangi konularda destek alabilirim?',
-    a: 'Kilo yönetimi (zayıflama, kilo alma, obezite), hastalıklarda beslenme (diyabet, insülin direnci, polikistik over, hipertansiyon, kolesterol, gut, bağırsak sorunları gibi), gebelik ve çocuk beslenmesi ile vücut analizi, kişiye özel beslenme planı ve takip konularında danışmanlık verilmektedir.',
+    a: 'Kilo yönetimi (zayıflama, kilo alma, obezite), hastalıklarda beslenme (diyabet, insülin direnci, polikistik over sendromu, hipertansiyon, yüksek kolesterol, gut, bağırsak sorunları gibi), gebelik ve çocuk beslenmesi konularında danışmanlık verilmektedir. Vücut analizi, kişiye özel beslenme planı ve düzenli takip de hizmetler arasındadır.',
     actions: ['sayfa:/hizmetler/', 'randevu'],
     k: ['hizmet', 'konular', 'hangi konu', 'neler yapıyor', 'diyet yap', 'diyet program', 'diyetler', 'diyetleri', 'hangi diyet', 'beslenme danışman', 'danışmanlık', 'program', 'hangi hastalık'],
   },
@@ -143,13 +143,13 @@ export const topics: Topic[] = [
     id: 'vki',
     chip: true,
     q: 'Vücut kitle indeksi hesaplama',
-    a: 'Vücut Kitle İndeksi hesaplama sayfamızda boy ve kilonuzu girerek VKİ değerinizi öğrenebilirsiniz. Bilgileriniz hiçbir yere gönderilmez; hesaplama cihazınızda yapılır.',
+    a: 'Vücut Kitle İndeksi Hesaplama sayfamızda cinsiyetinizi, boyunuzu, kilonuzu ve yaşınızı girerek VKİ değerinizi öğrenebilirsiniz. Bilgileriniz hiçbir yere gönderilmez; hesaplama cihazınızda yapılır.',
     actions: ['sayfa:/vucut-kitle-indeksi-hesaplama/'],
     k: ['vki', 'vücut kitle', 'beden kitle', 'bmi', 'ideal kilo', 'kilom', 'boyum', 'boy kilo', 'hesapla', 'normal kilo'],
   },
   {
     id: 'hazirlik',
-    q: 'Görüşmeye nasıl hazırlanmalıyım?',
+    q: 'Online görüşmeye nasıl hazırlanmalıyım?',
     a: `Online görüşmeden önce şunları hazırlamanız önerilir:\n${onlinePrepare.map((p) => `- ${p}`).join('\n')}`,
     actions: ['sayfa:/online-gorusme/'],
     k: ['hazırlan', 'hazırlık', 'ne gerek', 'gerekenler', 'gerekli', 'yanımda', 'getir', 'ne getir', 'tahlil getir', 'önceden'],
@@ -157,37 +157,37 @@ export const topics: Topic[] = [
   {
     id: 'sure',
     q: 'Görüşme ne kadar sürüyor?',
-    a: 'Görüşme süresiyle ilgili sitede bir bilgi yer almıyor. En doğru bilgiyi WhatsApp’tan ya da telefonla alabilirsiniz.',
+    a: 'Görüşme süresiyle ilgili en doğru bilgiyi WhatsApp’tan ya da telefonla alabilirsiniz.',
     actions: ['whatsapp', 'telefon'],
     k: ['ne kadar sürüyor', 'ne kadar sürer', 'ne kadar sürecek', 'kaç dakika', 'kaç saat sürüyor', 'süresi', 'görüşme süre', 'seans süre', 'uzun sürer'],
   },
   {
     id: 'iptal',
-    q: 'Randevumu nasıl değiştirebilirim?',
-    a: 'Randevunuzu değiştirmek veya iptal etmek için WhatsApp’tan ya da telefonla ulaşabilirsiniz.',
+    q: 'Randevumu nasıl değiştirebilir veya iptal edebilirim?',
+    a: 'Randevunuzu değiştirmek veya iptal etmek için WhatsApp’tan ya da telefonla bize ulaşabilirsiniz.',
     actions: ['whatsapp', 'telefon'],
     k: ['iptal', 'ertele', 'değiştir', 'randevumu', 'randevuma', 'gelemeyeceğim', 'gelemiyecem'],
   },
   {
     id: 'vaat',
     q: 'Ne kadar sürede sonuç alırım?',
-    a: 'Sonuçlar kişiden kişiye değişir; bu nedenle süre veya kilo vaadi verilemez. Size uygun, gerçekçi hedefler ilk görüşmede birlikte belirlenir.',
+    a: 'Sonuçlar kişiden kişiye değişir; bu nedenle belirli bir süre veya kilo kaybı vaat edilemez. Size uygun, gerçekçi hedefler ilk görüşmede birlikte belirlenir.',
     actions: ['randevu'],
     k: ['ne kadar sürede', 'kaç haftada', 'kaç ayda', 'kaç günde', 'garanti', 'kesin sonuç', 'hızlı kilo', 'kaç kilo ver', 'ayda kaç', 'haftada kaç'],
   },
   {
     id: 'hakkinda',
     q: 'Diyetisyen Eylem Dizman hakkında',
-    a: `${site.name}, İzmir Katip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve Diyetetik Bölümü mezunudur. Seyhan/Adana’daki kliniğinde yüz yüze, WhatsApp görüntülü görüşmeyle de online danışmanlık vermektedir. Katıldığı eğitim ve kongrelere ait belgeleri Sertifikalar sayfasında inceleyebilirsiniz.`,
+    a: `${site.name}, İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve Diyetetik Bölümü mezunudur. Seyhan/Adana’daki kliniğinde yüz yüze, WhatsApp görüntülü görüşmeyle de online danışmanlık vermektedir. Katıldığı eğitim ve kongrelere ait belgeleri Sertifikalar sayfasında inceleyebilirsiniz.`,
     actions: ['sayfa:/hakkinda/', 'sayfa:/sertifikalar/'],
     k: ['kimdir', 'kimsiniz', 'hakkında', 'eğitim', 'mezun', 'üniversite', 'diploma', 'sertifika', 'deneyim', 'tecrübe', 'özgeçmiş', 'uzman', 'uzman diyetisyen'],
   },
   {
     id: 'blog',
-    q: 'Blog yazıları',
-    a: 'Blog sayfamızda beslenme üzerine yazılar bulabilirsiniz.',
+    q: 'Blog & Reels',
+    a: 'Blog & Reels sayfamızda beslenme üzerine yazılar ve Instagram’da paylaştığımız Reels videoları yer alıyor.',
     actions: ['sayfa:/blog/'],
-    k: ['blog', 'yazı', 'makale', 'okumak', 'okuyabilir'],
+    k: ['blog', 'yazı', 'makale', 'okumak', 'okuyabilir', 'reels', 'reel', 'video', 'videolar', 'izlemek', 'içerik'],
   },
   {
     id: 'kvkk',
@@ -201,7 +201,7 @@ export const topics: Topic[] = [
 /** Acil durum belirtileri: diğer her şeyden önce kontrol edilir */
 export const emergency: Topic = {
   id: 'acil',
-  a: 'Anlattığınız belirtiler acil bir durum olabilir. Lütfen vakit kaybetmeden 112’yi arayın.',
+  a: 'Anlattığınız belirtiler acil bir duruma işaret edebilir. Lütfen vakit kaybetmeden 112’yi arayın.',
   actions: ['acil'],
   k: ['göğüs ağrı', 'göğsüm ağrı', 'göğsümde ağrı', 'nefes alamıyorum', 'nefes darlığ', 'bayıld', 'bayılıyor', 'bayılacak', 'bilincini kaybet', 'felç', 'zehirlen', 'alerjik reaksiyon', 'anafilaksi', 'kalp krizi geçiriyor', 'kriz geçiriyor', 'nöbet geçiriyor', 'acil durum'],
 };
@@ -209,7 +209,7 @@ export const emergency: Topic = {
 /** Ruhsal sıkıntı, yeme bozukluğu, kendine zarar verme */
 export const sensitive: Topic = {
   id: 'destek',
-  a: 'Bunu paylaştığınız için teşekkür ederim; yalnız değilsiniz. Yaşadıklarınız için bir hekimden ya da ruh sağlığı uzmanından destek almanız çok önemli. Kendinize zarar verme düşünceniz varsa ya da acil bir durum varsa lütfen hemen 112’yi arayın.',
+  a: 'Bunu paylaştığınız için teşekkür ederim; yalnız değilsiniz. Yaşadıklarınız için bir hekimden ya da ruh sağlığı uzmanından destek almanız çok önemli. Kendinize zarar verme düşünceniz ya da acil bir durum varsa lütfen hemen 112’yi arayın.',
   actions: ['acil'],
   k: ['intihar', 'kendime zarar', 'kendimi öldür', 'kendimi kes', 'yaşamak istemiyorum', 'ölmek istiyorum', 'kendimi kustur', 'kusturuyorum', 'yemek yiyemiyorum', 'yemek yemiyorum', 'anoreksi', 'bulimi', 'tıkınırcasına', 'yeme bozukluğ', 'kendimden nefret'],
 };
@@ -217,7 +217,7 @@ export const sensitive: Topic = {
 /** Kişiye özel sağlık/beslenme soruları: kişisel tavsiye verilmez, görüşmeye yönlendirilir */
 export const personal: Topic = {
   id: 'kisisel',
-  a: 'Size özel beslenme önerisi, tahlil ya da ilaç değerlendirmesi kişisel bir inceleme gerektirir; bu nedenle burada kişisel tavsiye veremiyorum. Bunu görüşmede birlikte değerlendirebiliriz.',
+  a: 'Size özel beslenme önerisi, tahlil ya da ilaç değerlendirmesi kişisel bir inceleme gerektirir; bu nedenle burada tavsiye veremiyorum. Bunu görüşmede birlikte ele alabiliriz.',
   actions: ['randevu', 'whatsapp'],
   k: ['ne yemeli', 'ne yiyebil', 'yiyebilir miyim', 'yesem', 'yersem', 'içebilir miyim', 'içsem', 'kaç kalori', 'kalori', 'diyet listesi', 'liste ver', 'liste atar', 'liste gönder', 'program yaz', 'menü yaz', 'tahlilim', 'tahlil sonuç', 'sonuçlarım', 'değerim', 'değerlerim', 'ilaç', 'takviye', 'vitamin', 'hapı', 'zararlı mı', 'faydalı mı', 'yararlı mı', 'sağlıklı mı', 'işe yarar mı', 'yapmalı mıyım', 'kilo aldırır mı', 'kilo yaptırır mı', 'zayıflatır mı'],
 };
@@ -237,7 +237,7 @@ export const thanks: Topic = {
 /** Eşleşme bulunamazsa */
 export const fallback: Topic = {
   id: 'bulunamadi',
-  a: 'Bu sorunun cevabını burada bulamadım. Aşağıdaki konulardan birini seçebilir ya da sorunuzu WhatsApp’tan iletebilirsiniz.',
+  a: 'Bu sorunun cevabını burada bulamadım. Aşağıdaki konulardan birini seçebilir, sorunuzu WhatsApp’tan iletebilir ya da bizi arayabilirsiniz.',
   actions: ['whatsapp', 'telefon'],
   k: [],
 };
@@ -280,7 +280,7 @@ export const assistantPages: Record<string, string> = {
   '/hizmetler/': 'Hizmetler',
   '/vucut-kitle-indeksi-hesaplama/': 'VKİ Hesapla',
   '/sertifikalar/': 'Sertifikalar',
-  '/blog/': 'Blog',
+  '/blog/': 'Blog & Reels',
   '/iletisim/': 'İletişim',
   '/online-gorusme/': 'Online Görüşme',
   '/randevu-olustur/': 'Randevu Oluştur',

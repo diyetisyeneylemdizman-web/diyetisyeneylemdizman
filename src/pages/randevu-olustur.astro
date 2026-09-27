@@ -5,8 +5,8 @@ import Icon from '../components/Icon.astro';
 import { serviceCategories } from '../data/services';
 import { site } from '../data/site';
 
-const days = ['Farketmez', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)', 'Öğleden sonra (15:00 – 18:00)'];
+const days = ['Fark etmez', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+const times = ['Fark etmez', 'Sabah (09:00–12:00)', 'Öğle (12:00–15:00)', 'Öğleden sonra (15:00–18:00)'];
 ---
 
 <BaseLayout
@@ -42,13 +42,13 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
         </div>
 
         <fieldset class="field type">
-          <legend class="label">Görüşme türü <span aria-hidden="true">*</span></legend>
+          <legend class="label">Görüşme Türü <span aria-hidden="true">*</span></legend>
           <div class="type-options">
             <label class="type-option">
               <input type="radio" name="tur" value="yuz-yuze" checked />
               <span class="type-card">
                 <Icon name="clinic" size={24} />
-                <span><strong>Yüz yüze</strong><small>Seyhan / Adana’daki klinikte</small></span>
+                <span><strong>Yüz Yüze</strong><small>Seyhan/Adana’daki klinikte</small></span>
               </span>
             </label>
             <label class="type-option">
@@ -62,7 +62,7 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
         </fieldset>
 
         <div class="field">
-          <label for="hizmet">İlgilendiğiniz konu</label>
+          <label for="hizmet">İlgilendiğiniz Konu</label>
           <select class="select" id="hizmet" name="hizmet">
             <option value="">Emin değilim / Genel danışmanlık</option>
             {
@@ -79,13 +79,13 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
 
         <div class="grid-fields">
           <div class="field">
-            <label for="gun">Tercih ettiğiniz gün</label>
+            <label for="gun">Tercih Ettiğiniz Gün</label>
             <select class="select" id="gun" name="gun">
               {days.map((d) => <option value={d}>{d}</option>)}
             </select>
           </div>
           <div class="field">
-            <label for="saat">Tercih ettiğiniz saat</label>
+            <label for="saat">Tercih Ettiğiniz Saat</label>
             <select class="select" id="saat" name="saat">
               {times.map((t) => <option value={t}>{t}</option>)}
             </select>
@@ -93,7 +93,7 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
         </div>
 
         <div class="field">
-          <label for="not">Eklemek istedikleriniz <span class="hint">(isteğe bağlı)</span></label>
+          <label for="not">Eklemek İstedikleriniz <span class="hint">(isteğe bağlı)</span></label>
           <textarea class="textarea" id="not" name="not" maxlength="500" placeholder="Kısaca belirtmek istediğiniz bir not varsa yazabilirsiniz."></textarea>
           <p class="hint">Lütfen ayrıntılı sağlık bilgilerinizi burada paylaşmayın; bunları görüşmede birlikte konuşacağız.</p>
         </div>
@@ -101,7 +101,7 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
         <label class="consent">
           <input type="checkbox" name="kvkk" required />
           <span>
-            Randevu talebimin iletilmesi için bilgilerimin WhatsApp üzerinden paylaşılacağını biliyorum.
+            Randevu talebimin iletilmesi için bilgilerimin WhatsApp üzerinden paylaşılacağını biliyorum.{' '}
             <a href="/kvkk-aydinlatma-metni/" target="_blank">KVKK Aydınlatma Metni</a>’ni okudum.
           </span>
         </label>
@@ -111,8 +111,8 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
           <Icon name="whatsapp" size={20} />WhatsApp ile Randevu Talebi Gönder
         </button>
         <p class="after-note">
-          Butona bastığınızda WhatsApp, bilgileriniz hazır bir mesaj olarak açılır. Mesajı göndermek için WhatsApp’ta
-          <strong>Gönder</strong>’e basmanız yeterli.
+          Butona bastığınızda WhatsApp, bilgilerinizi içeren hazır bir mesajla açılır. Mesajı göndermek için
+          WhatsApp’ta <strong>Gönder</strong>’e basmanız yeterli.
         </p>
       </form>
 
@@ -134,8 +134,8 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
         <div class="card side-card">
           <h2>Çalışma saatleri</h2>
           <p class="hours">
-            Pazartesi – Cuma: <strong>09:00 – 18:00</strong><br />
-            Cumartesi: <strong>09:00 – 15:00</strong><br />
+            Pazartesi–Cuma: <strong>09:00–18:00</strong><br />
+            Cumartesi: <strong>09:00–15:00</strong><br />
             Pazar: <strong>Kapalı</strong>
           </p>
         </div>
@@ -375,7 +375,7 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
     if (vki && durum) {
       const note = form.querySelector<HTMLElement>('[data-bmi-note]')!;
       form.querySelector<HTMLElement>('[data-bmi-note-text]')!.textContent =
-        `VKİ sonucunuz (${vki} – ${durum}) randevu talebinize eklenecek.`;
+        `VKİ sonucunuz randevu talebinize eklenecek: ${vki} – ${durum}`;
       note.hidden = false;
     }
 
@@ -418,8 +418,8 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
       }
 
       const tur = (form.querySelector<HTMLInputElement>('input[name="tur"]:checked')?.value ?? 'yuz-yuze') === 'online'
-        ? 'Online (WhatsApp görüntülü)'
-        : 'Yüz yüze (klinik)';
+        ? 'Online (WhatsApp görüntülü görüşme)'
+        : 'Yüz yüze (klinikte)';
       const konu = el<HTMLSelectElement>('hizmet').value || 'Emin değilim / Genel danışmanlık';
       const gun = el<HTMLSelectElement>('gun').value;
       const saat = el<HTMLSelectElement>('saat').value;
@@ -435,7 +435,7 @@ const times = ['Farketmez', 'Sabah (09:00 – 12:00)', 'Öğle (12:00 – 15:00)
         `• Tercih ettiğim gün: ${gun}`,
         `• Tercih ettiğim saat: ${saat}`,
       ];
-      if (vki && durum) lines.push(`• VKİ sonucum: ${vki} (${durum})`);
+      if (vki && durum) lines.push(`• VKİ sonucum: ${vki} – ${durum}`);
       if (not) lines.push(`• Not: ${not}`);
 
       const url = `https://wa.me/${form.dataset.wa}?text=${encodeURIComponent(lines.join('\n'))}`;

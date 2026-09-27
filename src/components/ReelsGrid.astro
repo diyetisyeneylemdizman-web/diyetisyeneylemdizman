@@ -1,0 +1,282 @@
+---
+// Instagram Reels bölümü
+// Videolar /api/reels adresinden (worker/index.ts) gelir. Liste yoksa ya da henüz kurulum yapılmadıysa
+// "Instagram'da izleyin" kartı görünür. Önizleme görselleri sitemizden sunulur; ziyaretçi bilgisi Instagram'a gitmez.
+import Icon from './Icon.astro';
+import { site } from '../data/site';
+
+interface Props {
+  /** Gösterilecek en fazla video sayısı */
+  limit?: number;
+  title?: string;
+  headingLevel?: 'h2' | 'h3';
+}
+const { limit = 4, title = 'Instagram Reels', headingLevel = 'h3' } = Astro.props;
+const Heading = headingLevel;
+---
+
+<div class="reels" data-reels data-limit={limit}>
+  <div class="reels-head">
+    <Heading class="reels-title"><span class="reels-badge"><Icon name="instagram" size={20} /></span>{title}</Heading>
+    <a href={site.instagram} target="_blank" rel="noopener" class="link-arrow" data-reels-more hidden>
+      Instagram’da Tümünü İzle <Icon name="arrowRight" size={18} />
+    </a>
+  </div>
+
+  <div class="reels-grid" data-reels-grid hidden></div>
+
+  <a href={site.instagram} target="_blank" rel="noopener" class="reels-fallback" data-reels-fallback>
+    <span class="reels-fallback-icon"><Icon name="play" size={22} /></span>
+    <span class="reels-fallback-text">
+      <strong>Reels Videolarımızı Instagram’da İzleyin</strong>
+      <small>{site.instagramHandle} hesabımızda beslenme üzerine kısa videolar paylaşıyoruz.</small>
+    </span>
+    <Icon name="arrowRight" size={20} />
+  </a>
+</div>
+
+<style>
+  .reels :global([hidden]) {
+    display: none !important;
+  }
+  .reels-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .reels-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    font-size: clamp(1.35rem, 2.2vw, 1.65rem);
+  }
+  .reels-badge {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--terracotta-50);
+    color: var(--terracotta-700);
+  }
+
+  .reels-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .reels-grid[hidden] {
+    display: none;
+  }
+  .reels-grid :global(.reel) {
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgb(41 44 41 / 0.05);
+    color: var(--ink);
+    text-decoration: none;
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .reels-grid :global(.reel:hover) {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+  }
+  .reels-grid :global(.reel:focus-visible) {
+    outline: 2.5px solid var(--terracotta-700);
+    outline-offset: 3px;
+  }
+  .reels-grid :global(.reel-media) {
+    position: relative;
+    display: block;
+    aspect-ratio: 3 / 4;
+    background: linear-gradient(160deg, var(--sage-100), var(--beige-soft));
+  }
+  .reels-grid :global(.reel-media img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .reels-grid :global(.reel-play) {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgb(255 253 249 / 0.92);
+    color: var(--terracotta-700);
+    box-shadow: 0 6px 16px -6px rgb(41 44 41 / 0.45);
+  }
+  .reels-grid :global(.reel-body) {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px 16px;
+  }
+  .reels-grid :global(.reel-caption) {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+  .reels-grid :global(.reel-date) {
+    font-size: 0.8rem;
+    color: var(--ink-3);
+  }
+
+  .reels-fallback {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    border-radius: var(--radius);
+    background: var(--paper);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgb(41 44 41 / 0.05);
+    color: var(--ink);
+    text-decoration: none;
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .reels-fallback:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+  .reels-fallback[hidden] {
+    display: none;
+  }
+  .reels-fallback-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--terracotta-700);
+    color: #fff;
+  }
+  .reels-fallback-text {
+    flex: 1;
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .reels-fallback-text strong {
+    font-size: 1.02rem;
+  }
+  .reels-fallback-text small {
+    color: var(--ink-2);
+    font-size: 0.9rem;
+  }
+  .reels-fallback > :global(svg:last-child) {
+    flex: none;
+    color: var(--terracotta-700);
+  }
+
+  @media (max-width: 900px) {
+    .reels-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+  }
+  @media (max-width: 480px) {
+    .reels-grid :global(.reel-body) {
+      padding: 12px 12px 14px;
+    }
+    .reels-grid :global(.reel-caption) {
+      font-size: 0.88rem;
+    }
+    .reels-fallback {
+      padding: 18px;
+      gap: 14px;
+    }
+  }
+</style>
+
+<script>
+  type Reel = { id: string; url: string; caption: string; date: string; img: string };
+
+  const PLAY =
+    '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 5.8v12.4a.8.8 0 0 0 1.2.7l9.6-6.2a.8.8 0 0 0 0-1.4L9.7 5.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>';
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const card = (r: Reel) => {
+    const a = document.createElement('a');
+    a.className = 'reel';
+    a.href = r.url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.setAttribute('aria-label', `Instagram’da izle: ${r.caption || 'Reels videosu'}`);
+
+    const media = document.createElement('span');
+    media.className = 'reel-media';
+    if (r.img) {
+      const img = document.createElement('img');
+      img.src = r.img;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      media.append(img);
+    }
+    const play = document.createElement('span');
+    play.className = 'reel-play';
+    play.innerHTML = PLAY;
+    media.append(play);
+
+    const body = document.createElement('span');
+    body.className = 'reel-body';
+    const caption = document.createElement('span');
+    caption.className = 'reel-caption';
+    caption.textContent = r.caption || 'Reels videosu';
+    body.append(caption);
+    const date = formatDate(r.date);
+    if (date) {
+      const time = document.createElement('time');
+      time.className = 'reel-date';
+      time.dateTime = r.date;
+      time.textContent = date;
+      body.append(time);
+    }
+    a.append(media, body);
+    return a;
+  };
+
+  const roots = document.querySelectorAll<HTMLElement>('[data-reels]');
+  if (roots.length) {
+    fetch('/api/reels', { headers: { Accept: 'application/json' } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { items?: Reel[] } | null) => {
+        const items = (data?.items ?? []).filter((r) => r && r.url && /^https:\/\/(www\.)?instagram\.com\//.test(r.url));
+        if (!items.length) return;
+        roots.forEach((root) => {
+          const limit = Number(root.dataset.limit) || 4;
+          const grid = root.querySelector<HTMLElement>('[data-reels-grid]')!;
+          grid.replaceChildren(...items.slice(0, limit).map(card));
+          grid.hidden = false;
+          root.querySelector<HTMLElement>('[data-reels-fallback]')!.hidden = true;
+          root.querySelector<HTMLElement>('[data-reels-more]')!.hidden = false;
+        });
+      })
+      .catch(() => {});
+  }
+</script>

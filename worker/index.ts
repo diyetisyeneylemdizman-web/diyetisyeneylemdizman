@@ -1,258 +1,225 @@
-// Cloudflare Worker
-// - Sitenin sayfaları "dist" klasöründen doğrudan sunulur; bu dosya yalnızca /api/* adreslerinde çalışır.
-// - /api/asistan: site asistanının yapay zekâ bağlantısı.
+// Cloudflare Worker — Instagram Reels bölümü
 //
-// Yapay zekâ anahtarı Cloudflare panelinde Worker → Settings → Variables and Secrets bölümünde
-// "ANTHROPIC_API_KEY" adıyla gizli değişken (Secret) olarak tanımlanır. Anahtar yoksa asistan yalnızca
-// hazır cevaplarla çalışır; site bundan etkilenmez.
+// Sitenin sayfaları "dist" klasöründen doğrudan sunulur; bu dosya yalnızca /api/* adreslerinde çalışır:
+//   /api/reels               → son Reels videolarının listesi (JSON)
+//   /api/reels/gorsel/<id>   → videonun önizleme görseli (sitemizden sunulur)
 //
-// Gizlilik: Ziyaretçi mesajları yalnızca yanıt üretmek için yapay zekâ servisine iletilir, burada saklanmaz
-// ve kayıtlara (log) yazılmaz. Yapay zekâ servisine IP adresi veya kimlik bilgisi gönderilmez.
+// Nasıl çalışır?
+// - Her 3 saatte bir (wrangler.jsonc → triggers) Instagram hesabındaki son videolar Instagram API'den alınır,
+//   önizleme görselleri indirilip saklanır. Ziyaretçiler görselleri sitemizden görür; ziyaretçi bilgisi Instagram'a
+//   gönderilmez. Videoya tıklayan ziyaretçi Instagram'da izler.
+// - Instagram erişim anahtarı Cloudflare panelinde Worker → Settings → Variables and Secrets bölümünde
+//   "INSTAGRAM_TOKEN" adıyla gizli değişken (Secret) olarak tanımlanır. Anahtar kodda veya GitHub'da durmaz.
+// - Anahtar 60 gün geçerlidir; bu dosya anahtarı haftada bir kendiliğinden yeniler. Anahtar yoksa ya da çalışmazsa
+//   sitede "Instagram'da izleyin" bağlantısı görünür; site bundan etkilenmez.
+// - Panelde anahtar değiştirilirse (yeni anahtar girilirse) yenisi otomatik olarak kullanılmaya başlanır.
+
+import { DurableObject } from 'cloudflare:workers';
 
 interface Env {
   ASSETS: { fetch(input: Request | URL | string, init?: RequestInit): Promise<Response> };
-  ANTHROPIC_API_KEY?: string;
-  /** İsteğe bağlı: farklı bir model kullanmak için */
-  ASISTAN_MODEL?: string;
-  /** Yalnızca yerel test için */
-  ANTHROPIC_BASE_URL?: string;
+  REELS: DurableObjectNamespace<ReelsStore>;
+  /** Instagram erişim anahtarı (Cloudflare panelinde Secret) */
+  INSTAGRAM_TOKEN?: string;
+  /** Yalnızca yerel test için: Instagram API adresi */
+  IG_API_BASE?: string;
 }
 
-type Action = { label: string; href: string; external?: boolean; primary?: boolean };
-type Knowledge = {
-  system: string;
-  actions: Record<string, Action>;
-  services: string[];
-  pages: Record<string, string>;
+type Reel = { id: string; url: string; caption: string; date: string; img: string };
+type ReelList = { updatedAt: string; items: Reel[] };
+type IgMedia = {
+  id: string;
+  caption?: string;
+  media_type?: string;
+  media_product_type?: string;
+  permalink?: string;
+  thumbnail_url?: string;
+  timestamp?: string;
 };
-type Message = { role: 'user' | 'assistant'; content: string };
+type TokenRecord = { value: string; from: string; at: number };
+type StoredImage = { type: string; data: ArrayBuffer };
 
-const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
-const MAX_TOKENS = 400;
-const MAX_MESSAGES = 12;
-const MAX_USER_CHARS = 600;
-const MAX_ASSISTANT_CHARS = 1500;
-const MAX_BODY_BYTES = 24_000;
-const LIMIT_PER_MINUTE = 8;
-const LIMIT_PER_HOUR = 60;
+const KEEP = 12; // sitede gösterilebilecek en fazla video
+const REFRESH_EVERY = 7 * 24 * 60 * 60 * 1000; // anahtar haftada bir yenilenir (60 gün geçerli)
+const FIRST_TRY_GAP = 10 * 60 * 1000; // ilk kurulumda en fazla 10 dakikada bir deneme
+const MAX_IMAGE_BYTES = 1_500_000;
+const FIELDS = 'id,caption,media_type,media_product_type,permalink,thumbnail_url,timestamp';
 
-let cachedKnowledge: { data: Knowledge; at: number } | null = null;
-const hits = new Map<string, number[]>();
+const apiBase = (env: Env) => (env.IG_API_BASE || 'https://graph.instagram.com').replace(/\/$/, '');
 
-const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
-      'x-content-type-options': 'nosniff',
-      ...extra,
-    },
-  });
+async function fingerprint(text: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].slice(0, 12).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
-    if (url.pathname === '/api/asistan' || url.pathname === '/api/asistan/') {
+/** Açıklamanın ilk dolu satırını, etiketler (#) olmadan kısaltır. */
+function shortCaption(caption = '') {
+  const first = caption.split('\n').find((line) => line.trim()) ?? '';
+  const clean = first.replace(/#[\p{L}\p{N}_]+/gu, '').replace(/\s+/g, ' ').trim();
+  if (clean.length <= 90) return clean;
+  return clean.slice(0, 88).replace(/\s+\S*$/, '') + '…';
+}
+
+const isVideo = (m: IgMedia) =>
+  Boolean(m.permalink) && (m.media_product_type === 'REELS' || (m.media_type === 'VIDEO' && m.media_product_type !== 'STORY'));
+
+/** Reels verisini ve anahtarı saklayan kalıcı depo (Cloudflare Durable Object). */
+export class ReelsStore extends DurableObject<Env> {
+  async list(): Promise<ReelList | null> {
+    return (await this.ctx.storage.get<ReelList>('list')) ?? null;
+  }
+
+  async image(id: string): Promise<StoredImage | null> {
+    return (await this.ctx.storage.get<StoredImage>(`img:${id}`)) ?? null;
+  }
+
+  /** Henüz hiç veri yoksa (ilk kurulum) eşitlemeyi dener; sık denemeyi önler. */
+  async ensure(): Promise<string> {
+    if (await this.list()) return 'var';
+    const last = (await this.ctx.storage.get<number>('lastAttempt')) ?? 0;
+    if (Date.now() - last < FIRST_TRY_GAP) return 'bekle';
+    return this.sync();
+  }
+
+  /** Geçerli anahtarı verir; gerekirse Instagram'dan yeniler. */
+  private async token(): Promise<string | null> {
+    const secret = this.env.INSTAGRAM_TOKEN?.trim();
+    if (!secret) return null;
+    const from = await fingerprint(secret);
+    let rec = await this.ctx.storage.get<TokenRecord>('token');
+    if (!rec || rec.from !== from) {
+      rec = { value: secret, from, at: Date.now() };
+      await this.ctx.storage.put('token', rec);
+    }
+    if (Date.now() - rec.at > REFRESH_EVERY) {
       try {
-        return await handleAssistant(request, env, url);
+        const url = `${apiBase(this.env)}/refresh_access_token?grant_type=ig_refresh_token&access_token=${encodeURIComponent(rec.value)}`;
+        const res = await fetch(url);
+        const body = (await res.json().catch(() => ({}))) as { access_token?: string };
+        if (res.ok && body.access_token) {
+          rec = { value: body.access_token, from, at: Date.now() };
+          await this.ctx.storage.put('token', rec);
+          console.log('Instagram anahtarı yenilendi');
+        } else {
+          console.log('Instagram anahtarı yenilenemedi', res.status);
+        }
       } catch (err) {
-        console.error('asistan: beklenmeyen hata', err instanceof Error ? err.name : 'bilinmiyor');
-        return json({ error: 'server' }, 500);
+        console.log('Instagram anahtarı yenilenemedi', String(err));
       }
     }
-    if (url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404);
+    return rec.value;
+  }
+
+  /** Instagram'dan son videoları alır, görselleri saklar ve listeyi günceller. */
+  async sync(): Promise<string> {
+    await this.ctx.storage.put('lastAttempt', Date.now());
+    const token = await this.token();
+    if (!token) return 'anahtar yok';
+
+    let media: IgMedia[] = [];
+    try {
+      const res = await fetch(`${apiBase(this.env)}/me/media?fields=${FIELDS}&limit=30&access_token=${encodeURIComponent(token)}`);
+      if (!res.ok) {
+        console.log('Instagram listesi alınamadı', res.status, (await res.text()).slice(0, 300));
+        return 'hata';
+      }
+      media = ((await res.json()) as { data?: IgMedia[] }).data ?? [];
+    } catch (err) {
+      console.log('Instagram listesi alınamadı', String(err));
+      return 'hata';
+    }
+
+    const videos = media.filter(isVideo).slice(0, KEEP);
+    const stored = new Set((await this.ctx.storage.get<string[]>('imgIds')) ?? []);
+    const items: Reel[] = [];
+    for (const m of videos) {
+      // Önizleme görseli henüz saklanmadıysa indir (geçici bir hatada bir kez daha dene)
+      for (let attempt = 0; attempt < 2 && !stored.has(m.id) && m.thumbnail_url; attempt++) {
+        try {
+          const res = await fetch(m.thumbnail_url);
+          const type = res.headers.get('content-type') ?? '';
+          if (res.ok && type.startsWith('image/')) {
+            const data = await res.arrayBuffer();
+            if (data.byteLength > MAX_IMAGE_BYTES) break;
+            await this.ctx.storage.put(`img:${m.id}`, { type, data } satisfies StoredImage);
+            stored.add(m.id);
+          } else if (res.status < 500) {
+            break;
+          }
+        } catch (err) {
+          console.log('Önizleme görseli alınamadı', m.id, String(err));
+        }
+      }
+      items.push({
+        id: m.id,
+        url: m.permalink!,
+        caption: shortCaption(m.caption),
+        date: m.timestamp ?? '',
+        img: stored.has(m.id) ? `/api/reels/gorsel/${m.id}` : '',
+      });
+    }
+
+    // Listeden çıkan videoların görsellerini sil
+    const keep = new Set(items.map((i) => i.id));
+    for (const id of [...stored]) {
+      if (!keep.has(id)) {
+        await this.ctx.storage.delete(`img:${id}`);
+        stored.delete(id);
+      }
+    }
+    await this.ctx.storage.put('imgIds', [...stored]);
+    await this.ctx.storage.put('list', { updatedAt: new Date().toISOString(), items } satisfies ReelList);
+    return `tamam (${items.length} video)`;
+  }
+}
+
+const store = (env: Env) => env.REELS.get(env.REELS.idFromName('instagram'));
+
+async function reelsList(request: Request, env: Env, ctx: ExecutionContext) {
+  const cache = caches.default;
+  const cacheKey = new Request(new URL('/api/reels', request.url).toString());
+  const hit = await cache.match(cacheKey);
+  if (hit) return hit;
+
+  const s = store(env);
+  const list = await s.list();
+  if (!list && env.INSTAGRAM_TOKEN) ctx.waitUntil(s.ensure().then((r) => console.log('Reels ilk eşitleme:', r)));
+  const res = Response.json(list ?? { updatedAt: null, items: [] }, {
+    headers: {
+      'Cache-Control': `public, max-age=${list ? 600 : 60}`,
+      'X-Robots-Tag': 'noindex',
+    },
+  });
+  if (list) ctx.waitUntil(cache.put(cacheKey, res.clone()));
+  return res;
+}
+
+async function reelImage(id: string, request: Request, env: Env, ctx: ExecutionContext) {
+  const cache = caches.default;
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const img = await store(env).image(id);
+  if (!img) return new Response('Bulunamadı', { status: 404 });
+  const res = new Response(img.data, {
+    headers: { 'Content-Type': img.type, 'Cache-Control': 'public, max-age=86400', 'X-Robots-Tag': 'noindex' },
+  });
+  ctx.waitUntil(cache.put(request, res.clone()));
+  return res;
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      if (url.pathname === '/api/reels') return reelsList(request, env, ctx);
+      const img = url.pathname.match(/^\/api\/reels\/gorsel\/(\d{1,30})$/);
+      if (img) return reelImage(img[1], request, env, ctx);
+    }
+    // Diğer tüm adresler: statik site (bulunamayan sayfalar için 404 sayfası)
     return env.ASSETS.fetch(request);
   },
-};
 
-async function handleAssistant(request: Request, env: Env, url: URL): Promise<Response> {
-  if (request.method === 'GET' || request.method === 'HEAD') {
-    return json({ ai: Boolean(env.ANTHROPIC_API_KEY) });
-  }
-  if (request.method !== 'POST') return json({ error: 'method' }, 405, { allow: 'GET, POST' });
-
-  // Yalnızca sitenin kendi sayfalarından gelen istekler
-  if (hostOf(request.headers.get('origin')) !== url.host) return json({ error: 'origin' }, 403);
-
-  if (!env.ANTHROPIC_API_KEY) return json({ error: 'not_configured' }, 503);
-
-  if (!allow(request.headers.get('cf-connecting-ip') || 'yerel')) {
-    return json({ error: 'rate_limited' }, 429, { 'retry-after': '60' });
-  }
-
-  if (Number(request.headers.get('content-length') || '0') > MAX_BODY_BYTES) return json({ error: 'too_large' }, 413);
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return json({ error: 'too_large' }, 413);
-
-  let body: unknown;
-  try {
-    body = JSON.parse(raw);
-  } catch {
-    return json({ error: 'bad_json' }, 400);
-  }
-  const messages = cleanMessages((body as { messages?: unknown })?.messages);
-  if (!messages) return json({ error: 'bad_request' }, 400);
-
-  const kb = await loadKnowledge(env, url);
-  if (!kb) return json({ error: 'knowledge' }, 500);
-
-  const base = (env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/+$/, '');
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 25_000);
-  let res: Response;
-  try {
-    res = await fetch(`${base}/v1/messages`, {
-      method: 'POST',
-      headers: {
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: env.ASISTAN_MODEL || DEFAULT_MODEL,
-        max_tokens: MAX_TOKENS,
-        temperature: 0.2,
-        system: [{ type: 'text', text: kb.system, cache_control: { type: 'ephemeral' } }],
-        messages,
-      }),
-      signal: ctrl.signal,
-    });
-  } catch {
-    console.error('asistan: yapay zekâ servisine ulaşılamadı');
-    return json({ error: 'upstream' }, 502);
-  } finally {
-    clearTimeout(timer);
-  }
-
-  if (!res.ok) {
-    // Mesaj içeriği değil, yalnızca durum kodu kaydedilir (ör. 401: anahtar hatalı, 400: kredi bitti olabilir)
-    console.error(`asistan: yapay zekâ servisi hata döndürdü (${res.status})`);
-    return json({ error: 'upstream' }, res.status === 429 ? 429 : 502);
-  }
-
-  const data = (await res.json().catch(() => null)) as { content?: { type: string; text?: string }[] } | null;
-  const text = (data?.content ?? [])
-    .filter((b) => b?.type === 'text' && typeof b.text === 'string')
-    .map((b) => b.text)
-    .join('\n')
-    .trim();
-  if (!text) return json({ error: 'empty' }, 502);
-
-  const { reply, actions } = extractActions(text, kb);
-  return json({ reply: reply || 'Aşağıdaki bağlantıdan devam edebilirsiniz.', actions });
-}
-
-function hostOf(origin: string | null): string {
-  if (!origin) return '';
-  try {
-    return new URL(origin).host;
-  } catch {
-    return '';
-  }
-}
-
-/** Basit hız sınırı (her Cloudflare sunucusunda ayrı tutulur; kötüye kullanımı zorlaştırmak içindir). */
-function allow(ip: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < 3_600_000);
-  const lastMinute = recent.filter((t) => now - t < 60_000).length;
-  if (lastMinute >= LIMIT_PER_MINUTE || recent.length >= LIMIT_PER_HOUR) {
-    hits.set(ip, recent);
-    return false;
-  }
-  recent.push(now);
-  hits.set(ip, recent);
-  if (hits.size > 5000) hits.clear();
-  return true;
-}
-
-/** Gelen konuşmayı doğrular, kısaltır ve yapay zekâ servisinin beklediği biçime getirir. */
-function cleanMessages(input: unknown): Message[] | null {
-  if (!Array.isArray(input)) return null;
-  const out: Message[] = [];
-  for (const m of input.slice(-MAX_MESSAGES * 2)) {
-    const role = (m as Message)?.role;
-    const content = (m as Message)?.content;
-    if ((role !== 'user' && role !== 'assistant') || typeof content !== 'string') continue;
-    const text = content
-      .replace(/\[\[[^\[\]]*\]\]/g, '')
-      .trim()
-      .slice(0, role === 'user' ? MAX_USER_CHARS : MAX_ASSISTANT_CHARS);
-    if (!text) continue;
-    const last = out[out.length - 1];
-    if (last && last.role === role) last.content += `\n\n${text}`;
-    else out.push({ role, content: text });
-  }
-  const trimmed = out.slice(-MAX_MESSAGES);
-  while (trimmed.length && trimmed[0].role !== 'user') trimmed.shift();
-  if (!trimmed.length || trimmed[trimmed.length - 1].role !== 'user') return null;
-  return trimmed;
-}
-
-/** Sitenin derlenirken oluşturduğu bilgi dosyasını okur (/asistan-bilgi.json). */
-async function loadKnowledge(env: Env, url: URL): Promise<Knowledge | null> {
-  if (cachedKnowledge && Date.now() - cachedKnowledge.at < 10 * 60 * 1000) return cachedKnowledge.data;
-  try {
-    const res = await env.ASSETS.fetch(new URL('/asistan-bilgi.json', url.origin));
-    if (!res.ok) return cachedKnowledge?.data ?? null;
-    const data = (await res.json()) as Knowledge;
-    if (typeof data?.system !== 'string' || !data.actions || !Array.isArray(data.services) || !data.pages) {
-      return cachedKnowledge?.data ?? null;
-    }
-    cachedKnowledge = { data, at: Date.now() };
-    return data;
-  } catch {
-    return cachedKnowledge?.data ?? null;
-  }
-}
-
-/** Yanıttaki [[...]] etiketlerini ayıklar ve yalnızca izin verilen bağlantılara çevirir. */
-function extractActions(text: string, kb: Knowledge): { reply: string; actions: Action[] } {
-  const tagRe = /\[\[([^\[\]]{1,160})\]\]/g;
-  const tags = [...text.matchAll(tagRe)].map((m) => m[1].trim());
-  const reply = text
-    .replace(tagRe, '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-  const actions: Action[] = [];
-  const seen = new Set<string>();
-  for (const tag of tags) {
-    const a = resolveTag(tag, kb);
-    if (a && !seen.has(a.href)) {
-      seen.add(a.href);
-      actions.push(a);
-    }
-    if (actions.length >= 3) break;
-  }
-  return { reply, actions };
-}
-
-const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
-
-function resolveTag(tag: string, kb: Knowledge): Action | null {
-  const t = tag.trim();
-  if (has(kb.actions, t.toLowerCase())) return kb.actions[t.toLowerCase()];
-  const i = t.indexOf(':');
-  if (i < 0) return null;
-  const kind = t.slice(0, i).trim().toLowerCase();
-  const value = t.slice(i + 1).trim();
-  if (!value) return null;
-  if (kind === 'randevu') {
-    const name = kb.services.find((s) => s.toLocaleLowerCase('tr') === value.toLocaleLowerCase('tr'));
-    if (!name) return has(kb.actions, 'randevu') ? kb.actions.randevu : null;
-    return {
-      label: `Randevu: ${name}`,
-      href: `/randevu-olustur/?hizmet=${encodeURIComponent(name)}#randevu-formu`,
-      primary: true,
-    };
-  }
-  if (kind === 'sayfa') {
-    const p = value.startsWith('/') ? value : `/${value}`;
-    const withSlash = p.endsWith('/') ? p : `${p}/`;
-    if (has(kb.pages, p)) return { label: kb.pages[p], href: p };
-    if (has(kb.pages, withSlash)) return { label: kb.pages[withSlash], href: withSlash };
-  }
-  return null;
-}
+  async scheduled(_controller, env, ctx) {
+    ctx.waitUntil(store(env).sync().then((r) => console.log('Reels eşitleme:', r)));
+  },
+} satisfies ExportedHandler<Env>;

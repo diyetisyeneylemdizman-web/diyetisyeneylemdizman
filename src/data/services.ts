@@ -42,14 +42,14 @@ export const serviceCategories: ServiceCategory[] = [
         name: 'Vücut Analizi',
         slug: 'vucut-analizi',
         description:
-          'Kilo, yağ, kas ve sıvı oranlarının ölçülmesiyle beslenme planınıza yol gösteren değerlendirme.',
+          'Vücut ağırlığı ile yağ, kas ve sıvı oranlarının ölçülmesiyle beslenme planınıza yol gösteren değerlendirme.',
       },
     ],
   },
   {
     id: 'kilo-yonetimi',
     title: 'Kilo Yönetimi',
-    intro: 'Kilo vermek ya da almak isteyenler için yasaklara değil dengeye dayanan bir yaklaşım.',
+    intro: 'Kilo vermek ya da almak isteyenler için yasaklara değil, dengeye dayanan bir yaklaşım.',
     icon: 'scale',
     services: [
       {
@@ -62,7 +62,7 @@ export const serviceCategories: ServiceCategory[] = [
         name: 'Kilo Alma Diyeti',
         slug: 'kilo-alma-diyeti',
         description:
-          'Sağlıklı kilo alımını hedefleyen; enerji ve besin öğesi ihtiyacınıza göre planlanan beslenme programı.',
+          'Sağlıklı kilo alımını hedefleyen, enerji ve besin öğesi ihtiyacınıza göre planlanan beslenme programı.',
       },
       {
         name: 'Obezitede Beslenme',
@@ -99,12 +99,12 @@ export const serviceCategories: ServiceCategory[] = [
       {
         name: 'Hipertansiyonda Beslenme',
         slug: 'hipertansiyonda-beslenme',
-        description: 'Tuz ve sodyum dengesine dikkat eden, kalp dostu beslenme örüntülerine dayalı plan.',
+        description: 'Tuz (sodyum) alımına dikkat eden, kalp dostu beslenme örüntülerine dayalı plan.',
       },
       {
         name: 'Kolesterol Yüksekliğinde Beslenme',
         slug: 'kolesterol-yuksekliginde-beslenme',
-        description: 'Yağ kalitesi ve lif alımı gözetilerek kan yağlarını desteklemeye yönelik beslenme.',
+        description: 'Yağ kalitesi ve lif alımı gözetilerek kan yağı düzeylerini dengelemeye yönelik beslenme.',
       },
       {
         name: 'Kalp-Damar Hastalıklarında Beslenme',

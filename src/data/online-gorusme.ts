@@ -14,7 +14,7 @@ export const onlineSteps = [
   {
     icon: 'video',
     title: 'Görüntülü görüşme',
-    text: 'Randevu saatinde WhatsApp görüntülü arama ile bağlanır, beslenme değerlendirmenizi birlikte yaparız.',
+    text: 'Randevu saatinde WhatsApp görüntülü görüşmeyle bağlanır, beslenme değerlendirmenizi birlikte yaparız.',
   },
   {
     icon: 'clipboard',
@@ -28,7 +28,7 @@ export const onlinePrepare = [
   'Boy bilginiz ve mezura ile ölçülmüş bel çevreniz',
   'Varsa son 3–6 ay içindeki kan tahlili sonuçlarınız',
   'Kullandığınız ilaç ve takviyelerin listesi',
-  'Birkaç günlük yeme-içme alışkanlıklarınıza dair kısa notlar',
+  'Birkaç günlük yeme içme alışkanlıklarınıza dair kısa notlar',
 ];
 
 export const onlineTech = [
@@ -47,7 +47,7 @@ export const onlineFaqs = [
     a: 'Cihazla yapılan vücut analizi için kliniğe gelmeniz gerekir. Online görüşmelerde kilo, bel ve kalça çevresi gibi ölçümleri evde almanız istenir.',
   },
   {
-    q: 'Görüşme ücreti ve ödeme nasıl yapılıyor?',
+    q: 'Görüşme ücretini ve ödeme bilgilerini nasıl öğrenebilirim?',
     a: 'Görüşme ücreti ve ödeme bilgileri, randevunuz netleştiğinde size ayrıca iletilir.',
   },
   {

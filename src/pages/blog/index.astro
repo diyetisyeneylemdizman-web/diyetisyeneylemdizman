@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PageHero from '../../components/PageHero.astro';
 import PostCard from '../../components/PostCard.astro';
+import ReelsGrid from '../../components/ReelsGrid.astro';
 import CtaBand from '../../components/CtaBand.astro';
 
 const posts = (await getCollection('blog')).sort(
@@ -11,26 +12,36 @@ const posts = (await getCollection('blog')).sort(
 ---
 
 <BaseLayout
-  title="Blog"
-  description="Sağlıklı beslenme, kilo yönetimi, insülin direnci, PKOS ve daha birçok konuda Diyetisyen Eylem Dizman’ın bilgilendirici yazıları."
+  title="Blog & Reels"
+  description="Sağlıklı beslenme, kilo yönetimi, insülin direnci, PKOS ve daha birçok konuda Diyetisyen Eylem Dizman’ın bilgilendirici yazıları ve Instagram Reels videoları."
 >
   <PageHero
-    title="Blog"
-    eyebrow="Beslenme Üzerine Yazılar"
-    lead="Sağlıklı beslenme, kilo yönetimi ve hastalıklarda beslenme üzerine bilgilendirici yazılar."
-    crumbs={[{ label: 'Blog' }]}
+    title="Blog & Reels"
+    eyebrow="Beslenme Üzerine İçerikler"
+    lead="Sağlıklı beslenme, kilo yönetimi ve hastalıklarda beslenme üzerine bilgilendirici yazılar ve Instagram’da paylaştığımız kısa videolar."
+    crumbs={[{ label: 'Blog & Reels' }]}
   />
   <section class="section">
     <div class="container">
+      <h2 class="list-title">Yazılar</h2>
       <div class="post-grid">
         {posts.map((p) => <PostCard post={p} />)}
       </div>
+    </div>
+  </section>
+  <section class="section bg-sage-soft" id="reels">
+    <div class="container">
+      <ReelsGrid limit={12} title="Instagram Reels" headingLevel="h2" />
     </div>
   </section>
   <CtaBand />
 </BaseLayout>
 
 <style>
+  .list-title {
+    margin: 0 0 24px;
+    font-size: clamp(1.35rem, 2.2vw, 1.65rem);
+  }
   .post-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

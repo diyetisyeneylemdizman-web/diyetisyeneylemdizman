@@ -48,7 +48,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
 
     <div class="bmi-extra" data-bmi-extra>
       <div class="field" data-show="ay" hidden>
-        <label for="bmi-ay">Ay <span class="unit">(yaşın üzerine, isteğe bağlı)</span></label>
+        <label for="bmi-ay">Ay <span class="unit">(yaşa ek, isteğe bağlı)</span></label>
         <select class="select" id="bmi-ay" name="ay">
           <option value="">Bilmiyorum</option>
           {months.map((m) => <option value={m}>{m} ay</option>)}
@@ -58,7 +58,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
         waist && (
           <div class="field" data-show="bel" hidden>
             <label for="bmi-bel">
-              Bel çevresi <span class="unit">(cm, isteğe bağlı)</span>
+              Bel Çevresi <span class="unit">(cm, isteğe bağlı)</span>
             </label>
             <input class="input" id="bmi-bel" name="bel" inputmode="decimal" autocomplete="off" placeholder="Örn. 82" />
           </div>
@@ -83,7 +83,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
   <div class="bmi-result" data-bmi-result aria-live="polite" hidden>
     <div class="result-top">
       <div>
-        <p class="result-label" data-bmi-label>Vücut kitle indeksiniz</p>
+        <p class="result-label" data-bmi-label>Vücut Kitle İndeksiniz</p>
         <p class="result-value" data-bmi-value>—</p>
       </div>
       <span class="result-chip" data-bmi-chip>—</span>
@@ -452,8 +452,8 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       label: 'Normal',
       bg: '#e3e7dd',
       fg: '#3d4636',
-      text: 'VKİ değeriniz normal aralıkta. Bu dengeyi korumak için düzenli, çeşitli ve dengeli beslenmeye devam etmeniz önemli.',
-      cta: { label: 'Sağlıklı Beslenme Danışmanlığı Al', hizmet: 'Sağlıklı Beslenme Önerileri', primary: false },
+      text: 'VKİ değeriniz normal aralıkta. Bu aralıkta kalmak için düzenli, çeşitli ve dengeli beslenmeyi sürdürmeniz önemlidir.',
+      cta: { label: 'Sağlıklı Beslenme İçin Randevu Oluştur', hizmet: 'Sağlıklı Beslenme Önerileri', primary: false },
     },
     {
       max: 30,
@@ -461,8 +461,8 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       label: 'Fazla Kilolu (Hafif Şişman)',
       bg: '#f6ebe5',
       fg: '#86493a',
-      text: 'VKİ değeriniz fazla kilolu (hafif şişman) aralığında. Kişiye özel bir beslenme planıyla sağlıklı ve sürdürülebilir bir kilo kaybı hedeflenebilir. Değerlendirme için hemen randevu oluşturabilirsiniz.',
-      cta: { label: 'Hemen Randevu Oluştur', hizmet: 'Zayıflama Diyeti', primary: true },
+      text: 'VKİ değeriniz fazla kilolu (hafif şişman) aralığında. Kişiye özel bir beslenme planıyla sağlıklı ve sürdürülebilir bir kilo kaybı hedeflenebilir. Değerlendirme için randevu oluşturabilirsiniz.',
+      cta: { label: 'Zayıflama Diyeti İçin Randevu Oluştur', hizmet: 'Zayıflama Diyeti', primary: true },
     },
     {
       max: 35,
@@ -470,8 +470,8 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       label: '1. Derece Obez',
       bg: '#f1ddd3',
       fg: '#86493a',
-      text: 'VKİ değeriniz 1. derece obezite aralığında. Obezite; tip 2 diyabet, hipertansiyon ve kalp-damar hastalıkları gibi sorunlar için risk oluşturabilir. Uzman desteğiyle planlanan bir beslenme programı önemlidir.',
-      cta: { label: 'Hemen Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
+      text: 'VKİ değeriniz 1. derece obezite aralığında. Obezite, tip 2 diyabet, hipertansiyon ve kalp-damar hastalıkları gibi sorunların riskini artırabilir. Uzman desteğiyle planlanan bir beslenme programı önemlidir.',
+      cta: { label: 'Obezitede Beslenme İçin Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
     },
     {
       max: 40,
@@ -480,7 +480,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       bg: '#ecd0c4',
       fg: '#7a4033',
       text: 'VKİ değeriniz 2. derece obezite aralığında. Bu aralıkta sağlık riskleri artabilir; hekiminizle birlikte, uzman desteğiyle planlanan bir beslenme programı önemlidir.',
-      cta: { label: 'Hemen Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
+      cta: { label: 'Obezitede Beslenme İçin Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
     },
     {
       max: Infinity,
@@ -489,7 +489,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       bg: '#e6c2b4',
       fg: '#6e392d',
       text: 'VKİ değeriniz 3. derece (morbid) obezite aralığında. Bu aralıkta sağlık riskleri belirgin şekilde artar; hekiminizle birlikte, uzman desteğiyle planlanan bir beslenme programı önemlidir.',
-      cta: { label: 'Hemen Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
+      cta: { label: 'Obezitede Beslenme İçin Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
     },
   ];
 
@@ -539,7 +539,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       return { label: 'Zayıf', bg: '#ece5da', fg: '#292c29', normal: false, text: `${base} zayıf aralığında. Büyümeyi destekleyen, yaşa uygun bir beslenme düzeninin birlikte değerlendirilmesi faydalı olabilir.` };
     const over = under5 ? [1, 2, 3] : [Infinity, 1, 2];
     if (z > over[2])
-      return { label: 'Obez', bg: '#f1ddd3', fg: '#86493a', normal: false, text: `${base} obezite aralığında. Hekimle birlikte, yaşa uygun ve kişiye özel bir beslenme planıyla değerlendirilmesi önemlidir.` };
+      return { label: 'Obez', bg: '#f1ddd3', fg: '#86493a', normal: false, text: `${base} obezite aralığında. Durumun hekimle birlikte değerlendirilmesi ve yaşa uygun, kişiye özel bir beslenme planıyla desteklenmesi önemlidir.` };
     if (z > over[1])
       return { label: 'Fazla Kilolu', bg: '#f6ebe5', fg: '#86493a', normal: false, text: `${base} fazla kilolu aralığında. Büyümeyi destekleyen, yaşa uygun ve kişiye özel bir beslenme planı faydalı olabilir.` };
     if (z > over[0])
@@ -551,9 +551,10 @@ const months = Array.from({ length: 12 }, (_, i) => i);
     const [inc, high] = sex === 'erkek' ? [94, 102] : [80, 88];
     const who = sex === 'erkek' ? 'Erkeklerde' : 'Kadınlarda';
     const rule = `${who} ${inc} cm üzeri artmış, ${high} cm üzeri yüksek risk olarak kabul edilir.`;
-    if (w > high) return { key: 'yuksek', label: 'Yüksek risk', bg: '#f1ddd3', fg: '#86493a', text: `Bel çevreniz ${fmt(w, 0)} cm. ${rule}` };
-    if (w > inc) return { key: 'artmis', label: 'Artmış risk', bg: '#f6ebe5', fg: '#86493a', text: `Bel çevreniz ${fmt(w, 0)} cm. ${rule}` };
-    return { key: 'normal', label: 'Risk sınırının altında', bg: '#e3e7dd', fg: '#3d4636', text: `Bel çevreniz ${fmt(w, 0)} cm. ${rule}` };
+    const wText = fmt(w, Number.isInteger(w) ? 0 : 1);
+    if (w > high) return { key: 'yuksek', label: 'Yüksek Risk', bg: '#f1ddd3', fg: '#86493a', text: `Bel çevreniz ${wText} cm. ${rule}` };
+    if (w > inc) return { key: 'artmis', label: 'Artmış Risk', bg: '#f6ebe5', fg: '#86493a', text: `Bel çevreniz ${wText} cm. ${rule}` };
+    return { key: 'normal', label: 'Risk Sınırının Altında', bg: '#e3e7dd', fg: '#3d4636', text: `Bel çevreniz ${wText} cm. ${rule}` };
   };
 
   document.querySelectorAll<HTMLElement>('[data-bmi]').forEach((root) => {
@@ -626,7 +627,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
     };
 
     const resetResult = () => {
-      $('[data-bmi-label]').textContent = 'Vücut kitle indeksiniz';
+      $('[data-bmi-label]').textContent = 'Vücut Kitle İndeksiniz';
       $('[data-bmi-range]').textContent = '';
       $('[data-bmi-text]').textContent = '';
       $('[data-bmi-note]').hidden = true;
@@ -693,7 +694,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
         setChip('Gebelik', '#f6ebe5', '#86493a');
         useScale('none');
         $('[data-bmi-text]').textContent =
-          'Gebelikte VKİ sınıflaması yapılmaz; değerlendirme gebelik öncesi kilonuza göre yapılır ve gebelik boyunca alınması önerilen kilo da buna ve gebelik haftasına göre değişir. Gebelik sürecinize uygun beslenme için birlikte değerlendirme yapabiliriz.';
+          'Gebelikte VKİ sınıflaması yapılmaz; değerlendirme gebelik öncesi VKİ’nize göre yapılır ve gebelik boyunca alınması önerilen kilo da buna ve gebelik haftasına göre değişir. Gebelik sürecinize uygun beslenme için birlikte değerlendirme yapabiliriz.';
         setCta({ label: 'Gebelikte Beslenme İçin Randevu Oluştur', hizmet: 'Gebelikte Beslenme', primary: true });
         reveal();
         return;
@@ -705,7 +706,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
         const ageMonths = yas * 12 + (ayVal === '' ? 6 : Number(ayVal));
         const ref = (await loadRef()) as Ref | null;
         const row = ref && sex ? ref[sex][ageMonths - ref.baslangicAy] : null;
-        $('[data-bmi-label]').textContent = 'Vücut kitle indeksi';
+        $('[data-bmi-label]').textContent = 'Vücut Kitle İndeksi';
         if (!row) {
           setChip('18 Yaş Altı', '#ece5da', '#292c29');
           useScale('none');
@@ -730,8 +731,10 @@ const months = Array.from({ length: 12 }, (_, i) => i);
               ? 'Yaşa ve cinsiyete göre 99. persentilin üzerinde'
               : `Yaşa ve cinsiyete göre ${pShort}. persentilde`;
         $('[data-bmi-text]').textContent = cat.text;
+        const kim = sex === 'kadin' ? (yas < 12 ? 'kız çocuğu' : 'genç kız') : yas < 12 ? 'erkek çocuğu' : 'genç erkek';
+        const yasTanim = ayVal === '' ? `${yas} yaşındaki bir ${kim}` : `${yas} yaş ${ayVal} aylık bir ${kim}`;
         $('[data-bmi-source]').textContent =
-          `${ageText}, ${sex === 'kadin' ? 'kız' : 'erkek'}${yas < 12 ? ' çocuk' : ''} için Dünya Sağlık Örgütü’nün yaşa ve cinsiyete özel VKİ tablolarına göre değerlendirilmiştir${ayVal === '' ? ' (ay bilgisi girilmediği için yaşın ortası esas alındı)' : ''}. Tek bir ölçüm yerine düzenli büyüme takibi önemlidir; kesin değerlendirme için çocuk doktorunuza danışın.`;
+          `Bu sonuç, ${yasTanim} için Dünya Sağlık Örgütünün yaşa ve cinsiyete özel VKİ tablolarına göre değerlendirilmiştir${ayVal === '' ? ' (ay bilgisi girilmediği için yaşa 6 ay eklenerek hesaplanmıştır)' : ''}. Tek bir ölçüm yerine düzenli büyüme takibi önemlidir; kesin değerlendirme için çocuk doktorunuza danışın.`;
         setCta(CHILD_CTA(!cat.normal), { vki: bmiText, durum: `${cat.label}, persentil ${pShort}, ${ageText}` });
         reveal();
         return;
@@ -741,10 +744,10 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       const cat = CATS.find((c) => bmi < c.max)!;
       setChip(cat.label, cat.bg, cat.fg);
       useScale('adult', Math.min(Math.max((bmi - 15) / 30, 0.01), 0.99) * 100);
-      $('[data-bmi-range]').textContent = `Boyunuza göre VKİ’nin normal aralıkta olduğu kilo: ${fmt(18.5 * h * h)} – ${fmt(24.9 * h * h)} kg`;
+      $('[data-bmi-range]').textContent = `Boyunuza göre VKİ’nin normal aralıkta olduğu kilo: ${fmt(18.5 * h * h)}–${fmt(24.9 * h * h)} kg`;
       $('[data-bmi-text]').textContent = cat.text;
       $('[data-bmi-source]').textContent =
-        'VKİ sınıfları Dünya Sağlık Örgütü’ne göredir ve yetişkinlerde kadın ile erkek için aynıdır; cinsiyet, bel çevresi değerlendirmesinde dikkate alınır.';
+        'VKİ sınıfları Dünya Sağlık Örgütüne göredir ve yetişkinlerde kadın ile erkek için aynıdır; cinsiyet, bel çevresi değerlendirmesinde dikkate alınır.';
 
       let cta = cat.cta;
       if (belRaw && sex) {
@@ -764,7 +767,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
         const note = $('[data-bmi-note]');
         note.hidden = false;
         note.textContent =
-          '65 yaş ve üzerinde VKİ değerlendirmesi farklılık gösterebilir; kas kaybı gibi etkenler nedeniyle kesin değerlendirme için uzman görüşü önerilir.';
+          '65 yaş ve üzerindeki bireylerde VKİ farklı yorumlanabilir; kas kaybı gibi etkenler nedeniyle kesin değerlendirme için uzman görüşü önerilir.';
       }
       setCta(cta, { vki: bmiText, durum: cat.label });
       reveal();

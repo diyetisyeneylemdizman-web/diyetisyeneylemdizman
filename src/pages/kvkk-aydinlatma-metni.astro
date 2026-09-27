@@ -7,15 +7,15 @@ import { site, fullAddress } from '../data/site';
 
 <BaseLayout
   title="KVKK Aydınlatma Metni"
-  description="Diyetisyen Eylem Dizman internet sitesi kişisel verilerin korunması ve işlenmesine ilişkin aydınlatma metni."
+  description="Diyetisyen Eylem Dizman internet sitesinin kişisel verilerin korunmasına ve işlenmesine ilişkin aydınlatma metni."
 >
   <PageHero title="KVKK Aydınlatma Metni" eyebrow="Kişisel Verilerin Korunması" crumbs={[{ label: 'KVKK Aydınlatma Metni' }]} />
 
   <section class="section">
     <div class="container-narrow prose">
       <p>
-        Bu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) uyarınca, <strong>{site.url.replace('https://', '')}</strong>
-        internet sitesini ziyaret eden ve site üzerinden bizimle iletişime geçen kişileri, kişisel verilerinin işlenmesi hakkında
+        Bu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) uyarınca, <strong>{site.url.replace('https://', '')}</strong> internet
+        sitesini ziyaret eden ve site üzerinden bizimle iletişime geçen kişileri, kişisel verilerinin işlenmesi hakkında
         bilgilendirmek amacıyla hazırlanmıştır.
       </p>
 
@@ -29,26 +29,26 @@ import { site, fullAddress } from '../data/site';
       <h2>2. İşlenen kişisel veriler ve toplanma yöntemi</h2>
       <ul>
         <li>
-          <strong>Randevu formu:</strong> Ad soyad, telefon numarası, görüşme türü, ilgilendiğiniz konu, tercih ettiğiniz gün ve
+          <strong>Randevu formu:</strong> ad soyad, telefon numarası, görüşme türü, ilgilendiğiniz konu, tercih ettiğiniz gün ve
           saat ile isteğe bağlı olarak yazdığınız not. Form bilgileri sitemizin sunucularına gönderilmez ve kaydedilmez; bu
           bilgiler cihazınızda hazır bir WhatsApp mesajına dönüştürülür ve mesajı siz gönderdiğinizde tarafımıza ulaşır.
         </li>
         <li>
-          <strong>Vücut kitle indeksi hesaplayıcı:</strong> Girdiğiniz boy, kilo ve yaş bilgileri yalnızca cihazınızda hesaplama
-          için kullanılır; hiçbir yere gönderilmez ve kaydedilmez. VKİ sonucunuzu randevu talebinize eklemeyi seçerseniz bu bilgi,
+          <strong>Vücut kitle indeksi hesaplayıcı:</strong> Girdiğiniz cinsiyet, boy, kilo, yaş, bel çevresi ve gebelik
+          bilgileri yalnızca cihazınızda hesaplama için kullanılır; hiçbir yere gönderilmez ve kaydedilmez. VKİ sonucunuzu randevu talebinize eklemeyi seçerseniz bu bilgi,
           gönderdiğiniz WhatsApp mesajıyla tarafımıza ulaşır.
         </li>
         <li id="asistan">
           <strong>Site asistanı:</strong> Asistana yazdığınız sorular ve seçtiğiniz konular yalnızca cihazınızda
           (tarayıcınızda) hazır cevaplarla eşleştirilir; hiçbir sunucuya veya üçüncü kişiye gönderilmez ve tarafımızca
-          kaydedilmez. Sohbet geçmişi yalnızca tarayıcınızda, sekmeyi kapatana kadar tutulur. Asistan yapay zekâ kullanmaz,
+          kaydedilmez. Sohbet geçmişi yalnızca tarayıcınızda, sekmeyi kapatana kadar (en fazla 3 saat) tutulur. Asistan yapay zekâ kullanmaz,
           kişisel sağlık değerlendirmesi yapmaz; genel bilgi verir.
         </li>
         <li>
-          <strong>Doğrudan iletişim:</strong> Telefon, WhatsApp veya e-posta yoluyla bizimle paylaştığınız bilgiler.
+          <strong>Doğrudan iletişim:</strong> telefon, WhatsApp veya e-posta yoluyla bizimle paylaştığınız bilgiler.
         </li>
         <li>
-          <strong>Teknik veriler:</strong> Sitenin barındırıldığı altyapı sağlayıcısı tarafından güvenlik ve hizmetin sunulması
+          <strong>Teknik veriler:</strong> sitenin barındırıldığı altyapı sağlayıcısı tarafından güvenlik ve hizmetin sunulması
           amacıyla işlenebilen IP adresi, tarayıcı bilgisi ve erişim kayıtları.
         </li>
       </ul>
@@ -67,9 +67,10 @@ import { site, fullAddress } from '../data/site';
 
       <h2>4. Hukuki sebepler</h2>
       <p>
-        Kişisel verileriniz KVKK’nın 5. maddesinde yer alan; bir sözleşmenin kurulması veya ifasıyla doğrudan ilgili olması,
-        veri sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi ve ilgili kişinin temel hak ve özgürlüklerine zarar
-        vermemek kaydıyla veri sorumlusunun meşru menfaati hukuki sebeplerine dayanılarak işlenir. Özel nitelikli kişisel
+        Kişisel verileriniz KVKK’nın 5. maddesinde yer alan “bir sözleşmenin kurulması veya ifasıyla doğrudan ilgili olması”,
+        “veri sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi için zorunlu olması” ve “ilgili kişinin temel hak ve
+        özgürlüklerine zarar vermemek kaydıyla, veri sorumlusunun meşru menfaatleri için veri işlenmesinin zorunlu olması”
+        hukuki sebeplerine dayanılarak işlenir. Özel nitelikli kişisel
         veriler ise KVKK’nın 6. maddesinde belirtilen şartlar çerçevesinde işlenir.
       </p>
 
@@ -78,8 +79,8 @@ import { site, fullAddress } from '../data/site';
         Kişisel verileriniz, yukarıdaki amaçlarla sınırlı olarak ve mevzuata uygun şekilde; yetkili kamu kurum ve
         kuruluşlarına, hukuken yetkili kişilere ve hizmet aldığımız altyapı sağlayıcılarına aktarılabilir. WhatsApp
         üzerinden ilettiğiniz mesajlar, WhatsApp hizmet sağlayıcısının kendi gizlilik politikası kapsamında işlenir ve yurt
-        dışında bulunan sunucularda barındırılabilir. Harita yalnızca “Haritayı Göster” butonuna
-        bastığınızda Google tarafından yüklenir.
+        dışında bulunan sunucularda barındırılabilir. Ana sayfadaki ve İletişim sayfasındaki harita, yalnızca “Haritayı Göster”
+        butonuna bastığınızda Google tarafından yüklenir.
       </p>
 
       <h2>6. Çerezler</h2>
@@ -87,9 +88,14 @@ import { site, fullAddress } from '../data/site';
         Sitemizde reklam veya ziyaretçi takibi amaçlı çerez kullanılmamaktadır. Google Haritalar gibi üçüncü taraf
         içerikleri yalnızca sizin talebinizle yüklendiğinde, ilgili hizmet sağlayıcı çerez kullanabilir.
       </p>
+      <p>
+        Blog &amp; Reels bölümündeki video önizlemeleri Instagram hesabımızdan alınarak sitemiz üzerinden gösterilir; bu
+        bölüm için Instagram’a ziyaretçi bilgisi gönderilmez. Bir videoya tıkladığınızda Instagram’a yönlendirilirsiniz;
+        orada Instagram’ın kendi gizlilik koşulları geçerlidir.
+      </p>
 
       <h2>7. KVKK kapsamındaki haklarınız</h2>
-      <p>KVKK’nın 11. maddesi uyarınca, veri sorumlusuna başvurarak;</p>
+      <p>KVKK’nın 11. maddesi uyarınca, veri sorumlusuna başvurarak aşağıdaki haklarınızı kullanabilirsiniz:</p>
       <ul>
         <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li>
         <li>İşlenmişse buna ilişkin bilgi talep etme,</li>
@@ -99,14 +105,13 @@ import { site, fullAddress } from '../data/site';
         <li>KVKK’nın 7. maddesindeki şartlar çerçevesinde silinmesini veya yok edilmesini isteme,</li>
         <li>Düzeltme, silme ve yok etme işlemlerinin, verilerin aktarıldığı üçüncü kişilere bildirilmesini isteme,</li>
         <li>İşlenen verilerin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme,</li>
-        <li>Kanuna aykırı işlenmesi sebebiyle zarara uğramanız hâlinde zararın giderilmesini talep etme</li>
+        <li>Kanuna aykırı işlenmesi sebebiyle zarara uğramanız hâlinde zararın giderilmesini talep etme.</li>
       </ul>
-      <p>haklarına sahipsiniz.</p>
 
       <h2>8. Başvuru</h2>
       <p>
-        Haklarınıza ilişkin taleplerinizi <a href={`mailto:${site.email}`}>{site.email}</a> adresine e-posta ile veya
-        {fullAddress} adresine yazılı olarak iletebilirsiniz. Başvurularınız, talebin niteliğine göre en kısa sürede ve en
+        Haklarınıza ilişkin taleplerinizi <a href={`mailto:${site.email}`}>{site.email}</a> adresine e-posta ile
+        veya {fullAddress} adresine yazılı olarak iletebilirsiniz. Başvurularınız, talebin niteliğine göre en kısa sürede ve en
         geç otuz gün içinde sonuçlandırılır.
       </p>
     </div>

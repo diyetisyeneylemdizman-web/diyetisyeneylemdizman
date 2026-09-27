@@ -7,22 +7,22 @@ import CtaBand from '../components/CtaBand.astro';
 
 const ranges = [
   { range: '18,5’in altı', label: 'Zayıf', color: '#cfc4b3' },
-  { range: '18,5 – 24,9', label: 'Normal', color: '#8e9b82' },
-  { range: '25,0 – 29,9', label: 'Fazla kilolu (hafif şişman)', color: '#dcae99' },
-  { range: '30,0 – 34,9', label: '1. derece obez', color: '#c4826b' },
-  { range: '35,0 – 39,9', label: '2. derece obez', color: '#a8654f' },
-  { range: '40 ve üzeri', label: '3. derece obez (morbid obez)', color: '#86493a' },
+  { range: '18,5–24,9', label: 'Normal', color: '#8e9b82' },
+  { range: '25,0–29,9', label: 'Fazla kilolu (hafif şişman)', color: '#dcae99' },
+  { range: '30,0–34,9', label: '1. derece obez', color: '#c4826b' },
+  { range: '35,0–39,9', label: '2. derece obez', color: '#a8654f' },
+  { range: '40,0 ve üzeri', label: '3. derece obez (morbid obez)', color: '#86493a' },
 ];
 ---
 
 <BaseLayout
   title="Vücut Kitle İndeksi Hesaplama"
-  description="Boyunuzu, kilonuzu ve yaşınızı girerek vücut kitle indeksinizi (VKİ) hesaplayın; hangi aralıkta olduğunuzu ve boyunuza göre sağlıklı kilo aralığınızı öğrenin."
+  description="Cinsiyetinizi, boyunuzu, kilonuzu ve yaşınızı girerek vücut kitle indeksinizi (VKİ) hesaplayın; hangi aralıkta olduğunuzu ve boyunuza göre sağlıklı kilo aralığınızı öğrenin."
 >
   <PageHero
     title="Vücut Kitle İndeksi Hesaplama"
     eyebrow="VKİ Hesaplayıcı"
-    lead="Boyunuzu, kilonuzu ve yaşınızı girin; vücut kitle indeksinizi, hangi aralıkta olduğunuzu ve boyunuza göre sağlıklı kilo aralığınızı hemen görün."
+    lead="Cinsiyetinizi, boyunuzu, kilonuzu ve yaşınızı girin; vücut kitle indeksinizi, hangi aralıkta olduğunuzu ve boyunuza göre sağlıklı kilo aralığınızı hemen görün."
     crumbs={[{ label: 'Vücut Kitle İndeksi Hesaplama' }]}
   />
 
@@ -75,11 +75,11 @@ const ranges = [
         </p>
       </div>
       <ul class="limit-list">
-        <li><Icon name="user" size={20} /><span><strong>Kas kütlesi yüksek kişiler ve sporcular:</strong> VKİ olduğundan yüksek çıkabilir.</span></li>
+        <li><Icon name="user" size={20} /><span><strong>Kas kütlesi yüksek kişiler ve sporcular:</strong> VKİ yüksek çıkabilir; bu, yağ fazlalığı anlamına gelmeyebilir.</span></li>
         <li><Icon name="bloom" size={20} /><span><strong>Gebelik ve emzirme dönemi:</strong> VKİ tek başına değerlendirme için uygun değildir.</span></li>
         <li><Icon name="heart" size={20} /><span><strong>18 yaş altı:</strong> Yaşa ve cinsiyete özel büyüme eğrileri kullanılır.</span></li>
         <li><Icon name="clock" size={20} /><span><strong>İleri yaş:</strong> Kas kaybı nedeniyle değerlendirme farklılık gösterebilir.</span></li>
-        <li><Icon name="ruler" size={20} /><span><strong>Bel çevresi:</strong> Karın bölgesinde yağlanma, VKİ normal olsa bile sağlık riskini artırabilir.</span></li>
+        <li><Icon name="ruler" size={20} /><span><strong>Bel çevresi geniş olanlar:</strong> Karın bölgesindeki yağlanma, VKİ normal olsa bile sağlık riskini artırabilir.</span></li>
       </ul>
     </div>
   </section>
@@ -91,8 +91,8 @@ const ranges = [
         <div>
           <h2>Daha ayrıntılı bir değerlendirme için: vücut analizi</h2>
           <p>
-            Vücut analiziyle kilonuzun ne kadarının yağ, kas ve sıvıdan oluştuğunu görebilir; beslenme planınızı bu
-            ölçümlere göre şekillendirebiliriz.
+            Vücut analiziyle kilonuzun ne kadarının yağ, kas ve sıvıdan oluştuğunu görebilirsiniz; beslenme planınızı da
+            bu ölçümlere göre şekillendirebiliriz.
           </p>
         </div>
         <a href="/randevu-olustur/?hizmet=V%C3%BCcut%20Analizi#randevu-formu" class="btn btn-primary">
@@ -152,9 +152,8 @@ const ranges = [
   }
   th {
     text-align: left;
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.01em;
     color: var(--ink-3);
     padding: 0 0 8px;
     border-bottom: 1px solid var(--beige);

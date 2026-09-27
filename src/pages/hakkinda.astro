@@ -11,19 +11,19 @@ const timeline = [
   {
     when: 'Lisans',
     title: 'Beslenme ve Diyetetik Bölümü',
-    place: 'İzmir Katip Çelebi Üniversitesi, Sağlık Bilimleri Fakültesi',
+    place: 'İzmir Kâtip Çelebi Üniversitesi, Sağlık Bilimleri Fakültesi',
     icon: 'cap',
   },
   {
-    when: '2021 – 2022',
+    when: '2021–2022',
     title: 'Diyetisyen',
-    place: 'İzmir Katip Çelebi Üniversitesi Atatürk Eğitim ve Araştırma Hastanesi',
+    place: 'İzmir Kâtip Çelebi Üniversitesi Atatürk Eğitim ve Araştırma Hastanesi',
     icon: 'clinic',
   },
   {
-    when: '2023 – Günümüz',
+    when: '2023–Günümüz',
     title: site.clinicName,
-    place: 'Seyhan / Adana · Yüz yüze ve online danışmanlık',
+    place: 'Seyhan/Adana · Yüz yüze ve online danışmanlık',
     icon: 'leaf',
   },
 ] as const;
@@ -54,7 +54,7 @@ const values = [
 
 <BaseLayout
   title="Hakkında"
-  description="Diyetisyen Eylem Dizman kimdir? İzmir Katip Çelebi Üniversitesi Beslenme ve Diyetetik mezunu Eylem Dizman, Seyhan/Adana’daki kliniğinde ve online olarak beslenme danışmanlığı vermektedir."
+  description="Diyetisyen Eylem Dizman kimdir? İzmir Kâtip Çelebi Üniversitesi Beslenme ve Diyetetik mezunu Eylem Dizman, Seyhan/Adana’daki kliniğinde ve online olarak beslenme danışmanlığı vermektedir."
 >
   <PageHero
     title="Hakkında"
@@ -79,10 +79,10 @@ const values = [
         <p class="eyebrow">Merhaba</p>
         <h2>Diyetisyen Eylem Dizman</h2>
         <p class="lead">
-          Lisans öncesi öğrenimlerinin ardından İzmir Katip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve
-          Diyetetik Bölümü’nde başladığı eğitimini başarıyla tamamlayarak Diyetisyen unvanını almıştır.
+          Eylem Dizman, lisans öncesi öğreniminin ardından İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi
+          Beslenme ve Diyetetik Bölümünde başladığı eğitimini başarıyla tamamlayarak diyetisyen unvanını almıştır.
         </p>
-        <p>Diyetisyen Eylem Dizman, mesleki çalışmalarına {site.clinicName}’nde devam etmektedir.</p>
+        <p>Mesleki çalışmalarına {site.clinicName}nde devam etmektedir.</p>
         <p>
           Seyhan/Adana’daki kliniğinde yüz yüze, WhatsApp görüntülü görüşmeyle de online olarak danışanlarıyla buluşmakta;
           kilo yönetimi, hastalıklarda beslenme, gebelik ve çocuk beslenmesi gibi alanlarda kişiye özel beslenme
@@ -237,10 +237,9 @@ const values = [
     box-shadow: var(--shadow-sm);
   }
   .t-when {
-    font-size: 0.78rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
     color: var(--terracotta-700);
   }
   .t-card h3 {

@@ -43,7 +43,7 @@ export const certificateGroups: CertificateGroup[] = [
     sets: [
       {
         title: 'Beslenme ve Diyetetik Bölümü · Lisans',
-        issuer: 'İzmir Katip Çelebi Üniversitesi, Sağlık Bilimleri Fakültesi',
+        issuer: 'İzmir Kâtip Çelebi Üniversitesi, Sağlık Bilimleri Fakültesi',
         date: '6 Temmuz 2022',
         items: [{ file: 'diploma.jpg', title: 'Lisans Diploması' }],
       },
@@ -64,7 +64,7 @@ export const certificateGroups: CertificateGroup[] = [
       {
         title: 'Beslenme ve Diyetetik Akademisi',
         issuer: 'Etkin Kampüs',
-        date: 'Mart – Nisan 2022',
+        date: 'Mart–Nisan 2022',
         items: [
           { file: 'akademi-2022-diyete-uyum.jpg', title: 'Danışanın Diyete Uyumunu Sağlayacak Psikolojik Yöntemler', date: '23 Mart 2022' },
           { file: 'akademi-2022-bariatrik.jpg', title: 'Bariatrik Cerrahi Sonrası Beslenme', date: '24 Mart 2022' },

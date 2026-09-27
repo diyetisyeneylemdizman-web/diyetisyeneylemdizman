@@ -26,8 +26,8 @@ const services = serviceCategories.flatMap((c) => c.services).filter((s) => feat
         <img src="/logo/logo-yatay-acik.svg" width="654" height="206" alt="Diyetisyen Eylem Dizman logosu" loading="lazy" />
       </a>
       <p>
-        Kişiye özel ve sürdürülebilir beslenme danışmanlığı. Seyhan/Adana’daki kliniğimizde yüz yüze, WhatsApp görüntülü
-        görüşmeyle online.
+        Kişiye özel ve sürdürülebilir beslenme danışmanlığı. Seyhan/Adana’daki kliniğimizde yüz yüze ya da WhatsApp
+        görüntülü görüşmeyle online.
       </p>
       <div class="social">
         <a href={site.instagram} target="_blank" rel="noopener" aria-label="Instagram"><Icon name="instagram" size={20} /></a>
@@ -52,7 +52,7 @@ const services = serviceCategories.flatMap((c) => c.services).filter((s) => feat
       <h2 class="footer-title">Hizmetler</h2>
       <ul class="footer-list">
         {services.map((s) => <li><a href={`/hizmetler/#${s.slug}`}>{s.name}</a></li>)}
-        <li><a href="/hizmetler/" class="more">Tüm hizmetler →</a></li>
+        <li><a href="/hizmetler/" class="more">Tüm Hizmetler →</a></li>
       </ul>
     </div>
 
@@ -67,7 +67,7 @@ const services = serviceCategories.flatMap((c) => c.services).filter((s) => feat
         <li><Icon name="mail" size={19} /><a href={`mailto:${site.email}`}>{site.email}</a></li>
         <li>
           <Icon name="clock" size={19} />
-          <span>Pzt–Cuma 09:00–18:00<br />Cumartesi 09:00–15:00<br />Pazar kapalı</span>
+          <span>Pazartesi–Cuma: 09:00–18:00<br />Cumartesi: 09:00–15:00<br />Pazar: Kapalı</span>
         </li>
       </ul>
     </div>
@@ -133,10 +133,9 @@ const services = serviceCategories.flatMap((c) => c.services).filter((s) => feat
   }
   .footer-title {
     font-family: var(--font-sans);
-    font-size: 0.78rem;
+    font-size: 0.98rem;
     font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
     color: var(--sage-200);
     margin-bottom: 18px;
   }

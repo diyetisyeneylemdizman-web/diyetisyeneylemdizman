@@ -48,7 +48,7 @@ const articleLd = {
         <nav aria-label="Sayfa konumu">
           <ol class="breadcrumb">
             <li><a href="/">Ana Sayfa</a></li>
-            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/blog/">Blog &amp; Reels</a></li>
             <li><span aria-current="page">{post.data.category}</span></li>
           </ol>
         </nav>
@@ -58,10 +58,10 @@ const articleLd = {
         <div class="meta">
           <span class="author">
             <img src="/logo/logo-simge.svg" width="136" height="206" alt="" />
-            <span><strong>Dyt. Eylem Dizman</strong>Diyetisyen</span>
+            <span><strong>Eylem Dizman</strong>Diyetisyen</span>
           </span>
           <span><Icon name="calendar" size={16} /><time datetime={post.data.date.toISOString()}>{fmt(post.data.date)}</time></span>
-          <span><Icon name="clock" size={16} />{minutes} dk okuma</span>
+          <span><Icon name="clock" size={16} />{minutes} dk. okuma</span>
         </div>
       </div>
     </header>
@@ -87,7 +87,7 @@ const articleLd = {
       <div class="post-cta">
         <div>
           <h2>Bu konuda destek almak ister misiniz?</h2>
-          <p>Size özel bir beslenme planı için randevu talebinizi hemen iletebilirsiniz.</p>
+          <p>Size özel bir beslenme planı için randevu talebinizi iletebilirsiniz.</p>
         </div>
         <a href={serviceLink} class="btn btn-primary"><Icon name="calendar" size={18} />Randevu Oluştur</a>
       </div>
