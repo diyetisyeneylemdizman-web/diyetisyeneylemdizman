@@ -5,120 +5,421 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import Icon from '../components/Icon.astro';
 import CtaBand from '../components/CtaBand.astro';
-import { certificateInfo } from '../data/certificates';
+import { certificateGroups, type CertificateGroup } from '../data/certificates';
 
-const files = import.meta.glob<{ default: ImageMetadata }>('../assets/sertifikalar/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', {
-  eager: true,
-});
-
-const certificates = await Promise.all(
-  Object.entries(files)
-    .sort(([a], [b]) => a.localeCompare(b, 'tr', { numeric: true }))
-    .map(async ([path, mod]) => {
-      const file = path.split('/').pop()!;
-      const info = certificateInfo[file];
-      const large = await getImage({ src: mod.default, width: 1600, format: 'webp' });
-      return { file, image: mod.default, large: large.src, info };
-    }),
+// src/assets/sertifikalar/ klasöründeki tüm görseller
+const modules = import.meta.glob<{ default: ImageMetadata }>(
+  '../assets/sertifikalar/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}',
+  { eager: true },
 );
+const images = new Map(Object.entries(modules).map(([path, mod]) => [path.split('/').pop()!, mod.default]));
+
+// Listeye eklenmemiş görseller "Diğer belgeler" grubunda gösterilir
+const listed = new Set(certificateGroups.flatMap((g) => g.sets.flatMap((s) => s.items.map((i) => i.file))));
+const others = [...images.keys()]
+  .filter((f) => !listed.has(f))
+  .sort((a, b) => a.localeCompare(b, 'tr', { numeric: true }));
+const fileTitle = (f: string) => {
+  const t = f.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+  return t.charAt(0).toLocaleUpperCase('tr') + t.slice(1);
+};
+const allGroups: CertificateGroup[] = [
+  ...certificateGroups,
+  ...(others.length
+    ? [
+        {
+          id: 'diger-belgeler',
+          title: 'Diğer Belgeler',
+          sets: [{ title: 'Diğer belgeler', issuer: '', date: '', items: others.map((f) => ({ file: f, title: fileTitle(f) })) }],
+        },
+      ]
+    : []),
+];
+
+// Görselleri eşleştir, büyük (lightbox) sürümlerini hazırla ve sıra numarası ver
+let index = 0;
+const groups = [];
+for (const g of allGroups) {
+  const sets = [];
+  for (const s of g.sets) {
+    const items = [];
+    for (const item of s.items) {
+      const image = images.get(item.file);
+      if (!image) {
+        console.warn(`[sertifikalar] Görsel bulunamadı, atlandı: ${item.file}`);
+        continue;
+      }
+      const large = await getImage({ src: image, width: Math.min(1600, image.width), format: 'webp', quality: 82 });
+      const caption = [s.title !== item.title ? s.title : '', s.issuer, item.date ?? s.date].filter(Boolean).join(' · ');
+      items.push({ ...item, image, large, caption, index: index++ });
+    }
+    if (items.length) sets.push({ ...s, items });
+  }
+  if (sets.length) groups.push({ ...g, sets, count: sets.reduce((n, s) => n + s.items.length, 0) });
+}
+const total = index;
+const diploma = groups.find((g) => g.id === 'diploma');
+const rest = groups.filter((g) => g.id !== 'diploma');
+const diplomaSet = diploma?.sets[0];
+const diplomaItem = diplomaSet?.items[0];
 ---
 
 <BaseLayout
   title="Sertifikalar"
-  description="Diyetisyen Eylem Dizman’ın tamamladığı mesleki eğitimler ve sertifika programları."
+  description="Diyetisyen Eylem Dizman’ın Beslenme ve Diyetetik lisans diploması ile katıldığı mesleki eğitim, kongre, zirve ve seminerlere ait belgeler."
 >
   <PageHero
     title="Sertifikalar"
-    eyebrow="Eğitimler ve sertifikalar"
-    lead="Mesleki gelişim için tamamlanan eğitim ve sertifika programları."
+    eyebrow="Eğitimler ve belgeler"
+    lead="Eylem Dizman’ın lisans diploması ile mesleki gelişim için katıldığı eğitim, kongre ve seminerlere ait belgeler. Büyütmek için belgenin üzerine tıklayın."
     crumbs={[{ label: 'Sertifikalar' }]}
-  />
+  >
+    {
+      total > 0 && (
+        <nav class="cert-nav" aria-label="Belge grupları">
+          {groups.map((g) => (
+            <a href={`#${g.id}`} class="chip">
+              {g.title}
+              <span class="n">{g.count}</span>
+            </a>
+          ))}
+        </nav>
+      )
+    }
+  </PageHero>
 
-  <section class="section">
-    <div class="container">
-      {
-        certificates.length > 0 ? (
-          <ul class="cert-grid" data-gallery>
-            {certificates.map((c, i) => (
-              <li class="reveal">
-                <button
-                  type="button"
-                  class="cert"
-                  data-index={i}
-                  data-large={c.large}
-                  data-title={c.info?.title ?? ''}
-                  aria-label={`${c.info?.title ?? `Sertifika ${i + 1}`} – büyüt`}
-                >
-                  <span class="cert-frame">
-                    <Image src={c.image} alt={c.info?.title ?? `Sertifika ${i + 1}`} width={520} loading="lazy" />
-                  </span>
-                  {c.info && (
-                    <span class="cert-meta">
-                      <strong>{c.info.title}</strong>
-                      {(c.info.institution || c.info.year) && (
-                        <span>{[c.info.institution, c.info.year].filter(Boolean).join(' · ')}</span>
-                      )}
-                    </span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div class="empty">
-            <div class="empty-art" aria-hidden="true">
-              {[0, 1, 2, 3, 4, 5].map((n) => (
-                <span class={`ph ph-${n}`}>
-                  <Icon name={(['cap', 'book', 'leaf', 'heart', 'chart', 'bloom'] as const)[n]} size={24} />
-                </span>
-              ))}
-            </div>
-            <div class="empty-copy">
-              <span class="icon-badge">
-                <Icon name="cap" size={26} />
+  {
+    total === 0 && (
+      <section class="section">
+        <div class="container empty">
+          <span class="icon-badge">
+            <Icon name="cap" size={26} />
+          </span>
+          <h2>Sertifikalar çok yakında burada</h2>
+          <p>Eylem Dizman’ın tamamladığı eğitim ve sertifika programları bu sayfada yer alacak.</p>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    diploma && diplomaSet && diplomaItem && (
+      <section class="section-sm" id="diploma">
+        <div class="container">
+          <div class="diploma card reveal">
+            <button
+              type="button"
+              class="cert diploma-shot"
+              data-cert
+              data-index={diplomaItem.index}
+              data-large={diplomaItem.large.src}
+              data-w={diplomaItem.large.attributes.width}
+              data-h={diplomaItem.large.attributes.height}
+              data-title={diplomaItem.title}
+              data-caption={diplomaItem.caption}
+              aria-label={`${diplomaItem.title} – büyüt`}
+            >
+              <span class="cert-frame">
+                <Image
+                  src={diplomaItem.image}
+                  alt={`${diplomaItem.title}: ${diplomaSet.title}, ${diplomaSet.issuer}`}
+                  widths={[480, 720, 960]}
+                  sizes="(max-width: 900px) 92vw, 560px"
+                />
               </span>
-              <h2>Sertifikalar çok yakında burada</h2>
-              <p>
-                Eylem Dizman’ın tamamladığı eğitim ve sertifika programları bu sayfada yer alacak. Görselleri büyüterek
-                inceleyebileceksiniz.
+            </button>
+            <div class="diploma-info">
+              <p class="eyebrow">{diploma.title}</p>
+              <h2>{diplomaSet.title}</h2>
+              <p class="lead">{diplomaSet.issuer}</p>
+              <p class="diploma-date">
+                <Icon name="calendar" size={18} />
+                Mezuniyet: {diplomaSet.date}
               </p>
-              <a href="/hakkinda/" class="link-arrow">
-                Eğitim ve deneyim bilgilerini inceleyin <Icon name="arrowRight" size={18} />
-              </a>
+              <button type="button" class="link-arrow open-diploma" data-open-index={diplomaItem.index}>
+                Diplomayı büyüt <Icon name="arrowRight" size={18} />
+              </button>
             </div>
           </div>
-        )
-      }
-    </div>
-  </section>
+          <p class="privacy-note">
+            <Icon name="lock" size={16} />
+            <span>Belgelerdeki T.C. kimlik numarası gibi kişisel veriler gizlenmiştir.</span>
+          </p>
+        </div>
+      </section>
+    )
+  }
 
-  <dialog class="lightbox" data-lightbox aria-label="Sertifika görüntüleyici">
-    <form method="dialog" class="lb-close-form">
-      <button class="lb-btn lb-close" aria-label="Kapat"><Icon name="close" size={24} /></button>
-    </form>
-    <button type="button" class="lb-btn lb-prev" data-prev aria-label="Önceki"><Icon name="arrowRight" size={24} /></button>
-    <figure>
-      <img data-lb-img alt="" />
-      <figcaption data-lb-caption></figcaption>
-    </figure>
-    <button type="button" class="lb-btn lb-next" data-next aria-label="Sonraki"><Icon name="arrowRight" size={24} /></button>
+  {
+    rest.map((g, gi) => (
+      <section class:list={['section-sm', 'cert-group', { 'bg-sage-faint': gi % 2 === 0 }]} id={g.id}>
+        <div class="container">
+          <header class="group-head reveal">
+            <div>
+              <p class="eyebrow">{g.count} belge</p>
+              <h2>{g.title}</h2>
+            </div>
+            {g.description && <p>{g.description}</p>}
+          </header>
+
+          {g.sets.map((s) => (
+            <div class="set">
+              <div class="set-info">
+                {s.issuer || s.date ? (
+                  <>
+                    <h3>{s.title}</h3>
+                    {s.issuer && <p class="set-issuer">{s.issuer}</p>}
+                    {s.date && (
+                      <p class="set-date">
+                        <Icon name="calendar" size={16} />
+                        {s.date}
+                      </p>
+                    )}
+                    {s.note && <p class="set-note">{s.note}</p>}
+                  </>
+                ) : (
+                  <h3>{s.title}</h3>
+                )}
+              </div>
+              <ul class="cert-grid" role="list">
+                {s.items.map((c) => (
+                  <li class="reveal">
+                    <button
+                      type="button"
+                      class="cert"
+                      data-cert
+                      data-index={c.index}
+                      data-large={c.large.src}
+                      data-w={c.large.attributes.width}
+                      data-h={c.large.attributes.height}
+                      data-title={c.title}
+                      data-caption={c.caption}
+                      aria-label={`${c.title} – büyüt`}
+                    >
+                      <span class="cert-frame">
+                        <Image
+                          src={c.image}
+                          alt={`${c.title} belgesi${s.issuer ? ` – ${s.issuer}` : ''}`}
+                          widths={[240, 360, 560]}
+                          sizes="(max-width: 560px) 120px, 280px"
+                          loading="lazy"
+                        />
+                      </span>
+                      <span class="cert-text">
+                        <span class="cert-title">{c.title}</span>
+                        {c.date && <span class="cert-date">{c.date}</span>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+    ))
+  }
+
+  <dialog class="lightbox" data-lightbox aria-label="Belge görüntüleyici">
+    <div class="lb-inner">
+      <form method="dialog">
+        <button class="lb-btn lb-close" aria-label="Kapat"><Icon name="close" size={22} /></button>
+      </form>
+      <figure>
+        <div class="lb-stage" data-lb-stage>
+          <img data-lb-img alt="" />
+        </div>
+        <figcaption>
+          <strong data-lb-title></strong>
+          <span data-lb-caption></span>
+        </figcaption>
+      </figure>
+      <div class="lb-nav">
+        <button type="button" class="lb-btn lb-prev" data-prev aria-label="Önceki belge">
+          <Icon name="arrowRight" size={22} />
+        </button>
+        <span class="lb-count" data-lb-count aria-live="polite"></span>
+        <button type="button" class="lb-btn" data-next aria-label="Sonraki belge">
+          <Icon name="arrowRight" size={22} />
+        </button>
+      </div>
+    </div>
   </dialog>
 
   <CtaBand />
 </BaseLayout>
 
 <style>
+  /* ---------- Grup bağlantıları ---------- */
+  .cert-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 26px;
+  }
+  .cert-nav .chip {
+    padding: 0.5em 0.6em 0.5em 1em;
+    background: var(--paper);
+    border: 1px solid rgb(41 44 41 / 0.08);
+    color: var(--ink);
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .cert-nav .chip:hover {
+    background: var(--sage-100);
+    border-color: var(--sage-200);
+  }
+  .cert-nav .n {
+    display: inline-grid;
+    place-items: center;
+    min-width: 26px;
+    height: 26px;
+    padding-inline: 7px;
+    border-radius: 999px;
+    background: var(--sage-100);
+    color: var(--sage-900);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  /* ---------- Diploma ---------- */
+  .diploma {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: clamp(24px, 4vw, 56px);
+    align-items: center;
+    padding: clamp(16px, 2.4vw, 28px);
+    border-radius: var(--radius-xl);
+  }
+  .diploma .cert-frame {
+    padding: 0;
+    box-shadow: none;
+    border: 0;
+    background: none;
+  }
+  .diploma .cert-frame :global(img) {
+    aspect-ratio: auto;
+    border-radius: calc(var(--radius-xl) - 16px);
+    background: none;
+  }
+  .diploma-info {
+    padding: 8px clamp(4px, 2vw, 24px) 8px 0;
+  }
+  .diploma-info h2 {
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+  }
+  .diploma-info .lead {
+    margin-bottom: 14px;
+  }
+  .diploma-date {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    color: var(--sage-800);
+    margin-bottom: 22px;
+  }
+  .open-diploma {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .privacy-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 22px auto 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+  .privacy-note :global(svg) {
+    flex: none;
+    margin-top: 2px;
+  }
+
+  /* ---------- Gruplar ---------- */
+  .group-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px 40px;
+    margin-bottom: clamp(28px, 4vw, 44px);
+  }
+  .group-head .eyebrow {
+    margin-bottom: 0.7rem;
+  }
+  .group-head h2 {
+    margin: 0;
+    font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+  }
+  .group-head p:not(.eyebrow) {
+    max-width: 440px;
+    margin: 0;
+    color: var(--ink-2);
+  }
+  .set {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 20px clamp(24px, 4vw, 48px);
+    padding-block: clamp(24px, 3vw, 32px);
+    border-top: 1px solid rgb(41 44 41 / 0.1);
+  }
+  .set-info {
+    position: sticky;
+    top: calc(var(--header-h) + 20px);
+    align-self: start;
+  }
+  .set-info h3 {
+    font-size: 1.28rem;
+    margin-bottom: 0.45em;
+  }
+  .set-issuer {
+    margin: 0 0 6px;
+    font-weight: 600;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .set-date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--sage-700);
+  }
+  .set-date :global(svg) {
+    flex: none;
+  }
+  .set-note {
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    color: var(--ink-3);
+  }
+
+  /* ---------- Belge kartları ---------- */
   .cert-grid {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 22px;
   }
   .cert {
-    display: block;
+    display: grid;
+    gap: 12px;
+    align-content: start;
     width: 100%;
+    height: 100%;
     padding: 0;
     border: 0;
     background: none;
@@ -129,9 +430,9 @@ const certificates = await Promise.all(
   }
   .cert-frame {
     display: block;
-    padding: 12px;
+    padding: 8px;
     background: var(--paper);
-    border-radius: var(--radius);
+    border-radius: 14px;
     box-shadow: var(--shadow-sm);
     border: 1px solid rgb(41 44 41 / 0.06);
     transition:
@@ -140,110 +441,117 @@ const certificates = await Promise.all(
   }
   .cert-frame :global(img) {
     width: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1.414;
     object-fit: contain;
-    background: var(--ivory);
-    border-radius: 10px;
+    background: var(--ivory-soft);
+    border-radius: 8px;
   }
   .cert:hover .cert-frame {
     transform: translateY(-3px);
     box-shadow: var(--shadow);
   }
-  .cert-meta {
+  .cert-text {
     display: grid;
     gap: 2px;
-    padding: 12px 4px 0;
-    font-size: 0.92rem;
+    padding-inline: 2px;
   }
-  .cert-meta span {
-    color: var(--ink-3);
+  .cert-title {
+    font-size: 0.93rem;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .cert-date {
     font-size: 0.84rem;
+    color: var(--ink-3);
   }
 
   .empty {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: clamp(28px, 5vw, 72px);
-    align-items: center;
+    justify-items: center;
+    text-align: center;
+    gap: 6px;
   }
-  .empty-art {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-  .ph {
-    display: grid;
-    place-items: center;
-    aspect-ratio: 4 / 3;
-    border-radius: 8px;
-    background: var(--paper);
-    border: 7px solid var(--ink);
-    color: var(--sage-700);
-    box-shadow: var(--shadow-sm);
-    position: relative;
-  }
-  .ph::after {
-    content: '';
-    position: absolute;
-    inset: 7px;
-    border: 1px solid var(--beige);
-  }
-  .ph-1,
-  .ph-5 {
-    border-color: var(--sage-800);
-  }
-  .ph-2,
-  .ph-3 {
-    border-color: #6b5d4b;
-  }
-  .ph-0 {
-    rotate: -3deg;
-  }
-  .ph-2 {
-    rotate: 2deg;
-  }
-  .ph-4 {
-    rotate: -2deg;
-  }
-  .empty-copy h2 {
-    margin-top: 18px;
+  .empty h2 {
+    margin-top: 12px;
     font-size: clamp(1.7rem, 3vw, 2.3rem);
   }
-  .empty-copy p {
-    color: var(--ink-2);
-  }
 
+  /* ---------- Büyük görüntüleyici ---------- */
+  :global(html:has(dialog.lightbox[open])) {
+    overflow: hidden;
+  }
   .lightbox {
     width: min(96vw, 1100px);
-    max-height: 94vh;
+    max-width: none;
+    max-height: 96dvh;
     padding: 0;
     border: 0;
     border-radius: var(--radius-lg);
     background: var(--ink);
     color: var(--ivory);
-    overflow: visible;
   }
   .lightbox::backdrop {
-    background: rgb(20 22 20 / 0.82);
+    background: rgb(20 22 20 / 0.85);
+  }
+  .lb-inner {
+    position: relative;
+    display: grid;
+    gap: 14px;
+    padding: 56px clamp(12px, 3vw, 28px) 18px;
   }
   .lightbox figure {
     margin: 0;
-    padding: 56px 64px 20px;
     display: grid;
-    gap: 12px;
+    gap: 14px;
     justify-items: center;
   }
-  .lightbox img {
-    max-height: 76vh;
+  .lb-stage {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    touch-action: pan-y;
+  }
+  .lb-stage img {
     width: auto;
+    max-width: 100%;
+    max-height: calc(96dvh - 230px);
     border-radius: 8px;
+    background: var(--paper);
+    transition: opacity 0.2s ease;
+  }
+  .lb-stage img.loading {
+    opacity: 0.35;
   }
   .lightbox figcaption {
-    font-size: 0.95rem;
-    min-height: 1.4em;
+    display: grid;
+    gap: 2px;
+    max-width: 760px;
+    text-align: center;
+    line-height: 1.45;
+  }
+  .lightbox figcaption strong {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  .lightbox figcaption span {
+    font-size: 0.88rem;
+    color: rgb(247 243 236 / 0.72);
+  }
+  .lb-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+  }
+  .lb-count {
+    min-width: 72px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    color: rgb(247 243 236 / 0.8);
   }
   .lb-btn {
-    position: absolute;
     display: grid;
     place-items: center;
     width: 46px;
@@ -253,60 +561,115 @@ const certificates = await Promise.all(
     background: rgb(247 243 236 / 0.12);
     color: var(--ivory);
     cursor: pointer;
+    transition: background-color 0.2s ease;
   }
   .lb-btn:hover {
     background: rgb(247 243 236 / 0.24);
   }
+  .lb-prev :global(svg) {
+    transform: scaleX(-1);
+  }
   .lb-close {
+    position: absolute;
     top: 10px;
     right: 10px;
   }
-  .lb-prev {
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%) scaleX(-1);
-  }
-  .lb-next {
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
-  @media (max-width: 800px) {
-    .empty {
+
+  /* ---------- Duyarlı ---------- */
+  @media (max-width: 900px) {
+    .diploma {
       grid-template-columns: 1fr;
     }
-    .lightbox figure {
-      padding: 56px 12px 16px;
+    .diploma-info {
+      padding: 0 8px 8px;
     }
-    .lb-prev,
-    .lb-next {
-      top: auto;
-      bottom: -60px;
+    .group-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .set {
+      grid-template-columns: 1fr;
+    }
+    .set-info {
+      position: static;
+    }
+  }
+  @media (max-width: 560px) {
+    .cert-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .cert {
+      grid-template-columns: 120px minmax(0, 1fr);
+      align-items: center;
+      gap: 14px;
+    }
+    .cert-frame {
+      padding: 5px;
+      border-radius: 10px;
+    }
+    .cert-frame :global(img) {
+      border-radius: 6px;
+    }
+    .diploma .cert {
+      grid-template-columns: 1fr;
+    }
+    .lb-inner {
+      padding-top: 60px;
+    }
+    .lb-stage img {
+      max-height: calc(96dvh - 250px);
     }
   }
 </style>
 
 <script>
-  const gallery = document.querySelector('[data-gallery]');
   const dialog = document.querySelector<HTMLDialogElement>('[data-lightbox]');
-  if (gallery && dialog) {
-    const items = Array.from(gallery.querySelectorAll<HTMLButtonElement>('button[data-large]'));
+  const items = Array.from(document.querySelectorAll<HTMLButtonElement>('button[data-cert]')).sort(
+    (a, b) => Number(a.dataset.index) - Number(b.dataset.index),
+  );
+
+  if (dialog && items.length) {
     const img = dialog.querySelector<HTMLImageElement>('[data-lb-img]')!;
-    const cap = dialog.querySelector<HTMLElement>('[data-lb-caption]')!;
+    const title = dialog.querySelector<HTMLElement>('[data-lb-title]')!;
+    const caption = dialog.querySelector<HTMLElement>('[data-lb-caption]')!;
+    const count = dialog.querySelector<HTMLElement>('[data-lb-count]')!;
+    const stage = dialog.querySelector<HTMLElement>('[data-lb-stage]')!;
     let current = 0;
+    let opener: HTMLElement | null = null;
+
+    const preload = (i: number) => {
+      const b = items[(i + items.length) % items.length];
+      if (b) new Image().src = b.dataset.large!;
+    };
+
     const show = (i: number) => {
       current = (i + items.length) % items.length;
       const b = items[current];
+      img.classList.add('loading');
+      img.onload = () => img.classList.remove('loading');
+      img.width = Number(b.dataset.w) || 0;
+      img.height = Number(b.dataset.h) || 0;
       img.src = b.dataset.large!;
-      img.alt = b.dataset.title || `Sertifika ${current + 1}`;
-      cap.textContent = `${b.dataset.title ? b.dataset.title + ' · ' : ''}${current + 1} / ${items.length}`;
+      img.alt = b.dataset.title || `Belge ${current + 1}`;
+      title.textContent = b.dataset.title || '';
+      caption.textContent = b.dataset.caption || '';
+      count.textContent = `${current + 1} / ${items.length}`;
+      preload(current + 1);
+      preload(current - 1);
     };
-    items.forEach((b, i) =>
-      b.addEventListener('click', () => {
-        show(i);
-        dialog.showModal();
-      }),
+
+    const open = (i: number, from: HTMLElement) => {
+      opener = from;
+      show(i);
+      dialog.showModal();
+    };
+
+    items.forEach((b) => b.addEventListener('click', () => open(Number(b.dataset.index), b)));
+    document.querySelectorAll<HTMLButtonElement>('[data-open-index]').forEach((b) =>
+      b.addEventListener('click', () => open(Number(b.dataset.openIndex), b)),
     );
+
     dialog.querySelector('[data-prev]')?.addEventListener('click', () => show(current - 1));
     dialog.querySelector('[data-next]')?.addEventListener('click', () => show(current + 1));
     dialog.addEventListener('keydown', (e) => {
@@ -316,5 +679,31 @@ const certificates = await Promise.all(
     dialog.addEventListener('click', (e) => {
       if (e.target === dialog) dialog.close();
     });
+    dialog.addEventListener('close', () => {
+      // Görüntüleyici kapanınca açılan belgeye geri dön
+      const b = items[current];
+      (b && b.offsetParent ? b : opener)?.focus();
+    });
+
+    // Telefonda sola/sağa kaydırarak geçiş
+    let sx = 0;
+    let sy = 0;
+    stage.addEventListener(
+      'touchstart',
+      (e) => {
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+      },
+      { passive: true },
+    );
+    stage.addEventListener(
+      'touchend',
+      (e) => {
+        const dx = e.changedTouches[0].clientX - sx;
+        const dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) show(current + (dx < 0 ? 1 : -1));
+      },
+      { passive: true },
+    );
   }
 </script>

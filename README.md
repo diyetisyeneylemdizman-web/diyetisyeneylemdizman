@@ -11,8 +11,8 @@ derlenip yayına alınır.
 | Telefon, adres, e-posta, çalışma saatleri, sosyal medya | `src/data/site.ts` |
 | Hizmet listesi ve açıklamaları | `src/data/services.ts` |
 | Blog yazıları | `src/content/blog/*.md` (her dosya bir yazı) |
-| Sertifika görselleri | `src/assets/sertifikalar/` klasörüne jpg/png eklenir |
-| Sertifika başlıkları (isteğe bağlı) | `src/data/certificates.ts` |
+| Sertifika görselleri | `src/assets/sertifikalar/` klasörüne jpg/png eklenir (kimlik no gibi kişisel veriler önceden gizlenmeli) |
+| Sertifika başlıkları, grupları ve sırası | `src/data/certificates.ts` (listede olmayan görseller “Diğer Belgeler” altında çıkar) |
 | Fotoğraf | `src/assets/eylem-dizman.jpg` |
 | Logo dosyaları | `public/logo/` |
 | Renkler ve yazı tipleri | `src/styles/global.css` |

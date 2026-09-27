@@ -1,5 +1,6 @@
 ---
-import { Picture } from 'astro:assets';
+import { Picture, Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Icon from '../components/Icon.astro';
@@ -11,8 +12,21 @@ import CtaBand from '../components/CtaBand.astro';
 import { serviceCategories } from '../data/services';
 import { site, fullAddress } from '../data/site';
 import portrait from '../assets/eylem-dizman.jpg';
+import { featuredCertificates } from '../data/certificates';
 
-const posts = (await getCollection('blog'))
+// Sertifika bandı: src/assets/sertifikalar/ klasöründeki belgelerden seçilen üç görsel ve toplam belge sayısı
+const certModules = import.meta.glob<{ default: ImageMetadata }>(
+  '../assets/sertifikalar/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}',
+  { eager: true },
+);
+const certImages = new Map(Object.entries(certModules).map(([path, mod]) => [path.split('/').pop()!, mod.default]));
+const certCount = certImages.size;
+const certPreview = featuredCertificates
+  .map((file) => certImages.get(file))
+  .filter((img): img is ImageMetadata => Boolean(img))
+  .slice(0, 3);
+
+const posts =(await getCollection('blog'))
   .sort((a, b) => b.data.date.getTime() - a.data.date.getTime() || a.data.title.localeCompare(b.data.title, 'tr'))
   .slice(0, 3);
 
@@ -245,16 +259,28 @@ const steps = [
   <!-- ============ SERTİFİKALAR ============ -->
   <section class="section-sm">
     <div class="container">
-      <div class="cert-band reveal">
-        <div class="cert-art" aria-hidden="true">
-          <span class="frame f1"><Icon name="cap" size={26} /></span>
-          <span class="frame f2"><Icon name="book" size={26} /></span>
-          <span class="frame f3"><Icon name="leaf" size={26} /></span>
-        </div>
+      <div class:list={['cert-band', 'reveal', { 'no-art': certPreview.length === 0 }]}>
+        {
+          certPreview.length > 0 && (
+            <a href="/sertifikalar/" class="cert-art" aria-hidden="true" tabindex="-1">
+              {certPreview.map((img, i) => (
+                <span class={`frame f${i + 1}`}>
+                  <Image src={img} alt="" widths={[260, 420]} sizes="260px" loading="lazy" />
+                </span>
+              ))}
+            </a>
+          )
+        }
         <div>
           <p class="eyebrow">Eğitimler ve Sertifikalar</p>
           <h2>Mesleki gelişim hiç durmaz</h2>
-          <p>Eylem Dizman’ın tamamladığı mesleki eğitim ve sertifika programlarını inceleyin.</p>
+          <p>
+            {
+              certCount > 0
+                ? `Lisans diploması ve katıldığı eğitim, kongre ve seminerlere ait ${certCount} belgeyi inceleyin.`
+                : 'Eylem Dizman’ın tamamladığı mesleki eğitim ve sertifika programlarını inceleyin.'
+            }
+          </p>
           <a href="/sertifikalar/" class="btn btn-sage">Sertifikaları Görüntüle <Icon name="arrowRight" size={18} /></a>
         </div>
       </div>
@@ -776,44 +802,60 @@ const steps = [
   .cert-band h2 {
     font-size: clamp(1.7rem, 3vw, 2.3rem);
   }
+  .cert-band.no-art {
+    grid-template-columns: 1fr;
+  }
   .cert-art {
     position: relative;
-    height: 220px;
+    display: block;
+    width: 100%;
+    max-width: 440px;
+    aspect-ratio: 1.45;
   }
   .frame {
     position: absolute;
-    display: grid;
-    place-items: center;
-    width: 150px;
-    height: 110px;
+    display: block;
+    padding: 6px;
     background: var(--paper);
-    border: 8px solid var(--ink);
-    border-radius: 4px;
-    color: var(--sage-700);
-    box-shadow: var(--shadow-sm);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    transition: transform 0.35s ease;
   }
-  .frame::after {
-    content: '';
-    position: absolute;
-    inset: 8px;
-    border: 1px solid var(--beige);
+  .frame :global(img) {
+    width: 100%;
+    height: auto;
+    border-radius: 5px;
   }
+  /* 1: diploma (yatay), 2: dikey belge, 3: yatay belge */
   .f1 {
-    left: 6%;
-    top: 0;
-    transform: rotate(-6deg);
+    left: 0;
+    top: 6%;
+    width: 60%;
+    transform: rotate(-5deg);
+    z-index: 1;
   }
   .f2 {
-    left: 36%;
-    top: 34px;
-    transform: rotate(4deg);
-    border-color: var(--sage-800);
+    right: 2%;
+    top: 0;
+    width: 31%;
+    transform: rotate(5deg);
+    z-index: 2;
   }
   .f3 {
-    left: 14%;
-    top: 104px;
-    transform: rotate(-2deg);
-    border-color: #6b5d4b;
+    left: 20%;
+    bottom: 0;
+    width: 52%;
+    transform: rotate(2deg);
+    z-index: 3;
+  }
+  .cert-art:hover .f1 {
+    transform: rotate(-6deg) translate(-4px, -4px);
+  }
+  .cert-art:hover .f2 {
+    transform: rotate(7deg) translate(4px, -4px);
+  }
+  .cert-art:hover .f3 {
+    transform: rotate(1deg) translateY(4px);
   }
 
   /* ---------- Blog ---------- */
@@ -901,8 +943,8 @@ const steps = [
       max-width: 560px;
     }
     .cert-art {
-      height: 200px;
-      max-width: 360px;
+      max-width: 380px;
+      margin-inline: auto;
     }
   }
   @media (max-width: 620px) {
