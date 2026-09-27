@@ -5,7 +5,7 @@ const wa = whatsappLink('Merhaba, web sitenizden ulaşıyorum. Bilgi almak istiy
 ---
 
 <a href={wa} class="wa-float" target="_blank" rel="noopener" aria-label="WhatsApp'tan yazın">
-  <Icon name="whatsapp" size={28} strokeWidth={1.7} />
+  <Icon name="whatsapp" size={26} strokeWidth={1.7} />
   <span class="wa-tip">WhatsApp'tan yazın</span>
 </a>
 
@@ -16,15 +16,16 @@ const wa = whatsappLink('Merhaba, web sitenizden ulaşıyorum. Bilgi almak istiy
 </nav>
 
 <style>
+  /* Sağ alt köşede site asistanı durur; WhatsApp butonu onun hemen üstündedir. */
   .wa-float {
     position: fixed;
-    right: clamp(16px, 2.4vw, 28px);
-    bottom: clamp(16px, 2.4vw, 28px);
+    right: calc(clamp(16px, 2.4vw, 28px) + 3px);
+    bottom: calc(clamp(16px, 2.4vw, 28px) + 72px);
     z-index: 40;
     display: grid;
     place-items: center;
-    width: 60px;
-    height: 60px;
+    width: 54px;
+    height: 54px;
     border-radius: 50%;
     background: var(--sage-800);
     color: #fff;

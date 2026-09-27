@@ -1,0 +1,957 @@
+---
+// Site asistanı: sağ alt köşedeki buton, karşılama balonu ve sohbet penceresi.
+// Metinler ve hazır sorular: src/data/assistant.ts · Yapay zekâ bağlantısı: worker/index.ts
+import Icon from './Icon.astro';
+import { assistant, quickReplies, resolveAction, actionDefs } from '../data/assistant';
+
+const replies = quickReplies.map((r) => ({
+  q: r.q,
+  a: r.a,
+  actions: (r.actions ?? []).map((t) => resolveAction(t)).filter(Boolean),
+}));
+
+const data = {
+  api: '/api/asistan',
+  teaser: assistant.teaser,
+  teaserDelayMs: assistant.teaserDelayMs,
+  welcome: assistant.welcome,
+  welcomeNoAi: assistant.welcomeNoAi,
+  hintAi: assistant.welcomeHintAi,
+  hintNoAi: assistant.welcomeHintNoAi,
+  errorText: assistant.errorText,
+  busyText: assistant.busyText,
+  replies,
+  fallbackActions: [actionDefs.whatsapp, actionDefs.telefon],
+};
+// JSON içinde "</script>" oluşmasın diye "<" karakteri kaçırılır
+const json = JSON.stringify(data).replace(/</g, '\\u003c');
+---
+
+<div class="asst" data-asst>
+  <div class="asst-teaser" data-teaser hidden>
+    <button type="button" class="asst-teaser-msg" data-open>
+      <span class="asst-teaser-dot" aria-hidden="true"></span>
+      {assistant.teaser}
+    </button>
+    <button type="button" class="asst-teaser-x" data-teaser-close aria-label="Karşılama mesajını kapat">
+      <Icon name="close" size={16} />
+    </button>
+  </div>
+
+  <button
+    type="button"
+    class="asst-launcher"
+    data-toggle
+    aria-expanded="false"
+    aria-controls="asistan"
+    aria-label="Asistanı aç"
+  >
+    <span class="asst-ico asst-ico-open"><Icon name="chat" size={28} /></span>
+    <span class="asst-ico asst-ico-close"><Icon name="close" size={26} /></span>
+    <span class="asst-spark" aria-hidden="true"><Icon name="sparkle" size={13} strokeWidth={2} /></span>
+  </button>
+
+  <section id="asistan" class="asst-panel" role="dialog" aria-modal="false" aria-labelledby="asistan-baslik" hidden>
+    <header class="asst-head">
+      <span class="asst-avatar" aria-hidden="true"><Icon name="sparkle" size={22} /></span>
+      <div class="asst-head-text">
+        <h2 id="asistan-baslik" tabindex="-1">
+          {assistant.title}
+          <span class="asst-badge" data-badge hidden>{assistant.badge}</span>
+        </h2>
+        <p>{assistant.subtitle}</p>
+      </div>
+      <button type="button" class="asst-icon-btn" data-reset aria-label="Yeni sohbet başlat" title="Yeni sohbet">
+        <Icon name="refresh" size={20} />
+      </button>
+      <button type="button" class="asst-icon-btn" data-close aria-label="Asistanı kapat" title="Kapat">
+        <Icon name="close" size={22} />
+      </button>
+    </header>
+
+    <div class="asst-log" data-log role="log" aria-live="polite" aria-relevant="additions"></div>
+
+    <form class="asst-form" data-form hidden>
+      <button type="button" class="asst-topics" data-topics aria-label="Hazır soruları göster" title="Hazır sorular">
+        <Icon name="menu" size={20} />
+      </button>
+      <label class="sr-only" for="asistan-soru">Sorunuz</label>
+      <textarea
+        id="asistan-soru"
+        data-input
+        rows="1"
+        maxlength="500"
+        placeholder={assistant.inputPlaceholder}
+        autocomplete="off"
+        enterkeyhint="send"></textarea>
+      <button type="submit" class="asst-send" data-send aria-label="Gönder">
+        <Icon name="send" size={20} />
+      </button>
+    </form>
+    <p class="asst-note" data-note hidden>
+      {assistant.privacyNote}{' '}
+      <a href="/kvkk-aydinlatma-metni/#asistan">Ayrıntılar</a>
+    </p>
+  </section>
+
+  <script type="application/json" data-asst-data set:html={json} />
+</div>
+
+<style>
+  .asst {
+    --asst-gap: clamp(16px, 2.4vw, 28px);
+    --asst-size: 60px;
+  }
+
+  /* ---------- Köşe butonu ---------- */
+  .asst-launcher {
+    position: fixed;
+    right: var(--asst-gap);
+    bottom: var(--asst-gap);
+    z-index: 44;
+    display: grid;
+    place-items: center;
+    width: var(--asst-size);
+    height: var(--asst-size);
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--ivory);
+    cursor: pointer;
+    box-shadow: 0 14px 30px -12px rgb(41 44 41 / 0.6);
+    transition:
+      transform 0.2s ease,
+      background-color 0.2s ease;
+  }
+  .asst-launcher:hover {
+    transform: translateY(-2px);
+    background: #1d201d;
+  }
+  .asst-ico {
+    grid-area: 1 / 1;
+    display: grid;
+    place-items: center;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+  .asst-ico-close {
+    opacity: 0;
+    transform: rotate(-45deg);
+  }
+  .asst.open .asst-ico-open {
+    opacity: 0;
+    transform: rotate(45deg);
+  }
+  .asst.open .asst-ico-close {
+    opacity: 1;
+    transform: none;
+  }
+  .asst-spark {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--sage);
+    color: #fff;
+    border: 2px solid var(--ivory);
+  }
+  .asst.open .asst-spark {
+    display: none;
+  }
+
+  /* ---------- Karşılama balonu ---------- */
+  .asst-teaser {
+    position: fixed;
+    right: calc(var(--asst-gap) + var(--asst-size) + 12px);
+    bottom: calc(var(--asst-gap) + 6px);
+    z-index: 44;
+    display: flex;
+    align-items: flex-start;
+    gap: 2px;
+    max-width: 280px;
+    padding: 4px;
+    border-radius: 18px 18px 6px 18px;
+    background: var(--paper);
+    border: 1px solid rgb(41 44 41 / 0.08);
+    box-shadow: 0 18px 40px -18px rgb(41 44 41 / 0.45);
+    animation: asst-pop 0.35s ease both;
+  }
+  .asst-teaser-msg {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px 4px 10px 12px;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.93rem;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+  }
+  .asst-teaser-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--leaf);
+    box-shadow: 0 0 0 3px rgb(141 198 63 / 0.25);
+  }
+  .asst-teaser-x {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--ink-3);
+    cursor: pointer;
+  }
+  .asst-teaser-x:hover {
+    background: var(--sage-50);
+    color: var(--ink);
+  }
+  @keyframes asst-pop {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+    }
+  }
+
+  /* ---------- Sohbet penceresi ---------- */
+  .asst-panel {
+    position: fixed;
+    right: var(--asst-gap);
+    bottom: calc(var(--asst-gap) + var(--asst-size) + 14px);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    width: min(392px, calc(100vw - 2 * var(--asst-gap)));
+    height: min(640px, calc(100dvh - var(--asst-gap) - var(--asst-size) - 40px));
+    border-radius: 24px;
+    background: var(--ivory-soft);
+    border: 1px solid rgb(41 44 41 / 0.08);
+    box-shadow: 0 30px 70px -24px rgb(41 44 41 / 0.5);
+    overflow: hidden;
+    animation: asst-pop 0.25s ease both;
+  }
+  .asst-panel[hidden] {
+    display: none;
+  }
+  .asst-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 10px 14px 16px;
+    background: var(--sage-800);
+    color: #fff;
+  }
+  .asst-avatar {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.14);
+  }
+  .asst-head-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .asst-head h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: #fff;
+    outline: none;
+  }
+  .asst-badge {
+    padding: 0.15em 0.6em;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.16);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .asst-head p {
+    margin: 1px 0 0;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    color: rgb(255 255 255 / 0.78);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .asst-icon-btn {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+  }
+  .asst-icon-btn:hover {
+    background: rgb(255 255 255 / 0.14);
+  }
+
+  .asst-log {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 14px 8px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .asst-log :global(.m) {
+    max-width: 88%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    font-size: 0.94rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+  .asst-log :global(.m p) {
+    margin: 0;
+  }
+  .asst-log :global(.m p + p),
+  .asst-log :global(.m p + ul),
+  .asst-log :global(.m ul + p) {
+    margin-top: 6px;
+  }
+  .asst-log :global(.m ul) {
+    margin: 0;
+    padding-left: 1.1em;
+  }
+  .asst-log :global(.m li + li) {
+    margin-top: 2px;
+  }
+  .asst-log :global(.m-bot) {
+    align-self: flex-start;
+    background: var(--paper);
+    border: 1px solid rgb(41 44 41 / 0.07);
+    border-bottom-left-radius: 6px;
+    color: var(--ink);
+  }
+  .asst-log :global(.m-user) {
+    align-self: flex-end;
+    background: var(--sage-800);
+    border-bottom-right-radius: 6px;
+    color: #fff;
+    white-space: pre-wrap;
+  }
+  .asst-log :global(.m-hint) {
+    margin-top: 6px;
+    color: var(--ink-3);
+    font-size: 0.86rem;
+  }
+  .asst-log :global(.acts) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: -2px;
+    max-width: 92%;
+  }
+  .asst-log :global(.act) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0.4em 0.95em;
+    border-radius: 999px;
+    border: 1.5px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-decoration: none;
+  }
+  .asst-log :global(.act:hover) {
+    background: var(--ink);
+    color: var(--ivory);
+  }
+  .asst-log :global(.act.primary) {
+    border-color: var(--terracotta-700);
+    background: var(--terracotta-700);
+    color: #fff;
+  }
+  .asst-log :global(.act.primary:hover) {
+    border-color: var(--terracotta-800);
+    background: var(--terracotta-800);
+  }
+  .asst-log :global(.chips) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .asst-log :global(.chip-q) {
+    padding: 0.5em 0.9em;
+    border-radius: 999px;
+    border: 1px solid var(--sage-200);
+    background: var(--sage-50);
+    color: var(--sage-900);
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+  .asst-log :global(.chip-q:hover) {
+    background: var(--sage-100);
+  }
+  .asst-log :global(.typing) {
+    display: inline-flex;
+    gap: 5px;
+    padding: 14px 16px;
+  }
+  .asst-log :global(.typing span) {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--sage);
+    animation: asst-dot 1.2s infinite ease-in-out;
+  }
+  .asst-log :global(.typing span:nth-child(2)) {
+    animation-delay: 0.15s;
+  }
+  .asst-log :global(.typing span:nth-child(3)) {
+    animation-delay: 0.3s;
+  }
+  @keyframes asst-dot {
+    0%,
+    80%,
+    100% {
+      opacity: 0.3;
+      transform: translateY(0);
+    }
+    40% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+
+  .asst-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 10px 10px 8px;
+    border-top: 1px solid rgb(41 44 41 / 0.08);
+    background: var(--paper);
+  }
+  .asst-form[hidden] {
+    display: none;
+  }
+  .asst-form textarea {
+    flex: 1;
+    min-width: 0;
+    max-height: 120px;
+    padding: 11px 14px;
+    border: 1px solid var(--beige);
+    border-radius: 16px;
+    background: var(--ivory-soft);
+    color: var(--ink);
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1.4;
+    resize: none;
+  }
+  .asst-form textarea:focus {
+    outline: 2px solid var(--sage);
+    outline-offset: 0;
+    border-color: transparent;
+  }
+  .asst-topics,
+  .asst-send {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .asst-topics {
+    background: none;
+    color: var(--ink-2);
+  }
+  .asst-topics:hover {
+    background: var(--sage-50);
+  }
+  .asst-send {
+    background: var(--terracotta-700);
+    color: #fff;
+  }
+  .asst-send:hover {
+    background: var(--terracotta-800);
+  }
+  .asst-send:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .asst-note {
+    margin: 0;
+    padding: 0 14px 10px;
+    background: var(--paper);
+    font-size: 0.74rem;
+    line-height: 1.4;
+    color: var(--ink-3);
+  }
+  .asst-note[hidden],
+  .asst-badge[hidden] {
+    display: none;
+  }
+  .asst-note a {
+    color: var(--ink-2);
+  }
+
+  /* ---------- Telefon ---------- */
+  @media (max-width: 760px) {
+    .asst {
+      --asst-size: 54px;
+    }
+    .asst-launcher {
+      right: 14px;
+      bottom: calc(76px + env(safe-area-inset-bottom));
+    }
+    .asst-teaser {
+      right: 14px;
+      bottom: calc(76px + 54px + 12px + env(safe-area-inset-bottom));
+      max-width: min(280px, calc(100vw - 28px));
+      border-radius: 18px 18px 6px 18px;
+    }
+    .asst-panel {
+      inset: 0;
+      width: 100%;
+      height: 100dvh;
+      border: 0;
+      border-radius: 0;
+      z-index: 70;
+    }
+    .asst-head {
+      padding-top: calc(12px + env(safe-area-inset-top));
+    }
+    .asst-note {
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+    :global(html.asst-lock) {
+      overflow: hidden;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .asst-teaser,
+    .asst-panel {
+      animation: none;
+    }
+  }
+  @media print {
+    .asst {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  type Action = { label: string; href: string; external?: boolean; primary?: boolean };
+  type Reply = { q: string; a: string; actions: Action[] };
+  type Item =
+    | { r: 'u'; t: string }
+    | { r: 'b'; t: string; a?: Action[]; hint?: boolean }
+    | { r: 'c'; skip?: string[] };
+  type Data = {
+    api: string;
+    teaser: string;
+    teaserDelayMs: number;
+    welcome: string;
+    welcomeNoAi: string;
+    hintAi: string;
+    hintNoAi: string;
+    errorText: string;
+    busyText: string;
+    replies: Reply[];
+    fallbackActions: Action[];
+  };
+
+  const root = document.querySelector<HTMLElement>('[data-asst]');
+  const dataEl = root?.querySelector<HTMLScriptElement>('[data-asst-data]');
+
+  if (root && dataEl) {
+    const D = JSON.parse(dataEl.textContent || '{}') as Data;
+    const panel = root.querySelector<HTMLElement>('.asst-panel')!;
+    const launcher = root.querySelector<HTMLButtonElement>('[data-toggle]')!;
+    const teaser = root.querySelector<HTMLElement>('[data-teaser]')!;
+    const log = root.querySelector<HTMLElement>('[data-log]')!;
+    const form = root.querySelector<HTMLFormElement>('[data-form]')!;
+    const input = root.querySelector<HTMLTextAreaElement>('[data-input]')!;
+    const send = root.querySelector<HTMLButtonElement>('[data-send]')!;
+    const heading = root.querySelector<HTMLElement>('#asistan-baslik')!;
+    const badge = root.querySelector<HTMLElement>('[data-badge]')!;
+    const note = root.querySelector<HTMLElement>('[data-note]')!;
+
+    const KEY = 'asistan-sohbet-v1';
+    const TEASER_KEY = 'asistan-karsilama';
+    const AI_KEY = 'asistan-durum';
+    const store = {
+      get(k: string) {
+        try {
+          return sessionStorage.getItem(k);
+        } catch {
+          return null;
+        }
+      },
+      set(k: string, v: string) {
+        try {
+          sessionStorage.setItem(k, v);
+        } catch {
+          /* tarayıcı depolamaya izin vermiyor */
+        }
+      },
+      del(k: string) {
+        try {
+          sessionStorage.removeItem(k);
+        } catch {
+          /* yok say */
+        }
+      },
+    };
+
+    let items: Item[] = [];
+    try {
+      const saved = JSON.parse(store.get(KEY) || 'null');
+      if (saved && Array.isArray(saved.items) && Date.now() - saved.ts < 3 * 60 * 60 * 1000) items = saved.items;
+    } catch {
+      items = [];
+    }
+    const save = () => store.set(KEY, JSON.stringify({ ts: Date.now(), items: items.slice(-40) }));
+
+    let aiReady: boolean | null = null;
+    let busy = false;
+    let rendered = false;
+    const finePointer = matchMedia('(pointer: fine)').matches;
+    const mobile = () => matchMedia('(max-width: 760px)').matches;
+
+    // ---------- Görünüm ----------
+    const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text != null) n.textContent = text;
+      return n;
+    };
+
+    const renderText = (box: HTMLElement, text: string) => {
+      const lines = text.replace(/\*\*/g, '').split('\n');
+      let ul: HTMLUListElement | null = null;
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) {
+          ul = null;
+          continue;
+        }
+        const m = line.match(/^[-•]\s+(.*)$/);
+        if (m) {
+          if (!ul) {
+            ul = el('ul');
+            box.append(ul);
+          }
+          ul.append(el('li', undefined, m[1]));
+        } else {
+          ul = null;
+          box.append(el('p', undefined, line));
+        }
+      }
+    };
+
+    // Yalnızca site içi sayfalara, WhatsApp'a, telefona ve haritaya giden bağlantılara izin ver
+    const safeHref = (h: unknown) =>
+      typeof h === 'string' &&
+      (/^\/(?!\/)/.test(h) || h.startsWith('https://wa.me/') || h.startsWith('tel:') || h.startsWith('https://maps.app.goo.gl/'));
+
+    const actionsRow = (acts: Action[]) => {
+      const row = el('div', 'acts');
+      for (const a of acts.filter((x) => x && safeHref(x.href) && typeof x.label === 'string').slice(0, 3)) {
+        const link = el('a', `act${a.primary ? ' primary' : ''}`, a.label);
+        link.href = a.href;
+        if (a.external) {
+          link.target = '_blank';
+          link.rel = 'noopener';
+        }
+        row.append(link);
+      }
+      return row;
+    };
+
+    const chipsRow = (skip: string[] = []) => {
+      const row = el('div', 'chips');
+      row.setAttribute('role', 'group');
+      row.setAttribute('aria-label', 'Hazır sorular');
+      for (const r of D.replies.filter((x) => !skip.includes(x.q))) {
+        const b = el('button', 'chip-q', r.q);
+        b.type = 'button';
+        b.addEventListener('click', () => askQuick(r));
+        row.append(b);
+      }
+      return row;
+    };
+
+    const renderItem = (it: Item) => {
+      if (it.r === 'u') {
+        log.append(el('div', 'm m-user', it.t));
+      } else if (it.r === 'b') {
+        const box = el('div', 'm m-bot');
+        renderText(box, it.t);
+        log.append(box);
+        if (it.a?.length) log.append(actionsRow(it.a));
+      } else {
+        log.append(chipsRow(it.skip));
+      }
+    };
+
+    const scrollDown = () => {
+      log.scrollTop = log.scrollHeight;
+    };
+
+    const renderAll = () => {
+      log.textContent = '';
+      const hello = el('div', 'm m-bot');
+      hello.append(el('p', undefined, aiReady ? D.welcome : D.welcomeNoAi));
+      hello.append(el('p', 'm-hint', aiReady ? D.hintAi : D.hintNoAi));
+      log.append(hello);
+      if (!aiReady) log.append(actionsRow(D.fallbackActions));
+      if (!items.length) {
+        log.append(chipsRow());
+      } else {
+        items.forEach(renderItem);
+      }
+      rendered = true;
+      scrollDown();
+    };
+
+    const push = (it: Item) => {
+      items.push(it);
+      save();
+      renderItem(it);
+      scrollDown();
+    };
+
+    const askedQuestions = () => items.filter((i): i is { r: 'u'; t: string } => i.r === 'u').map((i) => i.t);
+
+    // ---------- Hazır sorular ----------
+    function askQuick(r: Reply) {
+      if (busy) return;
+      push({ r: 'u', t: r.q });
+      busy = true;
+      const typing = showTyping();
+      setTimeout(() => {
+        typing.remove();
+        busy = false;
+        push({ r: 'b', t: r.a, a: r.actions });
+        const asked = askedQuestions();
+        if (D.replies.some((x) => !asked.includes(x.q))) push({ r: 'c', skip: asked });
+        if (finePointer && aiReady) input.focus();
+      }, 450);
+    }
+
+    const showTyping = () => {
+      const t = el('div', 'm m-bot typing');
+      t.setAttribute('aria-label', 'Yazıyor');
+      t.append(el('span'), el('span'), el('span'));
+      log.append(t);
+      scrollDown();
+      return t;
+    };
+
+    // ---------- Yapay zekâ durumu ----------
+    const setAi = (on: boolean) => {
+      aiReady = on;
+      form.hidden = !on;
+      badge.hidden = !on;
+      note.hidden = !on;
+      store.set(AI_KEY, JSON.stringify({ on, ts: Date.now() }));
+    };
+
+    let aiCheck: Promise<void> | null = null;
+    const checkAi = () => {
+      if (aiCheck) return aiCheck;
+      aiCheck = (async () => {
+        try {
+          const cached = JSON.parse(store.get(AI_KEY) || 'null');
+          if (cached && Date.now() - cached.ts < 10 * 60 * 1000) {
+            setAi(Boolean(cached.on));
+            return;
+          }
+        } catch {
+          /* yok say */
+        }
+        try {
+          const res = await fetch(D.api, { headers: { Accept: 'application/json' } });
+          const j = res.ok ? await res.json() : null;
+          setAi(Boolean(j && j.ai));
+        } catch {
+          setAi(false);
+        }
+      })();
+      return aiCheck;
+    };
+
+    // ---------- Mesaj gönderme ----------
+    const history = () =>
+      items
+        .filter((i): i is { r: 'u'; t: string } | { r: 'b'; t: string } => i.r === 'u' || i.r === 'b')
+        .map((i) => ({ role: i.r === 'u' ? 'user' : 'assistant', content: i.t }))
+        .slice(-12);
+
+    const setBusy = (on: boolean) => {
+      busy = on;
+      send.disabled = on;
+      input.readOnly = on;
+    };
+
+    const autosize = () => {
+      input.style.height = 'auto';
+      input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = input.value.trim().slice(0, 500);
+      if (!text || busy) return;
+      input.value = '';
+      autosize();
+      push({ r: 'u', t: text });
+      setBusy(true);
+      const typing = showTyping();
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 30000);
+      try {
+        const res = await fetch(D.api, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ messages: history() }),
+          signal: ctrl.signal,
+        });
+        const j = await res.json().catch(() => null);
+        typing.remove();
+        if (res.ok && j && typeof j.reply === 'string' && j.reply.trim()) {
+          push({ r: 'b', t: j.reply, a: Array.isArray(j.actions) ? j.actions : [] });
+        } else if (res.status === 429) {
+          push({ r: 'b', t: D.busyText });
+        } else {
+          if (res.status === 503) setAi(false);
+          push({ r: 'b', t: D.errorText, a: D.fallbackActions });
+        }
+      } catch {
+        typing.remove();
+        push({ r: 'b', t: D.errorText, a: D.fallbackActions });
+      } finally {
+        clearTimeout(timer);
+        setBusy(false);
+        if (finePointer && aiReady) input.focus();
+      }
+    });
+
+    input.addEventListener('input', autosize);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    root.querySelector('[data-topics]')?.addEventListener('click', () => {
+      push({ r: 'c', skip: [] });
+    });
+
+    root.querySelector('[data-reset]')?.addEventListener('click', () => {
+      items = [];
+      store.del(KEY);
+      renderAll();
+      if (finePointer && aiReady) input.focus();
+    });
+
+    // ---------- Aç / kapat ----------
+    const hideTeaser = () => {
+      teaser.hidden = true;
+    };
+
+    const open = async () => {
+      hideTeaser();
+      store.set(TEASER_KEY, '1');
+      panel.hidden = false;
+      root.classList.add('open');
+      launcher.setAttribute('aria-expanded', 'true');
+      launcher.setAttribute('aria-label', 'Asistanı kapat');
+      if (mobile()) document.documentElement.classList.add('asst-lock');
+      if (!rendered) {
+        if (aiReady === null) {
+          log.textContent = '';
+          const t = showTyping();
+          await checkAi();
+          t.remove();
+        }
+        renderAll();
+      }
+      if (finePointer && aiReady) input.focus();
+      else heading.focus();
+    };
+
+    const close = () => {
+      panel.hidden = true;
+      root.classList.remove('open');
+      launcher.setAttribute('aria-expanded', 'false');
+      launcher.setAttribute('aria-label', 'Asistanı aç');
+      document.documentElement.classList.remove('asst-lock');
+      launcher.focus();
+    };
+
+    launcher.addEventListener('click', () => (panel.hidden ? open() : close()));
+    // Kullanıcı butona yaklaşınca yapay zekâ durumunu önceden öğren (pencere daha hızlı açılır)
+    launcher.addEventListener('pointerenter', () => void checkAi(), { once: true });
+    launcher.addEventListener('focus', () => void checkAi(), { once: true });
+    root.querySelector('[data-close]')?.addEventListener('click', close);
+    root.querySelector('[data-open]')?.addEventListener('click', open);
+    root.querySelector('[data-teaser-close]')?.addEventListener('click', () => {
+      hideTeaser();
+      store.set(TEASER_KEY, '1');
+    });
+    panel.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') close();
+    });
+
+    // ---------- Karşılama balonu (oturumda bir kez) ----------
+    const quietPages = ['/randevu-olustur/', '/kvkk-aydinlatma-metni/'];
+    if (!store.get(TEASER_KEY) && !quietPages.includes(location.pathname)) {
+      setTimeout(() => {
+        if (!panel.hidden || store.get(TEASER_KEY)) return;
+        teaser.hidden = false;
+        store.set(TEASER_KEY, '1');
+        void checkAi();
+        setTimeout(hideTeaser, 15000);
+      }, D.teaserDelayMs);
+    }
+  }
+</script>

@@ -1,11 +1,17 @@
 {
-  // Cloudflare ayarları: site, derlenen "dist" klasöründen statik olarak yayınlanır.
+  // Cloudflare ayarları:
+  // - Site, derlenen "dist" klasöründen statik olarak yayınlanır.
+  // - Yalnızca /api/* adresleri worker/index.ts dosyasına gider (site asistanı).
+  // - Yapay zekâ anahtarı burada DEĞİL, Cloudflare panelinde gizli değişken (ANTHROPIC_API_KEY) olarak tutulur.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "diyetisyeneylemdizman",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-09-01",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
   }
 }
