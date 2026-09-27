@@ -27,20 +27,15 @@ Randevu Oluştur (form → WhatsApp) · KVKK Aydınlatma Metni
 
 ## Site asistanı
 
-Sağ alt köşedeki asistan iki şekilde çalışır:
+Sağ alt köşedeki asistan yapay zekâ kullanmaz ve ücretsizdir:
 
-- **Hazır sorular** (randevu, online görüşme, saatler, ücret vb.) yapay zekâ kullanmadan, anında cevaplanır.
-  Metinler `src/data/assistant.ts` dosyasındadır.
-- **Ziyaretçinin kendi yazdığı sorular** Cloudflare Worker (`worker/index.ts`) üzerinden yapay zekâya (Anthropic Claude
-  Haiku) gönderilir. Yapay zekâ yalnızca sitedeki bilgilerle cevap verir; bu bilgiler site her derlendiğinde
-  `/asistan-bilgi.json` dosyasına otomatik yazılır (hizmetler, saatler, online görüşme, blog yazıları vb.).
-
-Yapay zekâyı açmak için Cloudflare panelinde **Workers & Pages → diyetisyeneylemdizman → Settings → Variables and
-Secrets** bölümüne `ANTHROPIC_API_KEY` adıyla **Secret** türünde anahtar eklenir. Anahtar yoksa asistan yalnızca hazır
-cevaplarla çalışır. Harcamayı sınırlamak için Anthropic Console'da aylık harcama limiti tanımlanmalıdır. Farklı bir model
-kullanmak için isteğe bağlı `ASISTAN_MODEL` değişkeni eklenebilir.
-
-Asistan mesajları kaydetmez; ziyaretçilerden kişisel veya sağlık bilgisi yazmamaları istenir (bkz. KVKK Aydınlatma Metni).
+- **Hazır sorular** (randevu, online görüşme, saatler, ücret vb.) butonla anında cevaplanır.
+- **Ziyaretçinin yazdığı sorular** ziyaretçinin tarayıcısında anahtar kelimelerle hazır cevaplara ve hizmetlere
+  eşleştirilir (ör. “hamileyim” → Gebelikte Beslenme ve randevu butonu). Eşleşme yoksa WhatsApp'a yönlendirir.
+  Yazılanlar hiçbir yere gönderilmez.
+- Metinler, hazır sorular ve anahtar kelimeler `src/data/assistant.ts` dosyasındadır. Hizmetler ve blog yazıları
+  asistana otomatik eklenir; bilgiler site derlenirken `/asistan-bilgi.json` dosyasına yazılır.
+- Kişiye özel sağlık tavsiyesi, fiyat ve sonuç vaadi verilmez; acil durum ifadelerinde 112'ye yönlendirir.
 
 ## Mevzuat notları
 
@@ -56,5 +51,4 @@ npm run dev      # http://localhost:4321 adresinde önizleme
 npm run build    # yayın dosyalarını dist/ klasörüne üretir
 ```
 
-Cloudflare ayarları: `wrangler.jsonc` (derleme komutu `npm run build`, yayın komutu `npx wrangler deploy`). Sayfalar
-`dist/` klasöründen sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır.
+Cloudflare ayarları: `wrangler.jsonc` (derleme komutu `npm run build`, yayın komutu `npx wrangler deploy`).

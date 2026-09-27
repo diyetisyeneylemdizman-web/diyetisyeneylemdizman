@@ -1,26 +1,16 @@
 ---
 // Site asistanı: sağ alt köşedeki buton, karşılama balonu ve sohbet penceresi.
-// Metinler ve hazır sorular: src/data/assistant.ts · Yapay zekâ bağlantısı: worker/index.ts
+// Yapay zekâ kullanmaz ve ücretsizdir: yazılan soru, tarayıcıda hazır cevaplarla eşleştirilir; hiçbir yere gönderilmez.
+// Metinler, hazır sorular ve anahtar kelimeler: src/data/assistant.ts · Bilgi dosyası: src/pages/asistan-bilgi.json.ts
 import Icon from './Icon.astro';
-import { assistant, quickReplies, resolveAction, actionDefs } from '../data/assistant';
-
-const replies = quickReplies.map((r) => ({
-  q: r.q,
-  a: r.a,
-  actions: (r.actions ?? []).map((t) => resolveAction(t)).filter(Boolean),
-}));
+import { assistant, actionDefs } from '../data/assistant';
 
 const data = {
-  api: '/api/asistan',
-  teaser: assistant.teaser,
+  kb: '/asistan-bilgi.json',
   teaserDelayMs: assistant.teaserDelayMs,
   welcome: assistant.welcome,
-  welcomeNoAi: assistant.welcomeNoAi,
-  hintAi: assistant.welcomeHintAi,
-  hintNoAi: assistant.welcomeHintNoAi,
-  errorText: assistant.errorText,
-  busyText: assistant.busyText,
-  replies,
+  hint: assistant.hint,
+  loadError: assistant.loadError,
   fallbackActions: [actionDefs.whatsapp, actionDefs.telefon],
 };
 // JSON içinde "</script>" oluşmasın diye "<" karakteri kaçırılır
@@ -48,17 +38,13 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
   >
     <span class="asst-ico asst-ico-open"><Icon name="chat" size={28} /></span>
     <span class="asst-ico asst-ico-close"><Icon name="close" size={26} /></span>
-    <span class="asst-spark" aria-hidden="true"><Icon name="sparkle" size={13} strokeWidth={2} /></span>
   </button>
 
   <section id="asistan" class="asst-panel" role="dialog" aria-modal="false" aria-labelledby="asistan-baslik" hidden>
     <header class="asst-head">
-      <span class="asst-avatar" aria-hidden="true"><Icon name="sparkle" size={22} /></span>
+      <span class="asst-avatar" aria-hidden="true"><Icon name="leaf" size={22} /></span>
       <div class="asst-head-text">
-        <h2 id="asistan-baslik" tabindex="-1">
-          {assistant.title}
-          <span class="asst-badge" data-badge hidden>{assistant.badge}</span>
-        </h2>
+        <h2 id="asistan-baslik" tabindex="-1">{assistant.title}</h2>
         <p>{assistant.subtitle}</p>
       </div>
       <button type="button" class="asst-icon-btn" data-reset aria-label="Yeni sohbet başlat" title="Yeni sohbet">
@@ -71,7 +57,7 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
 
     <div class="asst-log" data-log role="log" aria-live="polite" aria-relevant="additions"></div>
 
-    <form class="asst-form" data-form hidden>
+    <form class="asst-form" data-form>
       <button type="button" class="asst-topics" data-topics aria-label="Hazır soruları göster" title="Hazır sorular">
         <Icon name="menu" size={20} />
       </button>
@@ -80,7 +66,7 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
         id="asistan-soru"
         data-input
         rows="1"
-        maxlength="500"
+        maxlength="300"
         placeholder={assistant.inputPlaceholder}
         autocomplete="off"
         enterkeyhint="send"></textarea>
@@ -88,7 +74,7 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
         <Icon name="send" size={20} />
       </button>
     </form>
-    <p class="asst-note" data-note hidden>
+    <p class="asst-note">
       {assistant.privacyNote}{' '}
       <a href="/kvkk-aydinlatma-metni/#asistan">Ayrıntılar</a>
     </p>
@@ -148,23 +134,6 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
     opacity: 1;
     transform: none;
   }
-  .asst-spark {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--sage);
-    color: #fff;
-    border: 2px solid var(--ivory);
-  }
-  .asst.open .asst-spark {
-    display: none;
-  }
-
   /* ---------- Karşılama balonu ---------- */
   .asst-teaser {
     position: fixed;
@@ -280,14 +249,6 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
     letter-spacing: 0;
     color: #fff;
     outline: none;
-  }
-  .asst-badge {
-    padding: 0.15em 0.6em;
-    border-radius: 999px;
-    background: rgb(255 255 255 / 0.16);
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
   }
   .asst-head p {
     margin: 1px 0 0;
@@ -521,10 +482,6 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
     line-height: 1.4;
     color: var(--ink-3);
   }
-  .asst-note[hidden],
-  .asst-badge[hidden] {
-    display: none;
-  }
   .asst-note a {
     color: var(--ink-2);
   }
@@ -578,22 +535,16 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
 
 <script>
   type Action = { label: string; href: string; external?: boolean; primary?: boolean };
-  type Reply = { q: string; a: string; actions: Action[] };
-  type Item =
-    | { r: 'u'; t: string }
-    | { r: 'b'; t: string; a?: Action[]; hint?: boolean }
-    | { r: 'c'; skip?: string[] };
+  type Intent = { id: string; kind: string; q: string; a: string; actions: Action[]; k: string[] };
+  type Special = 'emergency' | 'sensitive' | 'personal' | 'greeting' | 'thanks' | 'fallback';
+  type KB = { chips: string[]; intents: Intent[]; special: Record<Special, Intent> };
+  type Item = { r: 'u'; t: string; id?: string } | { r: 'b'; t: string; a?: Action[] } | { r: 'c'; ids: string[] };
   type Data = {
-    api: string;
-    teaser: string;
+    kb: string;
     teaserDelayMs: number;
     welcome: string;
-    welcomeNoAi: string;
-    hintAi: string;
-    hintNoAi: string;
-    errorText: string;
-    busyText: string;
-    replies: Reply[];
+    hint: string;
+    loadError: string;
     fallbackActions: Action[];
   };
 
@@ -608,14 +559,10 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
     const log = root.querySelector<HTMLElement>('[data-log]')!;
     const form = root.querySelector<HTMLFormElement>('[data-form]')!;
     const input = root.querySelector<HTMLTextAreaElement>('[data-input]')!;
-    const send = root.querySelector<HTMLButtonElement>('[data-send]')!;
     const heading = root.querySelector<HTMLElement>('#asistan-baslik')!;
-    const badge = root.querySelector<HTMLElement>('[data-badge]')!;
-    const note = root.querySelector<HTMLElement>('[data-note]')!;
 
-    const KEY = 'asistan-sohbet-v1';
+    const KEY = 'asistan-sohbet-v2';
     const TEASER_KEY = 'asistan-karsilama';
-    const AI_KEY = 'asistan-durum';
     const store = {
       get(k: string) {
         try {
@@ -649,11 +596,86 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
     }
     const save = () => store.set(KEY, JSON.stringify({ ts: Date.now(), items: items.slice(-40) }));
 
-    let aiReady: boolean | null = null;
+    let kb: KB | null = null;
+    let kbLoad: Promise<KB | null> | null = null;
     let busy = false;
     let rendered = false;
     const finePointer = matchMedia('(pointer: fine)').matches;
     const mobile = () => matchMedia('(max-width: 760px)').matches;
+
+    // ---------- Bilgi dosyası ----------
+    const loadKb = () => {
+      kbLoad ??= fetch(D.kb)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => (kb = j && Array.isArray(j.intents) && j.special ? (j as KB) : null))
+        .catch(() => null);
+      return kbLoad;
+    };
+
+    // ---------- Eşleştirme (tarayıcıda) ----------
+    const fold = (s: string) =>
+      s
+        .toLocaleLowerCase('tr')
+        .replace(/ı/g, 'i')
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    const weight = (k: string) => (k.length >= 9 ? 3 : k.length >= 5 ? 2 : 1);
+    const has = (text: string, k: string) => ` ${text}`.includes(` ${k}`);
+    const score = (text: string, it: Intent) => it.k.reduce((s, k) => (has(text, k) ? s + weight(k) : s), 0);
+    const matches = (text: string, it: Intent) => it.k.some((k) => has(text, k));
+    const byId = (id: string) => kb?.intents.find((i) => i.id === id);
+
+    const askedIds = () => items.flatMap((i) => (i.r === 'u' && i.id ? [i.id] : []));
+    // Hazır soru cevabından sonra henüz sorulmamış en fazla 4 konu önerilir (tamamı için alttaki menü butonu)
+    const remainingChips = () => (kb ? kb.chips.filter((id) => !askedIds().includes(id)).slice(0, 4) : []);
+
+    const reply = (it: Intent, actions: Action[] = it.actions, chips: string[] = []) => {
+      push({ r: 'b', t: it.a, a: actions });
+      const ids = chips.filter((id) => byId(id));
+      if (ids.length) push({ r: 'c', ids });
+    };
+
+    const answerText = (raw: string) => {
+      if (!kb) {
+        push({ r: 'b', t: D.loadError, a: D.fallbackActions });
+        return;
+      }
+      const S = kb.special;
+      const text = fold(raw);
+      if (matches(text, S.emergency)) return reply(S.emergency);
+      if (matches(text, S.sensitive)) return reply(S.sensitive);
+      const ranked = kb.intents
+        .map((i) => ({ i, s: score(text, i) }))
+        .filter((x) => x.s > 0)
+        .sort((a, b) => b.s - a.s);
+      if (matches(text, S.personal)) {
+        // Kişisel sağlık sorusu: tavsiye verilmez; soruda bir hastalık/hizmet geçiyorsa onun randevusu önerilir
+        const rest = S.personal.k.reduce((t, k) => ` ${t}`.split(` ${k}`).join(' ').trim(), text);
+        const svc = kb.intents
+          .filter((i) => i.kind === 'service')
+          .map((i) => ({ i, s: score(rest, i) }))
+          .filter((x) => x.s > 0)
+          .sort((a, b) => b.s - a.s)[0]?.i;
+        const acts = svc ? [svc.actions[0], ...S.personal.actions.filter((a) => !a.primary)] : S.personal.actions;
+        return reply(
+          S.personal,
+          acts,
+          ranked.filter((x) => x.i !== svc).slice(0, 3).map((x) => x.i.id),
+        );
+      }
+      if (ranked.length) {
+        return reply(
+          ranked[0].i,
+          ranked[0].i.actions,
+          ranked.slice(1, 4).map((x) => x.i.id),
+        );
+      }
+      if (matches(text, S.greeting)) return reply(S.greeting, [], kb.chips);
+      if (matches(text, S.thanks)) return reply(S.thanks, []);
+      return reply(S.fallback, S.fallback.actions, kb.chips);
+    };
 
     // ---------- Görünüm ----------
     const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
@@ -664,9 +686,8 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
     };
 
     const renderText = (box: HTMLElement, text: string) => {
-      const lines = text.replace(/\*\*/g, '').split('\n');
       let ul: HTMLUListElement | null = null;
-      for (const raw of lines) {
+      for (const raw of text.split('\n')) {
         const line = raw.trim();
         if (!line) {
           ul = null;
@@ -705,14 +726,16 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
       return row;
     };
 
-    const chipsRow = (skip: string[] = []) => {
+    const chipsRow = (ids: string[]) => {
       const row = el('div', 'chips');
       row.setAttribute('role', 'group');
       row.setAttribute('aria-label', 'Hazır sorular');
-      for (const r of D.replies.filter((x) => !skip.includes(x.q))) {
-        const b = el('button', 'chip-q', r.q);
+      for (const id of ids) {
+        const it = byId(id);
+        if (!it) continue;
+        const b = el('button', 'chip-q', it.q);
         b.type = 'button';
-        b.addEventListener('click', () => askQuick(r));
+        b.addEventListener('click', () => askIntent(it));
         row.append(b);
       }
       return row;
@@ -726,8 +749,8 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
         renderText(box, it.t);
         log.append(box);
         if (it.a?.length) log.append(actionsRow(it.a));
-      } else {
-        log.append(chipsRow(it.skip));
+      } else if (kb) {
+        log.append(chipsRow(it.ids));
       }
     };
 
@@ -738,12 +761,14 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
     const renderAll = () => {
       log.textContent = '';
       const hello = el('div', 'm m-bot');
-      hello.append(el('p', undefined, aiReady ? D.welcome : D.welcomeNoAi));
-      hello.append(el('p', 'm-hint', aiReady ? D.hintAi : D.hintNoAi));
+      hello.append(el('p', undefined, D.welcome));
+      if (kb) hello.append(el('p', 'm-hint', D.hint));
       log.append(hello);
-      if (!aiReady) log.append(actionsRow(D.fallbackActions));
-      if (!items.length) {
-        log.append(chipsRow());
+      if (!kb) {
+        log.append(el('div', 'm m-bot', D.loadError), actionsRow(D.fallbackActions));
+        form.hidden = true;
+      } else if (!items.length) {
+        log.append(chipsRow(kb.chips));
       } else {
         items.forEach(renderItem);
       }
@@ -758,24 +783,6 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
       scrollDown();
     };
 
-    const askedQuestions = () => items.filter((i): i is { r: 'u'; t: string } => i.r === 'u').map((i) => i.t);
-
-    // ---------- Hazır sorular ----------
-    function askQuick(r: Reply) {
-      if (busy) return;
-      push({ r: 'u', t: r.q });
-      busy = true;
-      const typing = showTyping();
-      setTimeout(() => {
-        typing.remove();
-        busy = false;
-        push({ r: 'b', t: r.a, a: r.actions });
-        const asked = askedQuestions();
-        if (D.replies.some((x) => !asked.includes(x.q))) push({ r: 'c', skip: asked });
-        if (finePointer && aiReady) input.focus();
-      }, 450);
-    }
-
     const showTyping = () => {
       const t = el('div', 'm m-bot typing');
       t.setAttribute('aria-label', 'Yazıyor');
@@ -785,93 +792,37 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
       return t;
     };
 
-    // ---------- Yapay zekâ durumu ----------
-    const setAi = (on: boolean) => {
-      aiReady = on;
-      form.hidden = !on;
-      badge.hidden = !on;
-      note.hidden = !on;
-      store.set(AI_KEY, JSON.stringify({ on, ts: Date.now() }));
+    const respond = (fn: () => void) => {
+      busy = true;
+      const typing = showTyping();
+      setTimeout(() => {
+        typing.remove();
+        busy = false;
+        fn();
+        if (finePointer) input.focus();
+      }, 420);
     };
 
-    let aiCheck: Promise<void> | null = null;
-    const checkAi = () => {
-      if (aiCheck) return aiCheck;
-      aiCheck = (async () => {
-        try {
-          const cached = JSON.parse(store.get(AI_KEY) || 'null');
-          if (cached && Date.now() - cached.ts < 10 * 60 * 1000) {
-            setAi(Boolean(cached.on));
-            return;
-          }
-        } catch {
-          /* yok say */
-        }
-        try {
-          const res = await fetch(D.api, { headers: { Accept: 'application/json' } });
-          const j = res.ok ? await res.json() : null;
-          setAi(Boolean(j && j.ai));
-        } catch {
-          setAi(false);
-        }
-      })();
-      return aiCheck;
-    };
-
-    // ---------- Mesaj gönderme ----------
-    const history = () =>
-      items
-        .filter((i): i is { r: 'u'; t: string } | { r: 'b'; t: string } => i.r === 'u' || i.r === 'b')
-        .map((i) => ({ role: i.r === 'u' ? 'user' : 'assistant', content: i.t }))
-        .slice(-12);
-
-    const setBusy = (on: boolean) => {
-      busy = on;
-      send.disabled = on;
-      input.readOnly = on;
-    };
+    // ---------- Hazır sorular ve yazılan sorular ----------
+    function askIntent(it: Intent) {
+      if (busy) return;
+      push({ r: 'u', t: it.q, id: it.id });
+      respond(() => reply(it, it.actions, remainingChips()));
+    }
 
     const autosize = () => {
       input.style.height = 'auto';
       input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
     };
 
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const text = input.value.trim().slice(0, 500);
+      const text = input.value.trim().slice(0, 300);
       if (!text || busy) return;
       input.value = '';
       autosize();
       push({ r: 'u', t: text });
-      setBusy(true);
-      const typing = showTyping();
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 30000);
-      try {
-        const res = await fetch(D.api, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ messages: history() }),
-          signal: ctrl.signal,
-        });
-        const j = await res.json().catch(() => null);
-        typing.remove();
-        if (res.ok && j && typeof j.reply === 'string' && j.reply.trim()) {
-          push({ r: 'b', t: j.reply, a: Array.isArray(j.actions) ? j.actions : [] });
-        } else if (res.status === 429) {
-          push({ r: 'b', t: D.busyText });
-        } else {
-          if (res.status === 503) setAi(false);
-          push({ r: 'b', t: D.errorText, a: D.fallbackActions });
-        }
-      } catch {
-        typing.remove();
-        push({ r: 'b', t: D.errorText, a: D.fallbackActions });
-      } finally {
-        clearTimeout(timer);
-        setBusy(false);
-        if (finePointer && aiReady) input.focus();
-      }
+      respond(() => answerText(text));
     });
 
     input.addEventListener('input', autosize);
@@ -883,14 +834,14 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
     });
 
     root.querySelector('[data-topics]')?.addEventListener('click', () => {
-      push({ r: 'c', skip: [] });
+      if (kb) push({ r: 'c', ids: kb.chips });
     });
 
     root.querySelector('[data-reset]')?.addEventListener('click', () => {
       items = [];
       store.del(KEY);
       renderAll();
-      if (finePointer && aiReady) input.focus();
+      if (finePointer && kb) input.focus();
     });
 
     // ---------- Aç / kapat ----------
@@ -907,15 +858,15 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
       launcher.setAttribute('aria-label', 'Asistanı kapat');
       if (mobile()) document.documentElement.classList.add('asst-lock');
       if (!rendered) {
-        if (aiReady === null) {
+        if (!kb) {
           log.textContent = '';
           const t = showTyping();
-          await checkAi();
+          await loadKb();
           t.remove();
         }
         renderAll();
       }
-      if (finePointer && aiReady) input.focus();
+      if (finePointer && kb) input.focus();
       else heading.focus();
     };
 
@@ -929,9 +880,9 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
     };
 
     launcher.addEventListener('click', () => (panel.hidden ? open() : close()));
-    // Kullanıcı butona yaklaşınca yapay zekâ durumunu önceden öğren (pencere daha hızlı açılır)
-    launcher.addEventListener('pointerenter', () => void checkAi(), { once: true });
-    launcher.addEventListener('focus', () => void checkAi(), { once: true });
+    // Kullanıcı butona yaklaşınca bilgi dosyasını önceden indir (pencere daha hızlı açılır)
+    launcher.addEventListener('pointerenter', () => void loadKb(), { once: true });
+    launcher.addEventListener('focus', () => void loadKb(), { once: true });
     root.querySelector('[data-close]')?.addEventListener('click', close);
     root.querySelector('[data-open]')?.addEventListener('click', open);
     root.querySelector('[data-teaser-close]')?.addEventListener('click', () => {
@@ -949,7 +900,7 @@ const json = JSON.stringify(data).replace(/</g, '\\u003c');
         if (!panel.hidden || store.get(TEASER_KEY)) return;
         teaser.hidden = false;
         store.set(TEASER_KEY, '1');
-        void checkAi();
+        void loadKb();
         setTimeout(hideTeaser, 15000);
       }, D.teaserDelayMs);
     }
