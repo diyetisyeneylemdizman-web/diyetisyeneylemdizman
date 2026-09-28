@@ -4,7 +4,7 @@ export const processSteps = [
   {
     icon: 'calendar',
     title: 'Randevunuzu oluşturun',
-    text: 'Formu doldurun, talebiniz WhatsApp üzerinden bize ulaşsın. Size uygun gün ve saati birlikte belirleyelim.',
+    text: 'Takvimden size uygun gün ve saati seçin, talebiniz WhatsApp üzerinden bize ulaşsın. Randevunuzu birlikte onaylayalım.',
   },
   {
     icon: 'consult',

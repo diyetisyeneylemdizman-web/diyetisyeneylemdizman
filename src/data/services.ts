@@ -20,7 +20,7 @@ export const serviceCategories: ServiceCategory[] = [
         name: 'Online & Yüz Yüze Beslenme Danışmanlığı',
         slug: 'online-yuz-yuze-beslenme-danismanligi',
         description:
-          'Seyhan/Adana’daki klinikte yüz yüze ya da WhatsApp görüntülü görüşmeyle online; size uygun yöntemle birebir beslenme danışmanlığı.',
+          'Seyhan/Adana’daki klinikte yüz yüze ya da WhatsApp araması ile online; size uygun yöntemle birebir beslenme danışmanlığı.',
       },
       {
         name: 'Sağlıklı Beslenme Önerileri',

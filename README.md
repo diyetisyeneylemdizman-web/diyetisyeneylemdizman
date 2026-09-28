@@ -21,11 +21,13 @@ derlenip yayına alınır.
 | Ana sayfadaki süreç adımları | `src/data/process.ts` |
 | Sayfa geçişi ve açılış animasyonları | `src/styles/global.css` (“Hafif animasyonlar” bölümü) |
 | Menü sırası ve adları | `src/data/site.ts` (`nav`) |
+| Randevu takvimi: çalışma saatleri, kapalı günler (tatiller), kaç gün sonrası seçilebilir | `src/data/site.ts` (`hours`, `closedDates`, `bookingDaysAhead`) |
 
 ## Sayfalar
 
 Ana sayfa · Hakkında · Sertifikalar · Hizmetler · Vücut Kitle İndeksi Hesaplama · Online Görüşme · Blog & Reels ·
-İletişim · Randevu Oluştur (form → WhatsApp) · KVKK Aydınlatma Metni
+İletişim · Randevu Oluştur (3 adım: görüşme → takvimden tarih ve saat → bilgiler; WhatsApp mesajı olarak gönderilir) ·
+KVKK Aydınlatma Metni
 
 ## Site asistanı
 
@@ -41,7 +43,8 @@ Sağ alt köşedeki asistan yapay zekâ kullanmaz ve ücretsizdir:
 
 ## Instagram Reels (Blog & Reels)
 
-Ana sayfadaki ve Blog & Reels sayfasındaki videolar Instagram hesabından otomatik gelir:
+Ana sayfadaki ve Blog & Reels sayfasındaki videolar Instagram hesabından otomatik gelir; yan yana dizilip sağdan sola
+kendiliğinden kayar, fare üzerine gelince durur (`src/components/ReelsGrid.astro`):
 
 - `worker/index.ts` her 3 saatte bir Instagram API'den son videoları (Reels) alır, önizleme görsellerini saklar ve
   sitede `/api/reels` adresinden sunar. Ziyaretçiler görselleri sitemizden görür; videoya tıklayınca Instagram açılır.
@@ -85,3 +88,5 @@ npm run build    # yayın dosyalarını dist/ klasörüne üretir
 
 Cloudflare ayarları: `wrangler.jsonc` (derleme komutu `npm run build`, yayın komutu `npx wrangler deploy`). Sayfalar
 statik dosya olarak sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır (Instagram Reels).
+
+Online görüşmeler WhatsApp araması ile yapılır (görüntülü görüşme yapılmaz); sitede bu ifade kullanılır.

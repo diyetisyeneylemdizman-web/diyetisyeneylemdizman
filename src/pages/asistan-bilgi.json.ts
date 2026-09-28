@@ -64,7 +64,7 @@ export const GET: APIRoute = async () => {
     const a = [
       `${s.name}: ${s.description}`,
       note.extra ?? '',
-      note.noOnline || /online/i.test(s.name) ? '' : 'Klinikte yüz yüze ya da WhatsApp görüntülü görüşmeyle online destek alabilirsiniz.',
+      note.noOnline || /online/i.test(s.name) ? '' : 'Klinikte yüz yüze ya da WhatsApp araması ile online destek alabilirsiniz.',
     ]
       .filter(Boolean)
       .join(' ');

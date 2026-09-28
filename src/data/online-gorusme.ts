@@ -8,13 +8,13 @@ export const onlineSteps = [
   },
   {
     icon: 'clock',
-    title: 'Gün ve saat',
-    text: 'Size uygun gün ve saat birlikte netleştirilir; görüşme bilgileri size iletilir.',
+    title: 'Tarih ve saat',
+    text: 'Takvimden size uygun gün ve saati seçin; randevunuz WhatsApp üzerinden onaylanır.',
   },
   {
-    icon: 'video',
-    title: 'Görüntülü görüşme',
-    text: 'Randevu saatinde WhatsApp görüntülü görüşmeyle bağlanır, beslenme değerlendirmenizi birlikte yaparız.',
+    icon: 'phone',
+    title: 'WhatsApp araması',
+    text: 'Randevu saatinde sizi WhatsApp üzerinden ararız; beslenme değerlendirmenizi birlikte yaparız.',
   },
   {
     icon: 'clipboard',
@@ -33,7 +33,7 @@ export const onlinePrepare = [
 
 export const onlineTech = [
   { icon: 'whatsapp', text: 'WhatsApp yüklü bir telefon veya bilgisayar' },
-  { icon: 'wifi', text: 'Görüntülü görüşme için yeterli internet bağlantısı' },
+  { icon: 'wifi', text: 'Kesintisiz bir arama için yeterli internet bağlantısı' },
   { icon: 'user', text: 'Rahat konuşabileceğiniz sessiz bir ortam' },
 ] as const;
 

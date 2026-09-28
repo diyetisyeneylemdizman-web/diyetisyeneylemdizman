@@ -5,9 +5,9 @@ export const site = {
   shortName: 'Dyt. Eylem Dizman',
   clinicName: 'Diyetisyen Eylem Dizman Kliniği',
   url: 'https://www.diyetisyeneylemdizman.com',
-  defaultTitle: 'Diyetisyen Eylem Dizman | Seyhan/Adana ve Online Beslenme Danışmanlığı',
+  defaultTitle: 'Diyetisyen Eylem Dizman | Seyhan/Adana ve Online Diyetisyen',
   defaultDescription:
-    'Diyetisyen Eylem Dizman ile Seyhan/Adana’da yüz yüze veya WhatsApp görüntülü görüşmeyle online beslenme danışmanlığı. Kişiye özel beslenme planı, vücut analizi ve düzenli takip.',
+    'Diyetisyen Eylem Dizman ile Seyhan/Adana’da yüz yüze veya WhatsApp üzerinden online beslenme danışmanlığı. Kişiye özel beslenme planı ve düzenli takip.',
 
   phoneDisplay: '0 505 825 87 45',
   phoneHref: 'tel:+905058258745',
@@ -30,13 +30,18 @@ export const site = {
   instagramHandle: '@diyetisyeneylemdizman',
   linkedin: 'https://www.linkedin.com/in/eylem-dizman-8120a11b9/',
 
-  onlinePlatform: 'WhatsApp görüntülü görüşme',
+  onlinePlatform: 'WhatsApp araması',
 
   // Yönetmelik gereği sitede görünen "site editörü" bilgisi
   editor: {
     name: 'Dyt. Eylem Dizman',
     email: 'diyetisyeneylemdizman@gmail.com',
   },
+
+  // Randevu takviminde seçilemeyecek günler (resmî tatiller vb.): "AA-GG" her yıl, "YYYY-AA-GG" yalnızca o tarih
+  closedDates: ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '10-29'] as string[],
+  // Randevu takviminde en fazla kaç gün sonrası seçilebilir
+  bookingDaysAhead: 60,
 
   hours: [
     { day: 'Pazartesi', short: 'Pzt', open: '09:00', close: '18:00' },

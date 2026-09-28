@@ -1,5 +1,6 @@
 ---
-// Instagram Reels bölümü
+// Instagram Reels bölümü: videolar yan yana dizilir ve sağdan sola kendiliğinden kayar;
+// fare üzerine gelince (ya da klavyeyle bir karta gelince) durur.
 // Videolar /api/reels adresinden (worker/index.ts) gelir. Liste yoksa ya da henüz kurulum yapılmadıysa
 // "Instagram'da izleyin" kartı görünür. Önizleme görselleri sitemizden sunulur; ziyaretçi bilgisi Instagram'a gitmez.
 import Icon from './Icon.astro';
@@ -11,7 +12,7 @@ interface Props {
   title?: string;
   headingLevel?: 'h2' | 'h3';
 }
-const { limit = 4, title = 'Instagram Reels', headingLevel = 'h3' } = Astro.props;
+const { limit = 8, title = 'Instagram Reels', headingLevel = 'h3' } = Astro.props;
 const Heading = headingLevel;
 ---
 
@@ -23,7 +24,9 @@ const Heading = headingLevel;
     </a>
   </div>
 
-  <div class="reels-grid" data-reels-grid hidden></div>
+  <div class="reels-marquee" data-reels-marquee hidden>
+    <div class="reels-track" data-reels-track></div>
+  </div>
 
   <a href={site.instagram} target="_blank" rel="noopener" class="reels-fallback" data-reels-fallback>
     <span class="reels-fallback-icon"><Icon name="play" size={22} /></span>
@@ -64,15 +67,37 @@ const Heading = headingLevel;
     color: var(--terracotta-700);
   }
 
-  .reels-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
+  /* ---------- Kayan şerit ---------- */
+  .reels-marquee {
+    position: relative;
+    overflow: hidden;
+    padding: 14px 0 22px; /* üzerine gelince yükselen kartlar kırpılmasın */
+    margin: -14px 0 -22px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
   }
-  .reels-grid[hidden] {
-    display: none;
+  .reels-track {
+    display: flex;
+    width: max-content;
+    animation: reels-kay var(--reels-sure, 40s) linear infinite;
+    will-change: transform;
   }
-  .reels-grid :global(.reel) {
+  .reels-marquee:hover .reels-track,
+  .reels-marquee:focus-within .reels-track,
+  .reels-marquee.is-paused .reels-track {
+    animation-play-state: paused;
+  }
+  @keyframes reels-kay {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Kartlar arası boşluk margin ile verilir: şeridin yarısı tam bir tekrar uzunluğu olur, döngü sekmez */
+  .reels-track :global(.reel) {
+    flex: none;
+    width: 228px;
+    margin-right: 18px;
     display: flex;
     flex-direction: column;
     background: var(--paper);
@@ -83,31 +108,37 @@ const Heading = headingLevel;
     color: var(--ink);
     text-decoration: none;
     transition:
-      transform 0.25s ease,
-      box-shadow 0.25s ease;
+      transform 0.35s ease,
+      box-shadow 0.35s ease;
   }
-  .reels-grid :global(.reel:hover) {
-    transform: translateY(-3px);
+  /* Sertifikalardaki gibi hafif hareket: kart yükselir ve azıcık döner */
+  .reels-track :global(.reel:hover),
+  .reels-track :global(.reel:focus-visible) {
+    transform: translateY(-8px) rotate(-1.5deg);
     box-shadow: var(--shadow);
   }
-  .reels-grid :global(.reel:focus-visible) {
+  .reels-track :global(.reel:nth-child(even):hover),
+  .reels-track :global(.reel:nth-child(even):focus-visible) {
+    transform: translateY(-8px) rotate(1.5deg);
+  }
+  .reels-track :global(.reel:focus-visible) {
     outline: 2.5px solid var(--terracotta-700);
     outline-offset: 3px;
   }
-  .reels-grid :global(.reel-media) {
+  .reels-track :global(.reel-media) {
     position: relative;
     display: block;
     aspect-ratio: 3 / 4;
     background: linear-gradient(160deg, var(--sage-100), var(--beige-soft));
   }
-  .reels-grid :global(.reel-media img) {
+  .reels-track :global(.reel-media img) {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
-  .reels-grid :global(.reel-play) {
+  .reels-track :global(.reel-play) {
     position: absolute;
     right: 12px;
     bottom: 12px;
@@ -119,13 +150,17 @@ const Heading = headingLevel;
     background: rgb(255 253 249 / 0.92);
     color: var(--terracotta-700);
     box-shadow: 0 6px 16px -6px rgb(41 44 41 / 0.45);
+    transition: transform 0.35s ease;
   }
-  .reels-grid :global(.reel-body) {
+  .reels-track :global(.reel:hover .reel-play) {
+    transform: scale(1.1);
+  }
+  .reels-track :global(.reel-body) {
     display: grid;
     gap: 6px;
     padding: 14px 16px 16px;
   }
-  .reels-grid :global(.reel-caption) {
+  .reels-track :global(.reel-caption) {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -133,12 +168,14 @@ const Heading = headingLevel;
     font-size: 0.95rem;
     font-weight: 600;
     line-height: 1.45;
+    min-height: 2.9em;
   }
-  .reels-grid :global(.reel-date) {
+  .reels-track :global(.reel-date) {
     font-size: 0.8rem;
     color: var(--ink-3);
   }
 
+  /* ---------- Kurulum yapılmadıysa: Instagram kartı ---------- */
   .reels-fallback {
     display: flex;
     align-items: center;
@@ -157,9 +194,6 @@ const Heading = headingLevel;
   .reels-fallback:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow);
-  }
-  .reels-fallback[hidden] {
-    display: none;
   }
   .reels-fallback-icon {
     flex: none;
@@ -189,17 +223,15 @@ const Heading = headingLevel;
     color: var(--terracotta-700);
   }
 
-  @media (max-width: 900px) {
-    .reels-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
+  @media (max-width: 640px) {
+    .reels-track :global(.reel) {
+      width: 176px;
+      margin-right: 14px;
     }
-  }
-  @media (max-width: 480px) {
-    .reels-grid :global(.reel-body) {
+    .reels-track :global(.reel-body) {
       padding: 12px 12px 14px;
     }
-    .reels-grid :global(.reel-caption) {
+    .reels-track :global(.reel-caption) {
       font-size: 0.88rem;
     }
     .reels-fallback {
@@ -207,26 +239,46 @@ const Heading = headingLevel;
       gap: 14px;
     }
   }
+
+  /* Hareketi azaltmayı seçenlerde kayma yok; şerit elle kaydırılır */
+  @media (prefers-reduced-motion: reduce) {
+    .reels-marquee {
+      overflow-x: auto;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    .reels-track {
+      animation: none;
+    }
+  }
 </style>
 
 <script>
   type Reel = { id: string; url: string; caption: string; date: string; img: string };
 
+  const SPEED = 38; // piksel/saniye
   const PLAY =
     '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 5.8v12.4a.8.8 0 0 0 1.2.7l9.6-6.2a.8.8 0 0 0 0-1.4L9.7 5.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>';
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
-  const card = (r: Reel) => {
+  const card = (r: Reel, copy: boolean) => {
     const a = document.createElement('a');
     a.className = 'reel';
     a.href = r.url;
     a.target = '_blank';
     a.rel = 'noopener';
-    a.setAttribute('aria-label', `Instagram’da izle: ${r.caption || 'Reels videosu'}`);
+    if (copy) {
+      // Kesintisiz döngü için eklenen kopyalar ekran okuyucu ve klavyede tekrar edilmez
+      a.setAttribute('aria-hidden', 'true');
+      a.tabIndex = -1;
+    } else {
+      a.setAttribute('aria-label', `Instagram’da izle: ${r.caption || 'Reels videosu'}`);
+    }
 
     const media = document.createElement('span');
     media.className = 'reel-media';
@@ -261,6 +313,48 @@ const Heading = headingLevel;
     return a;
   };
 
+  const build = (root: HTMLElement, items: Reel[]) => {
+    const marquee = root.querySelector<HTMLElement>('[data-reels-marquee]')!;
+    const track = root.querySelector<HTMLElement>('[data-reels-track]')!;
+    marquee.hidden = false;
+    root.querySelector<HTMLElement>('[data-reels-fallback]')!.hidden = true;
+    root.querySelector<HTMLElement>('[data-reels-more]')!.hidden = false;
+
+    track.replaceChildren(...items.map((r) => card(r, false)));
+    if (reduceMotion) return;
+
+    // Şerit ekranı dolduracak kadar uzun olsun; ardından kesintisiz döngü için bir kopya daha eklenir
+    const setWidth = () => track.scrollWidth;
+    const fill = () => {
+      let guard = 0;
+      while (setWidth() < marquee.clientWidth && guard++ < 12) {
+        items.forEach((r) => track.append(card(r, true)));
+      }
+      [...track.children].forEach((c) => {
+        const clone = c.cloneNode(true) as HTMLElement;
+        clone.setAttribute('aria-hidden', 'true');
+        clone.removeAttribute('aria-label');
+        clone.tabIndex = -1;
+        track.append(clone);
+      });
+      const half = track.scrollWidth / 2;
+      track.style.setProperty('--reels-sure', `${Math.max(20, half / SPEED)}s`);
+    };
+    fill();
+
+    // Dokunmatik ekranda karta dokununca kısa süre dur
+    let timer = 0;
+    marquee.addEventListener(
+      'touchstart',
+      () => {
+        marquee.classList.add('is-paused');
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => marquee.classList.remove('is-paused'), 4000);
+      },
+      { passive: true },
+    );
+  };
+
   const roots = document.querySelectorAll<HTMLElement>('[data-reels]');
   if (roots.length) {
     fetch('/api/reels', { headers: { Accept: 'application/json' } })
@@ -268,14 +362,7 @@ const Heading = headingLevel;
       .then((data: { items?: Reel[] } | null) => {
         const items = (data?.items ?? []).filter((r) => r && r.url && /^https:\/\/(www\.)?instagram\.com\//.test(r.url));
         if (!items.length) return;
-        roots.forEach((root) => {
-          const limit = Number(root.dataset.limit) || 4;
-          const grid = root.querySelector<HTMLElement>('[data-reels-grid]')!;
-          grid.replaceChildren(...items.slice(0, limit).map(card));
-          grid.hidden = false;
-          root.querySelector<HTMLElement>('[data-reels-fallback]')!.hidden = true;
-          root.querySelector<HTMLElement>('[data-reels-more]')!.hidden = false;
-        });
+        roots.forEach((root) => build(root, items.slice(0, Number(root.dataset.limit) || 8)));
       })
       .catch(() => {});
   }

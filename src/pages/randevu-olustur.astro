@@ -1,128 +1,196 @@
 ---
+// Randevu talebi: 3 adımda (görüşme → takvimden tarih ve saat → bilgiler) hazırlanır ve WhatsApp mesajı olarak gönderilir.
+// Bilgiler sunucuya gönderilmez ve kaydedilmez. Tarih ve saat "tercih"tir; kesin randevu WhatsApp üzerinden onaylanır.
+// Çalışma saatleri ve kapalı günler: src/data/site.ts (hours, closedDates, bookingDaysAhead)
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import Icon from '../components/Icon.astro';
 import { serviceCategories } from '../data/services';
 import { site } from '../data/site';
 
-const days = ['Fark etmez', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-const times = ['Fark etmez', 'Sabah (09:00–12:00)', 'Öğle (12:00–15:00)', 'Öğleden sonra (15:00–18:00)'];
+const takvim = JSON.stringify({ hours: site.hours, closed: site.closedDates, ahead: site.bookingDaysAhead });
+const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 ---
 
 <BaseLayout
   title="Randevu Oluştur"
-  description="Diyetisyen Eylem Dizman ile yüz yüze veya online görüşme için randevu talebinizi birkaç adımda iletin."
+  description="Diyetisyen Eylem Dizman ile yüz yüze veya online görüşme için takvimden gün ve saat seçerek randevu talebinizi birkaç adımda iletin."
 >
   <PageHero
     title="Randevu Oluştur"
     eyebrow="Yüz Yüze veya Online"
-    lead="Formu doldurun; bilgileriniz hazır bir mesaj olarak WhatsApp üzerinden bize ulaşsın. Size en kısa sürede dönüş yapalım."
+    lead="Görüşme türünü seçin, takvimden size uygun gün ve saati işaretleyin; talebiniz hazır bir mesaj olarak WhatsApp üzerinden bize ulaşsın."
     crumbs={[{ label: 'Randevu Oluştur' }]}
   />
 
   <section class="section">
     <div class="container booking">
-      <form class="card booking-form" id="randevu-formu" novalidate data-booking data-wa={site.whatsappNumber}>
-        <div class="bmi-note" data-bmi-note hidden>
-          <Icon name="scale" size={20} />
-          <span data-bmi-note-text></span>
-        </div>
+      <form class="card booking-form" id="randevu-formu" novalidate data-booking data-wa={site.whatsappNumber} data-takvim={takvim}>
+        <ol class="stepper" data-stepper>
+          <li class="is-current" data-step-tab="1">
+            <button type="button" data-goto="1"><span class="st-num">1</span><span class="st-label">Görüşme</span></button>
+          </li>
+          <li data-step-tab="2">
+            <button type="button" data-goto="2" disabled><span class="st-num">2</span><span class="st-label">Tarih ve Saat</span></button>
+          </li>
+          <li data-step-tab="3">
+            <button type="button" data-goto="3" disabled><span class="st-num">3</span><span class="st-label">Bilgileriniz</span></button>
+          </li>
+        </ol>
 
-        <div class="grid-fields">
-          <div class="field">
-            <label for="ad">Ad Soyad <span aria-hidden="true">*</span></label>
-            <input class="input" id="ad" name="ad" autocomplete="name" required />
-            <p class="field-error" data-error-for="ad"></p>
-          </div>
-          <div class="field">
-            <label for="telefon">Telefon <span aria-hidden="true">*</span></label>
-            <input class="input" id="telefon" name="telefon" type="tel" inputmode="tel" autocomplete="tel" placeholder="05XX XXX XX XX" required />
-            <p class="field-error" data-error-for="telefon"></p>
-          </div>
-        </div>
+        <!-- ADIM 1: Görüşme türü ve konu -->
+        <fieldset class="step is-active" data-step="1">
+          <legend class="step-title">Görüşme türünü ve konuyu seçin</legend>
 
-        <fieldset class="field type">
-          <legend class="label">Görüşme Türü <span aria-hidden="true">*</span></legend>
-          <div class="type-options">
-            <label class="type-option">
-              <input type="radio" name="tur" value="yuz-yuze" checked />
-              <span class="type-card">
-                <Icon name="clinic" size={24} />
-                <span><strong>Yüz Yüze</strong><small>Seyhan/Adana’daki klinikte</small></span>
-              </span>
-            </label>
-            <label class="type-option">
-              <input type="radio" name="tur" value="online" />
-              <span class="type-card">
-                <Icon name="video" size={24} />
-                <span><strong>Online</strong><small>WhatsApp görüntülü görüşme</small></span>
-              </span>
-            </label>
+          <div class="bmi-note" data-bmi-note hidden>
+            <Icon name="scale" size={20} />
+            <span data-bmi-note-text></span>
+          </div>
+
+          <div class="field">
+            <p class="label" id="tur-label">Görüşme Türü <span aria-hidden="true">*</span></p>
+            <div class="type-options" role="radiogroup" aria-labelledby="tur-label">
+              <label class="type-option">
+                <input type="radio" name="tur" value="yuz-yuze" checked />
+                <span class="type-card">
+                  <Icon name="clinic" size={24} />
+                  <span><strong>Yüz Yüze</strong><small>Seyhan/Adana’daki klinikte</small></span>
+                </span>
+              </label>
+              <label class="type-option">
+                <input type="radio" name="tur" value="online" />
+                <span class="type-card">
+                  <Icon name="phone" size={24} />
+                  <span><strong>Online</strong><small>WhatsApp araması ile</small></span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="hizmet">İlgilendiğiniz Konu</label>
+            <select class="select" id="hizmet" name="hizmet">
+              <option value="">Emin değilim / Genel danışmanlık</option>
+              {
+                serviceCategories.map((c) => (
+                  <optgroup label={c.title}>
+                    {c.services.map((s) => (
+                      <option value={s.name}>{s.name}</option>
+                    ))}
+                  </optgroup>
+                ))
+              }
+            </select>
+          </div>
+
+          <div class="step-actions">
+            <span></span>
+            <button type="button" class="btn btn-primary" data-next="2">Devam: Tarih ve Saat <Icon name="arrowRight" size={18} /></button>
           </div>
         </fieldset>
 
-        <div class="field">
-          <label for="hizmet">İlgilendiğiniz Konu</label>
-          <select class="select" id="hizmet" name="hizmet">
-            <option value="">Emin değilim / Genel danışmanlık</option>
-            {
-              serviceCategories.map((c) => (
-                <optgroup label={c.title}>
-                  {c.services.map((s) => (
-                    <option value={s.name}>{s.name}</option>
-                  ))}
-                </optgroup>
-              ))
-            }
-          </select>
-        </div>
+        <!-- ADIM 2: Takvim -->
+        <fieldset class="step" data-step="2">
+          <legend class="step-title">Takvimden gün ve saat seçin</legend>
 
-        <div class="grid-fields">
-          <div class="field">
-            <label for="gun">Tercih Ettiğiniz Gün</label>
-            <select class="select" id="gun" name="gun">
-              {days.map((d) => <option value={d}>{d}</option>)}
-            </select>
+          <div class="calendar" data-calendar>
+            <div class="cal-head">
+              <button type="button" class="cal-nav" data-cal-prev aria-label="Önceki ay"><span aria-hidden="true">‹</span></button>
+              <p class="cal-month" data-cal-month aria-live="polite">—</p>
+              <button type="button" class="cal-nav" data-cal-next aria-label="Sonraki ay"><span aria-hidden="true">›</span></button>
+            </div>
+            <div class="cal-week" aria-hidden="true">
+              {weekdays.map((d) => <span>{d}</span>)}
+            </div>
+            <div class="cal-grid" role="grid" aria-label="Randevu tarihi" data-cal-grid></div>
+            <p class="cal-legend">
+              <span class="lg lg-sel"></span>Seçili gün <span class="lg lg-off"></span>Kapalı / geçmiş gün
+            </p>
           </div>
-          <div class="field">
-            <label for="saat">Tercih Ettiğiniz Saat</label>
-            <select class="select" id="saat" name="saat">
-              {times.map((t) => <option value={t}>{t}</option>)}
-            </select>
+
+          <div class="slots-wrap">
+            <p class="label" id="saat-label">Saat <span class="hint" data-slot-day></span></p>
+            <p class="hint slot-empty" data-slot-empty>Önce takvimden bir gün seçin.</p>
+            <div class="slots" role="radiogroup" aria-labelledby="saat-label" data-slots></div>
           </div>
-        </div>
 
-        <div class="field">
-          <label for="not">Eklemek İstedikleriniz <span class="hint">(isteğe bağlı)</span></label>
-          <textarea class="textarea" id="not" name="not" maxlength="500" placeholder="Kısaca belirtmek istediğiniz bir not varsa yazabilirsiniz."></textarea>
-          <p class="hint">Lütfen ayrıntılı sağlık bilgilerinizi burada paylaşmayın; bunları görüşmede birlikte konuşacağız.</p>
-        </div>
+          <input type="hidden" name="tarih" data-tarih />
+          <input type="hidden" name="saat" data-saat />
+          <p class="field-error" data-error-for="tarih"></p>
 
-        <label class="consent">
-          <input type="checkbox" name="kvkk" required />
-          <span>
-            Randevu talebimin iletilmesi için bilgilerimin WhatsApp üzerinden paylaşılacağını biliyorum.{' '}
-            <a href="/kvkk-aydinlatma-metni/" target="_blank">KVKK Aydınlatma Metni</a>’ni okudum.
-          </span>
-        </label>
-        <p class="field-error" data-error-for="kvkk"></p>
+          <div class="step-actions">
+            <button type="button" class="btn btn-outline" data-prev="1">Geri</button>
+            <div class="step-actions-right">
+              <button type="button" class="btn-text" data-any-date>Tarih fark etmez</button>
+              <button type="button" class="btn btn-primary" data-next="3">Devam: Bilgileriniz <Icon name="arrowRight" size={18} /></button>
+            </div>
+          </div>
+        </fieldset>
 
-        <button type="submit" class="btn btn-primary btn-block submit">
-          <Icon name="whatsapp" size={20} />WhatsApp ile Randevu Talebi Gönder
-        </button>
-        <p class="after-note">
-          Butona bastığınızda WhatsApp, bilgilerinizi içeren hazır bir mesajla açılır. Mesajı göndermek için
-          WhatsApp’ta <strong>Gönder</strong>’e basmanız yeterli.
-        </p>
+        <!-- ADIM 3: Bilgiler ve gönderim -->
+        <fieldset class="step" data-step="3">
+          <legend class="step-title">Bilgilerinizi yazın ve gönderin</legend>
+
+          <div class="summary" data-summary>
+            <div><span>Görüşme</span><strong data-sum="tur">—</strong></div>
+            <div><span>Konu</span><strong data-sum="konu">—</strong></div>
+            <div><span>Tarih</span><strong data-sum="tarih">—</strong></div>
+            <div><span>Saat</span><strong data-sum="saat">—</strong></div>
+            <button type="button" class="btn-text" data-goto="2">Tarih ve Saati Değiştir</button>
+          </div>
+
+          <div class="grid-fields">
+            <div class="field">
+              <label for="ad">Ad Soyad <span aria-hidden="true">*</span></label>
+              <input class="input" id="ad" name="ad" autocomplete="name" required />
+              <p class="field-error" data-error-for="ad"></p>
+            </div>
+            <div class="field">
+              <label for="telefon">Telefon <span aria-hidden="true">*</span></label>
+              <input class="input" id="telefon" name="telefon" type="tel" inputmode="tel" autocomplete="tel" placeholder="05XX XXX XX XX" required />
+              <p class="field-error" data-error-for="telefon"></p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="not">Eklemek İstedikleriniz <span class="hint">(isteğe bağlı)</span></label>
+            <textarea class="textarea" id="not" name="not" maxlength="500" placeholder="Kısaca belirtmek istediğiniz bir not varsa yazabilirsiniz."></textarea>
+            <p class="hint">Lütfen ayrıntılı sağlık bilgilerinizi burada paylaşmayın; bunları görüşmede birlikte konuşacağız.</p>
+          </div>
+
+          <label class="consent">
+            <input type="checkbox" name="kvkk" required />
+            <span>
+              Randevu talebimin iletilmesi için bilgilerimin WhatsApp üzerinden paylaşılacağını biliyorum.{' '}
+              <a href="/kvkk-aydinlatma-metni/" target="_blank">KVKK Aydınlatma Metni</a>’ni okudum.
+            </span>
+          </label>
+          <p class="field-error" data-error-for="kvkk"></p>
+
+          <button type="submit" class="btn btn-primary btn-block submit">
+            <Icon name="whatsapp" size={20} />WhatsApp ile Randevu Talebi Gönder
+          </button>
+          <p class="after-note">
+            Butona bastığınızda WhatsApp, bilgilerinizi içeren hazır bir mesajla açılır. Mesajı göndermek için
+            WhatsApp’ta <strong>Gönder</strong>’e basmanız yeterli. Seçtiğiniz tarih ve saat bir tercihtir; randevunuz
+            WhatsApp üzerinden onaylanır.
+          </p>
+
+          <div class="step-actions">
+            <button type="button" class="btn btn-outline" data-prev="2">Geri</button>
+            <span></span>
+          </div>
+        </fieldset>
       </form>
 
       <aside class="side">
         <div class="card side-card">
           <h2>Nasıl işliyor?</h2>
           <ol class="mini-steps">
-            <li><span>1</span>Formu doldurun ve gönderin.</li>
-            <li><span>2</span>WhatsApp’ta hazır mesajı gönderin.</li>
-            <li><span>3</span>Size uygun gün ve saati birlikte netleştirelim.</li>
+            <li><span>1</span>Görüşme türünü ve konuyu seçin.</li>
+            <li><span>2</span>Takvimden size uygun gün ve saati işaretleyin.</li>
+            <li><span>3</span>Bilgilerinizi yazın, WhatsApp’ta hazır mesajı gönderin.</li>
+            <li><span>4</span>Randevunuzu WhatsApp üzerinden onaylayalım.</li>
           </ol>
         </div>
         <div class="card side-card">
@@ -156,9 +224,150 @@ const times = ['Fark etmez', 'Sabah (09:00–12:00)', 'Öğle (12:00–15:00)', 
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     min-width: 0;
-    gap: 22px;
+    gap: 26px;
     scroll-margin-top: calc(var(--header-h) + 20px);
   }
+
+  /* ---------- Adım göstergesi ---------- */
+  .stepper {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    counter-reset: none;
+  }
+  .stepper li {
+    position: relative;
+  }
+  .stepper li:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 19px;
+    left: calc(50% + 26px);
+    right: calc(-50% + 26px);
+    height: 2px;
+    border-radius: 2px;
+    background: var(--beige);
+  }
+  .stepper li.is-done:not(:last-child)::after {
+    background: var(--sage-700);
+  }
+  .stepper button {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink-3);
+    font: inherit;
+    cursor: pointer;
+  }
+  .stepper button:disabled {
+    cursor: default;
+  }
+  .st-num {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--beige);
+    background: var(--paper);
+    font-weight: 800;
+    color: var(--ink-3);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+  }
+  .st-label {
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  .stepper .is-current .st-num {
+    border-color: var(--sage-800);
+    background: var(--sage-800);
+    color: #fff;
+  }
+  .stepper .is-current button {
+    color: var(--ink);
+  }
+  .stepper .is-done .st-num {
+    border-color: var(--sage-700);
+    background: var(--sage-100);
+    color: var(--sage-900);
+  }
+  .stepper .is-done button {
+    color: var(--ink-2);
+  }
+  .stepper button:focus-visible .st-num {
+    outline: 2.5px solid var(--terracotta-700);
+    outline-offset: 3px;
+  }
+
+  /* ---------- Adımlar ---------- */
+  fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .step {
+    display: grid;
+    gap: 22px;
+  }
+  .step[hidden] {
+    display: none;
+  }
+  :global(.js) .step:not(.is-active) {
+    display: none;
+  }
+  .step > .field-error:empty {
+    display: none;
+  }
+  .step-title {
+    padding: 0;
+    margin: 0 0 4px;
+    font-family: var(--font-serif);
+    font-size: clamp(1.35rem, 2.4vw, 1.6rem);
+    color: var(--ink);
+  }
+  .step-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+  }
+  .step-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+  .btn-text {
+    padding: 8px 4px;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--terracotta-700);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .btn-text:hover {
+    color: var(--ink);
+  }
+
   .grid-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -167,16 +376,6 @@ const times = ['Fark etmez', 'Sabah (09:00–12:00)', 'Öğle (12:00–15:00)', 
   .field label span[aria-hidden],
   .label span[aria-hidden] {
     color: var(--terracotta-700);
-  }
-  fieldset {
-    border: 0;
-    margin: 0;
-    padding: 0;
-    min-width: 0;
-  }
-  legend {
-    padding: 0;
-    margin-bottom: 10px;
   }
   .type-options {
     display: grid;
@@ -229,6 +428,198 @@ const times = ['Fark etmez', 'Sabah (09:00–12:00)', 'Öğle (12:00–15:00)', 
     outline: 2.5px solid var(--terracotta-700);
     outline-offset: 3px;
   }
+
+  /* ---------- Takvim ---------- */
+  .calendar {
+    border: 1.5px solid var(--beige);
+    border-radius: 20px;
+    padding: 16px;
+    background: var(--paper);
+  }
+  .cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .cal-month {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    color: var(--ink);
+  }
+  .cal-nav {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1.5px solid var(--beige);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .cal-nav:hover:not(:disabled) {
+    background: var(--sage-50);
+  }
+  .cal-nav:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .cal-week,
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .cal-week span {
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink-3);
+    padding: 6px 0;
+  }
+  .cal-grid :global(.cal-day) {
+    height: clamp(40px, 5.2vw, 52px);
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 12px;
+    background: var(--sage-50);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      transform 0.15s ease;
+  }
+  .cal-grid :global(.cal-day:hover:not(:disabled)) {
+    background: var(--sage-100);
+    transform: translateY(-1px);
+  }
+  .cal-grid :global(.cal-day:disabled) {
+    background: transparent;
+    color: #b9b2a6;
+    font-weight: 500;
+    text-decoration: line-through;
+    text-decoration-color: rgb(185 178 166 / 0.6);
+    cursor: default;
+  }
+  .cal-grid :global(.cal-day.is-today) {
+    box-shadow: inset 0 0 0 1.5px var(--terracotta);
+  }
+  .cal-grid :global(.cal-day[aria-selected='true']) {
+    background: var(--sage-800);
+    color: #fff;
+    box-shadow: 0 6px 14px -8px rgb(41 44 41 / 0.6);
+  }
+  .cal-grid :global(.cal-day:focus-visible) {
+    outline: 2.5px solid var(--terracotta-700);
+    outline-offset: 2px;
+  }
+  .cal-grid :global(.cal-pad) {
+    height: clamp(40px, 5.2vw, 52px);
+  }
+  .cal-legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin: 12px 0 0;
+    font-size: 0.78rem;
+    color: var(--ink-3);
+  }
+  .lg {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+  }
+  .lg-sel {
+    background: var(--sage-800);
+  }
+  .lg-off {
+    margin-left: 8px;
+    background: transparent;
+    border: 1.5px dashed #b9b2a6;
+  }
+
+  .slots-wrap .label {
+    margin-bottom: 10px;
+  }
+  .slot-empty {
+    margin: 0;
+  }
+  .slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    gap: 8px;
+  }
+  .slots :global(.slot) {
+    padding: 11px 8px;
+    border-radius: 12px;
+    border: 1.5px solid var(--beige);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.92rem;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+  .slots :global(.slot:hover) {
+    border-color: var(--sage-700);
+  }
+  .slots :global(.slot[aria-checked='true']) {
+    border-color: var(--sage-800);
+    background: var(--sage-800);
+    color: #fff;
+  }
+  .slots :global(.slot:focus-visible) {
+    outline: 2.5px solid var(--terracotta-700);
+    outline-offset: 2px;
+  }
+  .slots :global(.slot-any) {
+    grid-column: 1 / -1;
+  }
+
+  /* ---------- Özet ---------- */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+    padding: 18px 20px;
+    border-radius: 16px;
+    background: var(--sage-50);
+  }
+  .summary div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .summary span {
+    font-size: 0.82rem;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+  .summary strong {
+    font-size: 0.98rem;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .summary .btn-text {
+    grid-column: 1 / -1;
+    justify-self: start;
+    padding: 0;
+  }
+
   .consent {
     display: flex;
     gap: 12px;
@@ -270,6 +661,9 @@ const times = ['Fark etmez', 'Sabah (09:00–12:00)', 'Öğle (12:00–15:00)', 
     color: var(--ink);
     font-size: 0.93rem;
     font-weight: 600;
+  }
+  .bmi-note[hidden] {
+    display: none;
   }
   .bmi-note :global(svg) {
     flex: none;
@@ -351,46 +745,340 @@ const times = ['Fark etmez', 'Sabah (09:00–12:00)', 'Öğle (12:00–15:00)', 
   }
   @media (max-width: 560px) {
     .grid-fields,
-    .type-options {
+    .type-options,
+    .summary {
       grid-template-columns: 1fr;
+    }
+    .calendar {
+      padding: 12px;
+    }
+    .cal-week,
+    .cal-grid {
+      gap: 3px;
+    }
+    .cal-grid :global(.cal-day),
+    .cal-grid :global(.cal-pad) {
+      height: 40px;
+    }
+    .cal-grid :global(.cal-day) {
+      border-radius: 10px;
+      font-size: 0.9rem;
+    }
+    .st-label {
+      font-size: 0.78rem;
+    }
+    /* Telefonda ana buton üstte, "Geri" en altta */
+    .step-actions,
+    .step-actions-right {
+      flex-direction: column-reverse;
+      align-items: stretch;
+      width: 100%;
+    }
+    .step-actions-right {
+      gap: 8px;
+    }
+    .step-actions .btn {
+      width: 100%;
     }
   }
 </style>
 
 <script>
+  type Hour = { day: string; open: string | null; close: string | null };
+  type Takvim = { hours: Hour[]; closed: string[]; ahead: number };
+
   const form = document.querySelector<HTMLFormElement>('[data-booking]');
   if (form) {
+    const cfg = JSON.parse(form.dataset.takvim || '{}') as Takvim;
+    const $ = <T extends Element = HTMLElement>(s: string) => form.querySelector<T>(s)!;
+    const $$ = <T extends Element = HTMLElement>(s: string) => [...form.querySelectorAll<T>(s)];
     const el = <T extends Element = HTMLInputElement>(name: string) => form.elements.namedItem(name) as unknown as T;
     const params = new URLSearchParams(location.search);
 
-    // Adres çubuğundan gelen bilgileri forma yerleştir (VKİ hesaplayıcı ve hizmet sayfalarından)
+    const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const GUNLER = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const fromIso = (s: string) => {
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const longDate = (d: Date) => `${d.getDate()} ${AYLAR[d.getMonth()]} ${d.getFullYear()} ${GUNLER[d.getDay()]}`;
+    const hourOf = (d: Date) => cfg.hours[(d.getDay() + 6) % 7];
+    const toMin = (hhmm: string) => {
+      const [h, m] = hhmm.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    // ---------- Adres çubuğundan gelen bilgiler (VKİ hesaplayıcı, hizmet ve online sayfaları) ----------
     const hizmet = params.get('hizmet');
     const select = el<HTMLSelectElement>('hizmet');
     if (hizmet && Array.from(select.options).some((o) => o.value === hizmet)) select.value = hizmet;
-    if (params.get('tur') === 'online') {
-      form.querySelector<HTMLInputElement>('input[name="tur"][value="online"]')!.checked = true;
-    }
+    if (params.get('tur') === 'online') $<HTMLInputElement>('input[name="tur"][value="online"]').checked = true;
     const vki = params.get('vki');
     const durum = params.get('durum');
     if (vki && durum) {
-      const note = form.querySelector<HTMLElement>('[data-bmi-note]')!;
-      form.querySelector<HTMLElement>('[data-bmi-note-text]')!.textContent =
-        `VKİ sonucunuz randevu talebinize eklenecek: ${vki} – ${durum}`;
-      note.hidden = false;
+      $('[data-bmi-note-text]').textContent = `VKİ sonucunuz randevu talebinize eklenecek: ${vki} – ${durum}`;
+      $('[data-bmi-note]').hidden = false;
     }
 
+    // ---------- Takvim ----------
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const last = new Date(today);
+    last.setDate(last.getDate() + (cfg.ahead || 60));
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+
+    const slotsFor = (d: Date) => {
+      const h = hourOf(d);
+      if (!h || !h.open || !h.close) return [] as string[];
+      const out: string[] = [];
+      for (let m = toMin(h.open); m + 60 <= toMin(h.close); m += 60) {
+        if (d.getTime() === today.getTime() && m < nowMin + 60) continue; // bugün için en az 1 saat sonrası
+        out.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)}`);
+      }
+      return out;
+    };
+    const isClosedDate = (d: Date) => {
+      const md = `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      return cfg.closed.includes(md) || cfg.closed.includes(iso(d));
+    };
+    const available = (d: Date) => d >= today && d <= last && !isClosedDate(d) && slotsFor(d).length > 0;
+
+    let view = new Date(today.getFullYear(), today.getMonth(), 1);
+    let selDate = '';
+    let selTime = '';
+    let anyDate = false;
+    const grid = $('[data-cal-grid]');
+    const tarihInput = $<HTMLInputElement>('[data-tarih]');
+    const saatInput = $<HTMLInputElement>('[data-saat]');
+
+    // İlk uygun güne kadar ileri git (ör. ayın son günlerindeysek)
+    const firstAvailable = (() => {
+      const d = new Date(today);
+      while (d <= last && !available(d)) d.setDate(d.getDate() + 1);
+      return d <= last ? d : null;
+    })();
+    if (firstAvailable) view = new Date(firstAvailable.getFullYear(), firstAvailable.getMonth(), 1);
+
+    const renderCalendar = (focusIso?: string) => {
+      $('[data-cal-month]').textContent = `${AYLAR[view.getMonth()]} ${view.getFullYear()}`;
+      $<HTMLButtonElement>('[data-cal-prev]').disabled = view <= new Date(today.getFullYear(), today.getMonth(), 1);
+      $<HTMLButtonElement>('[data-cal-next]').disabled = new Date(view.getFullYear(), view.getMonth() + 1, 1) > last;
+      const cells: HTMLElement[] = [];
+      const lead = (view.getDay() + 6) % 7;
+      for (let i = 0; i < lead; i++) {
+        const s = document.createElement('span');
+        s.className = 'cal-pad';
+        s.setAttribute('aria-hidden', 'true');
+        cells.push(s);
+      }
+      const days = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+      let tabbable = '';
+      const enabled: string[] = [];
+      for (let n = 1; n <= days; n++) {
+        const d = new Date(view.getFullYear(), view.getMonth(), n);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'cal-day';
+        b.textContent = String(n);
+        b.dataset.date = iso(d);
+        const ok = available(d);
+        b.disabled = !ok;
+        b.setAttribute('aria-label', `${longDate(d)}${ok ? '' : ' (seçilemez)'}`);
+        b.setAttribute('aria-selected', String(b.dataset.date === selDate));
+        if (d.getTime() === today.getTime()) b.classList.add('is-today');
+        b.tabIndex = -1;
+        if (ok) enabled.push(b.dataset.date);
+        cells.push(b);
+      }
+      tabbable = (focusIso && enabled.includes(focusIso) && focusIso) || (enabled.includes(selDate) && selDate) || enabled[0] || '';
+      grid.replaceChildren(...cells);
+      const t = grid.querySelector<HTMLButtonElement>(`[data-date="${tabbable}"]`);
+      if (t) t.tabIndex = 0;
+      if (focusIso && t) t.focus();
+    };
+
+    const renderSlots = () => {
+      const box = $('[data-slots]');
+      const empty = $('[data-slot-empty]');
+      box.replaceChildren();
+      if (!selDate) {
+        empty.hidden = false;
+        $('[data-slot-day]').textContent = '';
+        return;
+      }
+      empty.hidden = true;
+      const d = fromIso(selDate);
+      $('[data-slot-day]').textContent = `– ${longDate(d)}`;
+      const mk = (value: string, label: string, extra = '') => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `slot ${extra}`.trim();
+        b.textContent = label;
+        b.dataset.value = value;
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String(selTime === value));
+        return b;
+      };
+      box.append(...slotsFor(d).map((s) => mk(s, s)), mk('Fark etmez', 'Saat fark etmez', 'slot-any'));
+    };
+
+    const pickDate = (value: string) => {
+      selDate = value;
+      anyDate = false;
+      if (selTime && selTime !== 'Fark etmez' && !slotsFor(fromIso(value)).includes(selTime)) selTime = '';
+      tarihInput.value = value;
+      saatInput.value = selTime;
+      setError('tarih', '');
+      renderCalendar(value);
+      renderSlots();
+    };
+
+    grid.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.cal-day');
+      if (b && !b.disabled && b.dataset.date) pickDate(b.dataset.date);
+    });
+    // Klavye: oklarla günler arasında gezinme
+    grid.addEventListener('keydown', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.cal-day');
+      if (!b?.dataset.date) return;
+      const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      const d = fromIso(b.dataset.date);
+      for (let i = 0; i < 62; i++) {
+        d.setDate(d.getDate() + step);
+        if (d < today || d > last) return;
+        if (available(d)) break;
+      }
+      if (!available(d)) return;
+      if (d.getMonth() !== view.getMonth()) view = new Date(d.getFullYear(), d.getMonth(), 1);
+      renderCalendar(iso(d));
+    });
+    $('[data-slots]').addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.slot');
+      if (!b?.dataset.value) return;
+      selTime = b.dataset.value;
+      saatInput.value = selTime;
+      setError('tarih', '');
+      renderSlots();
+      $<HTMLButtonElement>(`.slot[data-value="${CSS.escape(selTime)}"]`).focus();
+    });
+    $('[data-cal-prev]').addEventListener('click', () => {
+      view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+      renderCalendar();
+    });
+    $('[data-cal-next]').addEventListener('click', () => {
+      view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+      renderCalendar();
+    });
+
+    // ---------- Adımlar ----------
+    let current = 1;
+    let reached = 1;
     const setError = (name: string, msg: string) => {
       const p = form.querySelector<HTMLElement>(`[data-error-for="${name}"]`);
       if (p) p.textContent = msg;
       const input = form.elements.namedItem(name) as HTMLInputElement | null;
-      if (input && 'setAttribute' in input) {
+      if (input && input.type !== 'hidden' && 'setAttribute' in input) {
         if (msg) input.setAttribute('aria-invalid', 'true');
         else input.removeAttribute('aria-invalid');
       }
     };
 
+    const turText = () =>
+      ($<HTMLInputElement>('input[name="tur"]:checked')?.value ?? 'yuz-yuze') === 'online' ? 'Online (WhatsApp araması)' : 'Yüz yüze (klinikte)';
+    const tarihText = () => (anyDate || !selDate ? 'Fark etmez' : longDate(fromIso(selDate)));
+    const saatText = () => (anyDate || !selTime ? 'Fark etmez' : selTime);
+
+    const updateSummary = () => {
+      $('[data-sum="tur"]').textContent = turText();
+      $('[data-sum="konu"]').textContent = select.value || 'Emin değilim / Genel danışmanlık';
+      $('[data-sum="tarih"]').textContent = tarihText();
+      $('[data-sum="saat"]').textContent = saatText();
+    };
+
+    const show = (n: number, focus = true) => {
+      current = n;
+      reached = Math.max(reached, n);
+      $$('[data-step]').forEach((s) => s.classList.toggle('is-active', s.dataset.step === String(n)));
+      $$<HTMLLIElement>('[data-step-tab]').forEach((li) => {
+        const k = Number(li.dataset.stepTab);
+        li.classList.toggle('is-current', k === n);
+        li.classList.toggle('is-done', k < n);
+        const btn = li.querySelector<HTMLButtonElement>('button')!;
+        btn.disabled = k > reached;
+        if (k === n) btn.setAttribute('aria-current', 'step');
+        else btn.removeAttribute('aria-current');
+      });
+      if (n === 2) {
+        renderCalendar();
+        renderSlots();
+      }
+      if (n === 3) updateSummary();
+      if (focus) {
+        const top = form.getBoundingClientRect().top;
+        if (top < 0 || top > window.innerHeight * 0.4) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const target = form.querySelector<HTMLElement>(`[data-step="${n}"] .step-title`);
+        if (target) {
+          target.setAttribute('tabindex', '-1');
+          window.setTimeout(() => target.focus({ preventScroll: true }), 50);
+        }
+      }
+    };
+
+    const canLeave2 = () => {
+      if (anyDate || selDate) {
+        if (selDate && !selTime) selTime = 'Fark etmez';
+        saatInput.value = selTime;
+        return true;
+      }
+      setError('tarih', 'Lütfen takvimden bir gün seçin ya da “Tarih fark etmez” seçeneğini kullanın.');
+      return false;
+    };
+
+    form.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      const next = t.closest<HTMLElement>('[data-next]');
+      const prev = t.closest<HTMLElement>('[data-prev]');
+      const go = t.closest<HTMLElement>('[data-goto]');
+      if (next) {
+        const n = Number(next.dataset.next);
+        if (n === 3 && !canLeave2()) return;
+        show(n);
+      } else if (prev) {
+        show(Number(prev.dataset.prev));
+      } else if (go && !(go as HTMLButtonElement).disabled) {
+        const n = Number(go.dataset.goto);
+        if (n === 3 && current === 2 && !canLeave2()) return;
+        show(n);
+      } else if (t.closest('[data-any-date]')) {
+        anyDate = true;
+        selDate = '';
+        selTime = '';
+        tarihInput.value = '';
+        saatInput.value = '';
+        setError('tarih', '');
+        show(3);
+      }
+    });
+
+    // Başlangıç: adımlar tek tek gösterilir (JavaScript kapalıysa tüm alanlar görünür)
+    show(1, false);
+
+    // Yazmaya başlayınca hata mesajı kalksın
+    ['ad', 'telefon'].forEach((n) => el(n).addEventListener('input', () => setError(n, '')));
+    el('kvkk').addEventListener('change', () => setError('kvkk', ''));
+
+    // ---------- Gönderim ----------
     form.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (current !== 3) {
+        if (current === 1) show(2);
+        else if (canLeave2()) show(3);
+        return;
+      }
       const ad = el('ad').value.trim();
       const tel = el('telefon').value.trim();
       const telDigits = tel.replace(/\D/g, '');
@@ -417,23 +1105,16 @@ const times = ['Fark etmez', 'Sabah (09:00–12:00)', 'Öğle (12:00–15:00)', 
         return;
       }
 
-      const tur = (form.querySelector<HTMLInputElement>('input[name="tur"]:checked')?.value ?? 'yuz-yuze') === 'online'
-        ? 'Online (WhatsApp görüntülü görüşme)'
-        : 'Yüz yüze (klinikte)';
-      const konu = el<HTMLSelectElement>('hizmet').value || 'Emin değilim / Genel danışmanlık';
-      const gun = el<HTMLSelectElement>('gun').value;
-      const saat = el<HTMLSelectElement>('saat').value;
       const not = el<HTMLTextAreaElement>('not').value.trim();
-
       const lines = [
         'Merhaba, web sitesi üzerinden randevu talebinde bulunmak istiyorum.',
         '',
         `• Ad Soyad: ${ad}`,
         `• Telefon: ${tel}`,
-        `• Görüşme türü: ${tur}`,
-        `• Konu: ${konu}`,
-        `• Tercih ettiğim gün: ${gun}`,
-        `• Tercih ettiğim saat: ${saat}`,
+        `• Görüşme türü: ${turText()}`,
+        `• Konu: ${select.value || 'Emin değilim / Genel danışmanlık'}`,
+        `• Tercih ettiğim tarih: ${tarihText()}`,
+        `• Tercih ettiğim saat: ${saatText()}`,
       ];
       if (vki && durum) lines.push(`• VKİ sonucum: ${vki} – ${durum}`);
       if (not) lines.push(`• Not: ${not}`);

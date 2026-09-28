@@ -44,7 +44,7 @@ const steps = processSteps;
         <p class="eyebrow">Diyetisyen Eylem Dizman</p>
         <h1>Size özel, <em class="accent">sürdürülebilir</em> bir beslenme düzeni</h1>
         <p class="lead">
-          Yüz yüze ya da WhatsApp görüntülü görüşmeyle online; yaşam tarzınıza, sağlık durumunuza ve hedeflerinize uygun bir
+          Yüz yüze ya da WhatsApp araması ile online; yaşam tarzınıza, sağlık durumunuza ve hedeflerinize uygun bir
           beslenme planını birlikte oluşturalım.
         </p>
         <div class="hero-actions">
@@ -52,7 +52,7 @@ const steps = processSteps;
           <a href="/vucut-kitle-indeksi-hesaplama/" class="btn btn-outline"><Icon name="scale" size={19} />VKİ’nizi Hesaplayın</a>
         </div>
         <ul class="hero-points">
-          <li><span><Icon name="video" size={18} /></span>Online & Yüz Yüze</li>
+          <li><span><Icon name="consult" size={18} /></span>Online & Yüz Yüze</li>
           <li><span><Icon name="clipboard" size={18} /></span>Kişiye Özel Plan</li>
           <li><span><Icon name="chart" size={18} /></span>Düzenli Takip</li>
         </ul>
@@ -80,10 +80,6 @@ const steps = processSteps;
             <span>Dengeli beslenme<br />Sağlıklı alışkanlıklar</span>
           </div>
         </div>
-        <div class="float-card card-online">
-          <span class="dot" aria-hidden="true"></span>
-          Online Görüşme
-        </div>
       </div>
     </div>
   </section>
@@ -96,15 +92,21 @@ const steps = processSteps;
         <ul class="facts">
           <li>
             <Icon name="cap" size={22} />
-            <span><strong>Beslenme ve Diyetetik</strong>İzmir Kâtip Çelebi Üniversitesi, Sağlık Bilimleri Fakültesi</span>
+            <span
+              ><strong>Öğrenim Hayatı</strong>İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi<br />Beslenme ve
+              Diyetetik</span
+            >
           </li>
           <li>
             <Icon name="clinic" size={22} />
-            <span><strong>{site.clinicName}</strong>Seyhan/Adana</span>
+            <span
+              ><strong>{site.clinicName}</strong>{site.address.line1} {site.address.line2}<br />{site.address.postalCode}{' '}
+              {site.address.district}/{site.address.city}</span
+            >
           </li>
           <li>
-            <Icon name="video" size={22} />
-            <span><strong>Online Danışmanlık</strong>WhatsApp görüntülü görüşme ile</span>
+            <Icon name="consult" size={22} />
+            <span><strong>Online & Yüz Yüze Beslenme Danışmanlığı</strong>Klinikte yüz yüze veya WhatsApp araması ile online</span>
           </li>
         </ul>
       </div>
@@ -201,14 +203,15 @@ const steps = processSteps;
       <div class="online-visual reveal" aria-hidden="true">
         <div class="phone">
           <div class="phone-screen">
-            <div class="call-top"><span></span>WhatsApp görüntülü görüşme</div>
+            <div class="call-top"><span></span>WhatsApp araması</div>
             <div class="call-avatar">
+              <span class="ring"></span><span class="ring"></span><span class="ring"></span>
               <img src="/logo/logo-simge.svg" width="136" height="206" alt="" />
             </div>
             <p class="call-name">Dyt. Eylem Dizman</p>
             <p class="call-time">Beslenme danışmanlığı</p>
             <div class="call-actions">
-              <span><Icon name="video" size={18} /></span>
+              <span><Icon name="mic" size={18} /></span>
               <span class="end"><Icon name="phone" size={18} /></span>
               <span><Icon name="consult" size={18} /></span>
             </div>
@@ -220,16 +223,16 @@ const steps = processSteps;
         <p class="eyebrow">Online Görüşme</p>
         <h2>Nerede olursanız olun, <em class="accent">online</em> görüşme</h2>
         <p class="lead">
-          Kliniğe gelemediğiniz durumlarda WhatsApp görüntülü görüşmeyle birebir beslenme danışmanlığı alabilirsiniz.
+          Kliniğe gelemediğiniz durumlarda WhatsApp araması ile birebir beslenme danışmanlığı alabilirsiniz.
         </p>
         <ul class="checks">
           <li><Icon name="check" size={20} />Randevu formunda görüşme türü olarak “Online”ı seçin</li>
-          <li><Icon name="check" size={20} />Size uygun gün ve saati birlikte netleştirelim</li>
-          <li><Icon name="check" size={20} />Görüşme saatinde WhatsApp görüntülü görüşmeyle bağlanın</li>
+          <li><Icon name="check" size={20} />Takvimden size uygun gün ve saati seçin</li>
+          <li><Icon name="check" size={20} />Görüşme saatinde sizi WhatsApp üzerinden arayalım</li>
         </ul>
         <div class="hero-actions">
           <a href="/randevu-olustur/?tur=online#randevu-formu" class="btn btn-primary"
-            ><Icon name="video" size={19} />Online Randevu Oluştur</a
+            ><Icon name="phone" size={19} />Online Randevu Oluştur</a
           >
           <a href="/online-gorusme/" class="btn btn-outline">Nasıl İşliyor?</a>
         </div>
@@ -282,7 +285,7 @@ const steps = processSteps;
         {posts.map((p) => <PostCard post={p} />)}
       </div>
       <div class="reels-wrap">
-        <ReelsGrid limit={4} />
+        <ReelsGrid limit={10} />
       </div>
     </div>
   </section>
@@ -465,23 +468,6 @@ const steps = processSteps;
     font-size: 0.76rem;
     color: var(--ink-3);
     line-height: 1.35;
-  }
-  .card-online {
-    right: -10px;
-    top: 16%;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    font-weight: 700;
-    font-size: 0.88rem;
-  }
-  .card-online .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--leaf);
-    box-shadow: 0 0 0 5px rgb(141 198 63 / 0.22);
   }
 
   /* ---------- Hakkında ---------- */
@@ -714,6 +700,7 @@ const steps = processSteps;
     background: var(--leaf);
   }
   .call-avatar {
+    position: relative;
     width: 118px;
     height: 118px;
     border-radius: 50%;
@@ -723,8 +710,34 @@ const steps = processSteps;
     box-shadow: 0 0 0 10px rgb(247 243 236 / 0.08), 0 0 0 22px rgb(247 243 236 / 0.05);
   }
   .call-avatar img {
+    position: relative;
     width: 50px;
     height: auto;
+  }
+  /* Logonun çevresinde sürekli, hafif dalgalanan halkalar (arama efekti) */
+  .call-avatar .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgb(247 243 236 / 0.4);
+    animation: halka 3.6s cubic-bezier(0.25, 0.6, 0.35, 1) infinite;
+    pointer-events: none;
+  }
+  .call-avatar .ring:nth-child(2) {
+    animation-delay: 1.2s;
+  }
+  .call-avatar .ring:nth-child(3) {
+    animation-delay: 2.4s;
+  }
+  @keyframes halka {
+    0% {
+      transform: scale(1);
+      opacity: 0.75;
+    }
+    100% {
+      transform: scale(1.7);
+      opacity: 0;
+    }
   }
   .call-name {
     margin: 30px 0 2px;
@@ -941,9 +954,6 @@ const steps = processSteps;
     .card-name {
       left: -8px;
       bottom: 22px;
-    }
-    .card-online {
-      right: -4px;
     }
     .hero-visual :global(.hero-leaf) {
       display: none;
