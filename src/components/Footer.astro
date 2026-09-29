@@ -1,7 +1,7 @@
 ---
 import Icon from './Icon.astro';
 import { nav, site, fullAddress, whatsappLink } from '../data/site';
-import { serviceCategories } from '../data/services';
+import { allServices } from '../data/services';
 
 interface Props {
   updatedAt: string;
@@ -9,14 +9,16 @@ interface Props {
 const { updatedAt } = Astro.props;
 const year = new Date().getFullYear();
 const featured = [
-  'Zayıflama Diyeti',
-  'İnsülin Direncinde Beslenme',
-  'Polikistik Over Diyeti',
-  'Diyabet (Şeker) Beslenmesi',
+  'Kilo Verme Diyeti',
+  'İnsülin Direnci ve Prediyabet',
+  'PMOS (Polikistik Over Sendromu)',
+  'Diyabette Beslenme',
   'Gebelikte Beslenme',
-  'Çocuk Beslenmesi',
+  'Çocuk ve Ergen Beslenmesi',
 ];
-const services = serviceCategories.flatMap((c) => c.services).filter((s) => featured.includes(s.name));
+const services = featured
+  .map((name) => allServices.find((s) => s.name === name))
+  .filter((s): s is (typeof allServices)[number] => Boolean(s));
 ---
 
 <footer class="site-footer">
@@ -25,10 +27,7 @@ const services = serviceCategories.flatMap((c) => c.services).filter((s) => feat
       <a href="/" aria-label="Ana sayfa">
         <img src="/logo/logo-yatay-acik.svg" width="654" height="206" alt="Diyetisyen Eylem Dizman logosu" loading="lazy" />
       </a>
-      <p>
-        Kişiye özel ve sürdürülebilir beslenme danışmanlığı. Seyhan/Adana’daki kliniğimizde yüz yüze ya da WhatsApp
-        araması ile online.
-      </p>
+      <p>Beslenme ve Diyet Danışmanlığı</p>
       <div class="social">
         <a href={site.instagram} target="_blank" rel="noopener" aria-label="Instagram"><Icon name="instagram" size={20} /></a>
         <a href={site.linkedin} target="_blank" rel="noopener" aria-label="LinkedIn"><Icon name="linkedin" size={20} /></a>
@@ -44,7 +43,7 @@ const services = serviceCategories.flatMap((c) => c.services).filter((s) => feat
       <ul class="footer-list">
         <li><a href="/">Ana Sayfa</a></li>
         {nav.map((n) => <li><a href={n.href}>{n.title ?? n.label}</a></li>)}
-        <li><a href="/randevu-olustur/">Randevu Oluştur</a></li>
+        <li><a href="/randevu-olustur/">Randevu Talebi Oluştur</a></li>
       </ul>
     </div>
 
@@ -110,7 +109,9 @@ const services = serviceCategories.flatMap((c) => c.services).filter((s) => feat
   }
   .footer-brand p {
     color: var(--sage-200);
-    font-size: 0.95rem;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     max-width: 340px;
   }
   .social {

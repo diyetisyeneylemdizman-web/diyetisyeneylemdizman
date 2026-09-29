@@ -144,8 +144,8 @@ export const certificateGroups: CertificateGroup[] = [
   },
   {
     id: 'gida-guvenligi',
-    title: 'Gıda Güvenliği ve Gıda Eğitimleri',
-    description: 'Gıda güvenliği yönetim sistemleri, hijyen uygulamaları ve gıda üretimi üzerine eğitimler.',
+    title: 'Gıda Güvenliği Eğitimleri',
+    description: 'Gıda güvenliği yönetim sistemleri ve hijyen uygulamaları üzerine eğitimler.',
     sets: [
       {
         title: 'Gıda Güvenliği Eğitim Programı',
@@ -158,12 +158,6 @@ export const certificateGroups: CertificateGroup[] = [
           { file: 'fqc-ghp.jpg', title: 'GHP – İyi Hijyen Uygulamaları Eğitimi' },
           { file: 'fqc-glp.jpg', title: 'GLP – İyi Laboratuvar Uygulamaları Eğitimi' },
         ],
-      },
-      {
-        title: 'Eğitim Sertifikası',
-        issuer: 'Duru Bulgur Gıda San. ve Tic. A.Ş.',
-        date: '28 Kasım 2019',
-        items: [{ file: 'duru-bulgur.jpg', title: 'Bulgurun Tarihi, Üretim Süreci ve Mutfaklarda Kullanımı' }],
       },
     ],
   },

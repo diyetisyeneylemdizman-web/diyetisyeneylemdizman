@@ -9,7 +9,7 @@ interface Props {
 }
 const {
   title = 'Sağlıklı bir başlangıç için ilk adımı birlikte atalım',
-  text = 'Yüz yüze ya da online görüşme için randevu talebinizi birkaç adımda iletebilirsiniz.',
+  text = 'Yüz yüze veya online görüşme için randevu talebinizi birkaç adımda iletebilirsiniz.',
 } = Astro.props;
 ---
 
@@ -22,7 +22,7 @@ const {
         <p>{text}</p>
       </div>
       <div class="cta-actions">
-        <a href="/randevu-olustur/" class="btn btn-primary"><Icon name="calendar" size={18} />Randevu Oluştur</a>
+        <a href="/randevu-olustur/" class="btn btn-primary"><Icon name="calendar" size={18} />Randevu Talebi Oluştur</a>
         <a href={site.phoneHref} class="btn btn-light"><Icon name="phone" size={18} />{site.phoneDisplay}</a>
       </div>
     </div>

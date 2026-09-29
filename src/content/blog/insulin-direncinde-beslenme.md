@@ -1,11 +1,11 @@
 ---
 title: 'İnsülin Direncinde Beslenme: Bilmeniz Gereken 7 Temel Nokta'
-description: 'İnsülin direnci nedir, beslenme bu süreçte nasıl destek olur? Öğün düzeninden lif tüketimine, hareketten uykuya kadar 7 temel noktayı derledik.'
+description: 'İnsülin direnci nedir? Beslenme bu süreçte nasıl destek olabilir?'
 date: 2026-09-24
 category: 'Hastalıklarda Beslenme'
 tone: 'sage'
 icon: 'chart'
-relatedService: 'İnsülin Direncinde Beslenme'
+relatedService: 'İnsülin Direnci ve Prediyabet'
 ---
 
 İnsülin, kandaki şekerin (glikozun) hücrelere geçmesini sağlayan bir hormondur. **İnsülin direncinde** hücreler insüline beklenen yanıtı veremez; pankreas da kan şekerini dengede tutabilmek için daha fazla insülin salgılamaya başlar. Bu durum uzun vadede prediyabet ve tip 2 diyabet riskini artırabilir.

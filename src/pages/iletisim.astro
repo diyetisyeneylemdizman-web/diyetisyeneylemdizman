@@ -13,7 +13,7 @@ import { site, fullAddress, whatsappLink } from '../data/site';
 >
   <PageHero
     title="İletişim"
-    eyebrow="Bize Ulaşın"
+    eyebrow={site.clinicName}
     lead="Sorularınız ve randevu talepleriniz için telefon, WhatsApp veya e-posta ile ulaşabilirsiniz."
     crumbs={[{ label: 'İletişim' }]}
   />
@@ -207,7 +207,7 @@ import { site, fullAddress, whatsappLink } from '../data/site';
   }
   @media (max-width: 1000px) {
     .contact-page {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
     .map-col {
       position: static;
@@ -218,7 +218,7 @@ import { site, fullAddress, whatsappLink } from '../data/site';
   }
   @media (max-width: 560px) {
     .contact-cards {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 </style>

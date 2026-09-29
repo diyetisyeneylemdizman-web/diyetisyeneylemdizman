@@ -4,54 +4,55 @@ export const onlineSteps = [
   {
     icon: 'calendar',
     title: 'Randevu talebi',
-    text: 'Randevu formunda görüşme türü olarak “Online”ı seçin. Talebiniz WhatsApp üzerinden bize ulaşır.',
+    text: 'Randevu formunda görüşme türü olarak “Online” seçilir. Randevu talebi WhatsApp üzerinden iletilir.',
   },
   {
     icon: 'clock',
     title: 'Tarih ve saat',
-    text: 'Takvimden size uygun gün ve saati seçin; randevunuz WhatsApp üzerinden onaylanır.',
+    text: 'Takvimden uygun gün ve saat seçilir. Randevu bilgileri WhatsApp üzerinden iletilerek onaylanır.',
   },
   {
     icon: 'phone',
     title: 'WhatsApp araması',
-    text: 'Randevu saatinde sizi WhatsApp üzerinden ararız; beslenme değerlendirmenizi birlikte yaparız.',
+    text: 'Randevu saatinde danışan aranır. Beslenme değerlendirmesi görüşme sırasında gerçekleştirilir.',
   },
   {
     icon: 'clipboard',
     title: 'Plan ve takip',
-    text: 'Size özel beslenme planınız hazırlanır; kontrol görüşmeleriyle süreciniz takip edilir.',
+    text: 'Değerlendirme sonrasında kişiye özel beslenme planı hazırlanır. Süreç, kontrol görüşmeleriyle takip edilir.',
   },
 ] as const;
 
 export const onlinePrepare = [
   'Güncel kilonuz (mümkünse sabah, aç karnına tartılmış)',
-  'Boy bilginiz ve mezura ile ölçülmüş bel çevreniz',
-  'Varsa son 3–6 ay içindeki kan tahlili sonuçlarınız',
+  'Boy bilginiz ve varsa mezura ile ölçülmüş bel çevreniz',
   'Kullandığınız ilaç ve takviyelerin listesi',
   'Birkaç günlük yeme içme alışkanlıklarınıza dair kısa notlar',
+  'Rahat konuşabileceğiniz sessiz bir ortam',
 ];
 
-export const onlineTech = [
-  { icon: 'whatsapp', text: 'WhatsApp yüklü bir telefon veya bilgisayar' },
-  { icon: 'wifi', text: 'Kesintisiz bir arama için yeterli internet bağlantısı' },
-  { icon: 'user', text: 'Rahat konuşabileceğiniz sessiz bir ortam' },
-] as const;
+/** "Görüşmeden önce hazırlayın" listesinin altındaki not */
+export const onlineHealthNote =
+  'Danışanın mevcut sağlık raporları ve yakın tarihli tahlil sonuçları, paylaşmayı tercih etmesi hâlinde beslenme değerlendirmesinde dikkate alınır. Tıbbi değerlendirme gerektiren durumlarda danışan hekime yönlendirilir.';
+
+/** Ödeme bilgisi notu */
+export const paymentNote = 'Ödeme bilgileri randevunuz netleşmeden size ayrıca iletilir.';
 
 export const onlineFaqs = [
   {
     q: 'Online görüşme, yüz yüze görüşmeden farklı mı?',
-    a: 'Değerlendirme ve planlama süreci aynıdır. Tek fark, cihazla yapılan vücut analizinin online görüşmede yapılamamasıdır; bunun yerine bazı ölçümleri evde kendiniz alırsınız.',
+    a: 'Değerlendirme ve planlama süreci aynıdır. Tek fark, cihazla yapılan vücut analizinin online görüşmede yapılamamasıdır; bunun yerine bazı ölçümler evde alınır.',
   },
   {
     q: 'Vücut analizi online yapılabilir mi?',
-    a: 'Cihazla yapılan vücut analizi için kliniğe gelmeniz gerekir. Online görüşmelerde kilo, bel ve kalça çevresi gibi ölçümleri evde almanız istenir.',
+    a: 'Cihazla yapılan vücut analizi yalnızca klinikte yapılabilir. Online görüşmelerde kilo, bel ve kalça çevresi gibi ölçümler evde alınır.',
   },
   {
-    q: 'Görüşme ücretini ve ödeme bilgilerini nasıl öğrenebilirim?',
-    a: 'Görüşme ücreti ve ödeme bilgileri, randevunuz netleştiğinde size ayrıca iletilir.',
+    q: 'Ödeme bilgilerini nasıl öğrenebilirim?',
+    a: 'Ödeme bilgileri randevunuz netleşmeden size ayrıca iletilir.',
   },
   {
     q: 'Yurt dışından veya başka bir şehirden görüşme yapabilir miyim?',
-    a: 'Evet. İnternet bağlantınız ve WhatsApp’ınız olduğu sürece bulunduğunuz yerden online görüşme yapabilirsiniz.',
+    a: 'Evet. Online görüşme bulunduğunuz yerden yapılabilir.',
   },
 ];

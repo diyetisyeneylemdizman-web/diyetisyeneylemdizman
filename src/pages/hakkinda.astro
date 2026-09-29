@@ -23,7 +23,7 @@ const timeline = [
   {
     when: '2023–Günümüz',
     title: site.clinicName,
-    place: 'Seyhan/Adana · Yüz yüze ve online danışmanlık',
+    place: 'Yüz Yüze ve Online Danışmanlık',
     icon: 'leaf',
   },
 ] as const;
@@ -32,12 +32,12 @@ const values = [
   {
     icon: 'book',
     title: 'Bilimsel temelli',
-    text: 'Öneriler, güncel bilimsel kanıtlara ve ulusal ile uluslararası beslenme rehberlerine dayanır.',
+    text: 'Öneriler, güncel bilimsel kanıtlara, ulusal ve uluslararası beslenme rehberlerine dayanır.',
   },
   {
     icon: 'user',
     title: 'Kişiye özel',
-    text: 'Yaşam tarzınız, damak tadınız, sağlık durumunuz ve hedefleriniz birlikte değerlendirilir.',
+    text: 'Yaşam tarzı, sağlık durumu ve kişisel hedefler birlikte değerlendirilir.',
   },
   {
     icon: 'leaf',
@@ -47,14 +47,14 @@ const values = [
   {
     icon: 'chart',
     title: 'Düzenli takip',
-    text: 'Kontrol görüşmeleriyle süreç izlenir, plan ihtiyaçlarınıza göre güncellenir.',
+    text: 'Kontrol görüşmeleriyle süreç izlenir, plan ihtiyaçlara göre güncellenir.',
   },
 ] as const;
 ---
 
 <BaseLayout
   title="Hakkında"
-  description="Diyetisyen Eylem Dizman kimdir? İzmir Kâtip Çelebi Üniversitesi Beslenme ve Diyetetik mezunu Eylem Dizman, Seyhan/Adana’daki kliniğinde ve online olarak beslenme danışmanlığı vermektedir."
+  description="Diyetisyen Eylem Dizman kimdir? İzmir Kâtip Çelebi Üniversitesi Beslenme ve Diyetetik mezunu Eylem Dizman, Seyhan/Adana’da yüz yüze ve online olarak beslenme danışmanlığı vermektedir."
 >
   <PageHero
     title="Hakkında"
@@ -79,17 +79,16 @@ const values = [
         <p class="eyebrow">Merhaba</p>
         <h2>Diyetisyen Eylem Dizman</h2>
         <p class="lead">
-          Eylem Dizman, lisans öncesi öğreniminin ardından İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi
-          Beslenme ve Diyetetik Bölümünde başladığı eğitimini başarıyla tamamlayarak diyetisyen unvanını almıştır.
+          Eylem Dizman, İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve Diyetetik Bölümünden mezun
+          olarak diyetisyen unvanını almıştır.
         </p>
-        <p>Mesleki çalışmalarına {site.clinicName}nde devam etmektedir.</p>
+        <p>Mesleki çalışmalarını {site.clinicName}nde sürdürmektedir.</p>
         <p>
-          Seyhan/Adana’daki kliniğinde yüz yüze, WhatsApp araması ile de online olarak danışanlarıyla görüşmekte;
-          kilo yönetimi, hastalıklarda beslenme, gebelik ve çocuk beslenmesi gibi alanlarda kişiye özel beslenme
-          danışmanlığı vermektedir.
+          Danışanlarıyla yüz yüze veya online olarak görüşmekte; kilo yönetimi, metabolik ve hormonal sağlık, sindirim
+          sistemi sağlığı ve yaşam dönemlerinde beslenme gibi alanlarda kişiye özel beslenme danışmanlığı vermektedir.
         </p>
         <div class="bio-actions">
-          <a href="/randevu-olustur/" class="btn btn-primary"><Icon name="calendar" size={18} />Randevu Oluştur</a>
+          <a href="/randevu-olustur/" class="btn btn-primary"><Icon name="calendar" size={18} />Randevu Talebi Oluştur</a>
           <a href="/sertifikalar/" class="btn btn-outline"><Icon name="cap" size={18} />Sertifikalar</a>
         </div>
       </div>
@@ -126,7 +125,7 @@ const values = [
     <div class="container">
       <div class="section-head center">
         <p class="eyebrow">Yaklaşım</p>
-        <h2>Nasıl çalışıyoruz?</h2>
+        <h2>Danışmanlık yaklaşımı</h2>
         <p>Her danışanın hikâyesi, ihtiyacı ve hedefi farklıdır. Beslenme planı da buna göre şekillenir.</p>
       </div>
       <div class="values">

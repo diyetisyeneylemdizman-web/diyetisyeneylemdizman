@@ -5,7 +5,7 @@ date: 2026-09-15
 category: 'Kadın Sağlığı'
 tone: 'terracotta'
 icon: 'bloom'
-relatedService: 'Polikistik Over Diyeti'
+relatedService: 'PMOS (Polikistik Over Sendromu)'
 ---
 
 **Polikistik over sendromu (PKOS)**, üreme çağındaki kadınlarda sık görülen hormonal bir durumdur. Dünya Sağlık Örgütüne göre bu yaş grubundaki kadınların yaklaşık **%8–13’ünü** etkiler. Düzensiz adet döngüleri, sivilce ve tüylenme gibi androjen fazlalığı belirtileri ile ultrasonda overlerde (yumurtalıklarda) çok sayıda küçük folikül görülmesi sık karşılaşılan bulgulardır. Tanı, bu kriterler değerlendirilerek **hekim tarafından** konur.

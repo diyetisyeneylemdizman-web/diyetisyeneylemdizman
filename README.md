@@ -9,10 +9,10 @@ derlenip yayına alınır.
 | Ne değişecek? | Dosya / klasör |
 | --- | --- |
 | Telefon, adres, e-posta, çalışma saatleri, sosyal medya | `src/data/site.ts` |
-| Hizmet listesi ve açıklamaları | `src/data/services.ts` |
+| Hizmet alanları, alt başlıklar ve açıklamaları (Hizmetler sayfası, ana sayfa kartları, randevu formundaki konu listesi) | `src/data/services.ts` |
 | Blog yazıları | `src/content/blog/*.md` (her dosya bir yazı) |
 | Sertifika görselleri | `src/assets/sertifikalar/` klasörüne jpg/png eklenir (kimlik no gibi kişisel veriler önceden gizlenmeli) |
-| Sertifika başlıkları, grupları ve sırası | `src/data/certificates.ts` (listede olmayan görseller “Diğer Belgeler” altında çıkar) |
+| Sertifika başlıkları, grupları ve sırası | `src/data/certificates.ts` (listede olmayan görseller “Diğer Belgeler” altında çıkar; sitede gösterilmeyecek bir belge, `src/pages/index.astro` ve `src/pages/sertifikalar.astro` içindeki listeye `!` ile eklenir) |
 | Fotoğraf | `src/assets/eylem-dizman.jpg` |
 | Logo dosyaları | `public/logo/` |
 | Renkler ve yazı tipleri | `src/styles/global.css` |
@@ -26,7 +26,7 @@ derlenip yayına alınır.
 ## Sayfalar
 
 Ana sayfa · Hakkında · Sertifikalar · Hizmetler · Vücut Kitle İndeksi Hesaplama · Online Görüşme · Blog & Reels ·
-İletişim · Randevu Oluştur (3 adım: görüşme → takvimden tarih ve saat → bilgiler; WhatsApp mesajı olarak gönderilir) ·
+İletişim · Randevu Talebi Oluştur (3 adım: görüşme → takvimden tercih edilen tarih ve saat → bilgiler; WhatsApp mesajı olarak gönderilir, randevu onaydan sonra kesinleşir) ·
 KVKK Aydınlatma Metni
 
 ## Site asistanı
@@ -52,7 +52,7 @@ kendiliğinden kayar, fare üzerine gelince durur (`src/components/ReelsGrid.ast
   `INSTAGRAM_TOKEN` (Instagram erişim anahtarı). Anahtar koda veya GitHub'a yazılmaz.
 - Anahtar 60 gün geçerlidir; Worker haftada bir kendiliğinden yeniler. Panelde yeni bir anahtar girilirse otomatik
   olarak ona geçilir.
-- Anahtar yoksa ya da çalışmazsa sitede “Reels Videolarımızı Instagram’da İzleyin” kartı görünür; site etkilenmez.
+- Anahtar yoksa ya da çalışmazsa sitede “Reels Videolarını Instagram’da İzleyin” kartı görünür; site etkilenmez.
 - Hata ayıklama: Cloudflare panelinde Worker → Logs (“Reels eşitleme: …” satırları).
 
 ## Google yorumları
@@ -69,7 +69,9 @@ yapılmış olsa bile, yasaklıyor.
 - **2–17 yaş:** VKİ, DSÖ’nün yaşa ve cinsiyete özel tablolarıyla persentil olarak değerlendirilir (2–5 yaş: DSÖ 2006
   büyüme standartları, 5–19 yaş: DSÖ 2007 referansları). Tablo değerleri `public/veri/vki-referans.json` dosyasındadır;
   yalnızca çocuk hesabında indirilir.
-- **2 yaş altı ve gebelik:** VKİ sınıflaması yapılmaz; Çocuk Beslenmesi / Gebelikte Beslenme hizmetine yönlendirilir.
+- **2 yaş altı ve gebelik:** VKİ sınıflaması yapılmaz; Çocuk ve Ergen Beslenmesi / Gebelikte Beslenme hizmetine yönlendirilir.
+- **Gebelikte kilo takibi:** VKİ sayfasında, gebelik öncesi VKİ’ye göre tekil gebelikte önerilen toplam kilo artışı
+  tablosu (CDC / IOM 2009) ve “Gebeyseniz” uyarısı yer alır.
 - Hesaplama tarayıcıda yapılır; girilen bilgiler hiçbir yere gönderilmez.
 
 ## Mevzuat notları
@@ -89,4 +91,10 @@ npm run build    # yayın dosyalarını dist/ klasörüne üretir
 Cloudflare ayarları: `wrangler.jsonc` (derleme komutu `npm run build`, yayın komutu `npx wrangler deploy`). Sayfalar
 statik dosya olarak sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır (Instagram Reels).
 
-Online görüşmeler WhatsApp araması ile yapılır (görüntülü görüşme yapılmaz); sitede bu ifade kullanılır.
+## Yazım kuralları
+
+- Online görüşme için yalnızca “online” ifadesi kullanılır (“WhatsApp araması ile online” gibi ekler yazılmaz); yüz yüze
+  görüşmenin altına konum eklenmez. WhatsApp yalnızca randevu talebinin iletildiği kanal olarak geçer.
+- Süreç ve hizmet anlatımları üçüncü kişi ağzıyla yazılır (“seçilir”, “iletilir”, “takip edilir”); düğmelerde ve formda
+  ziyaretçiye doğrudan hitap edilir.
+- Ana düğmelerde “Randevu Talebi Oluştur” kullanılır.

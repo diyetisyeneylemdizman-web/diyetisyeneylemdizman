@@ -135,7 +135,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
     <p class="result-source" data-bmi-source></p>
     <div class="result-actions">
       <a href="/randevu-olustur/" class="btn btn-primary" data-bmi-cta>
-        <Icon name="calendar" size={18} /><span data-bmi-cta-label>Randevu Oluştur</span>
+        <Icon name="calendar" size={18} /><span data-bmi-cta-label>Randevu Talebi Oluştur</span>
       </a>
     </div>
   </div>
@@ -444,7 +444,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       bg: '#ece5da',
       fg: '#292c29',
       text: 'VKİ değeriniz zayıf aralığında. Vücudunuzun ihtiyaç duyduğu enerji ve besin öğelerini yeterince alamıyor olabilirsiniz. Sağlıklı kilo alımı için kişiye özel bir beslenme planı faydalı olabilir.',
-      cta: { label: 'Kilo Alma Diyeti İçin Randevu Oluştur', hizmet: 'Kilo Alma Diyeti', primary: true },
+      cta: { label: 'Sağlıklı Kilo Alma İçin Randevu Talebi Oluştur', hizmet: 'Sağlıklı Kilo Alma', primary: true },
     },
     {
       max: 25,
@@ -453,7 +453,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       bg: '#e3e7dd',
       fg: '#3d4636',
       text: 'VKİ değeriniz normal aralıkta. Bu aralıkta kalmak için düzenli, çeşitli ve dengeli beslenmeyi sürdürmeniz önemlidir.',
-      cta: { label: 'Sağlıklı Beslenme İçin Randevu Oluştur', hizmet: 'Sağlıklı Beslenme Önerileri', primary: false },
+      cta: { label: 'Sağlıklı Beslenme İçin Randevu Talebi Oluştur', hizmet: 'Sağlıklı Beslenme Alışkanlıkları', primary: false },
     },
     {
       max: 30,
@@ -461,8 +461,8 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       label: 'Fazla Kilolu (Hafif Şişman)',
       bg: '#f6ebe5',
       fg: '#86493a',
-      text: 'VKİ değeriniz fazla kilolu (hafif şişman) aralığında. Kişiye özel bir beslenme planıyla sağlıklı ve sürdürülebilir bir kilo kaybı hedeflenebilir. Değerlendirme için randevu oluşturabilirsiniz.',
-      cta: { label: 'Zayıflama Diyeti İçin Randevu Oluştur', hizmet: 'Zayıflama Diyeti', primary: true },
+      text: 'VKİ değeriniz fazla kilolu (hafif şişman) aralığında. Kişiye özel bir beslenme planıyla sağlıklı ve sürdürülebilir bir kilo kaybı hedeflenebilir. Değerlendirme için randevu talebi oluşturabilirsiniz.',
+      cta: { label: 'Kilo Verme Diyeti İçin Randevu Talebi Oluştur', hizmet: 'Kilo Verme Diyeti', primary: true },
     },
     {
       max: 35,
@@ -471,7 +471,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       bg: '#f1ddd3',
       fg: '#86493a',
       text: 'VKİ değeriniz 1. derece obezite aralığında. Obezite, tip 2 diyabet, hipertansiyon ve kalp-damar hastalıkları gibi sorunların riskini artırabilir. Uzman desteğiyle planlanan bir beslenme programı önemlidir.',
-      cta: { label: 'Obezitede Beslenme İçin Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
+      cta: { label: 'Obezitede Beslenme İçin Randevu Talebi Oluştur', hizmet: 'Obezitede Beslenme Desteği', primary: true },
     },
     {
       max: 40,
@@ -480,7 +480,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       bg: '#ecd0c4',
       fg: '#7a4033',
       text: 'VKİ değeriniz 2. derece obezite aralığında. Bu aralıkta sağlık riskleri artabilir; hekiminizle birlikte, uzman desteğiyle planlanan bir beslenme programı önemlidir.',
-      cta: { label: 'Obezitede Beslenme İçin Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
+      cta: { label: 'Obezitede Beslenme İçin Randevu Talebi Oluştur', hizmet: 'Obezitede Beslenme Desteği', primary: true },
     },
     {
       max: Infinity,
@@ -489,13 +489,13 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       bg: '#e6c2b4',
       fg: '#6e392d',
       text: 'VKİ değeriniz 3. derece (morbid) obezite aralığında. Bu aralıkta sağlık riskleri belirgin şekilde artar; hekiminizle birlikte, uzman desteğiyle planlanan bir beslenme programı önemlidir.',
-      cta: { label: 'Obezitede Beslenme İçin Randevu Oluştur', hizmet: 'Obezitede Beslenme', primary: true },
+      cta: { label: 'Obezitede Beslenme İçin Randevu Talebi Oluştur', hizmet: 'Obezitede Beslenme Desteği', primary: true },
     },
   ];
 
   const CHILD_CTA = (primary: boolean): Cta => ({
-    label: 'Çocuk Beslenmesi İçin Randevu Oluştur',
-    hizmet: 'Çocuk Beslenmesi',
+    label: 'Çocuk Beslenmesi İçin Randevu Talebi Oluştur',
+    hizmet: 'Çocuk ve Ergen Beslenmesi',
     primary,
   });
 
@@ -677,7 +677,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
         setChip('2 Yaş Altı', '#ece5da', '#292c29');
         useScale('none');
         $('[data-bmi-text]').textContent =
-          '2 yaşından küçük bebeklerde beslenme ve büyüme durumu, boya göre ağırlık ve büyüme eğrileriyle çocuk doktoru tarafından değerlendirilir. Ek gıda dönemi ve beslenme alışkanlıkları için birlikte değerlendirme yapabiliriz.';
+          '2 yaşından küçük bebeklerde beslenme ve büyüme durumu, boya göre ağırlık ve büyüme eğrileriyle çocuk doktoru tarafından değerlendirilir. Ek gıda dönemi ve beslenme alışkanlıkları için değerlendirme yapılabilir.';
         setCta(CHILD_CTA(true));
         reveal();
         return;
@@ -694,8 +694,8 @@ const months = Array.from({ length: 12 }, (_, i) => i);
         setChip('Gebelik', '#f6ebe5', '#86493a');
         useScale('none');
         $('[data-bmi-text]').textContent =
-          'Gebelikte VKİ sınıflaması yapılmaz; değerlendirme gebelik öncesi VKİ’nize göre yapılır ve gebelik boyunca alınması önerilen kilo da buna ve gebelik haftasına göre değişir. Gebelik sürecinize uygun beslenme için birlikte değerlendirme yapabiliriz.';
-        setCta({ label: 'Gebelikte Beslenme İçin Randevu Oluştur', hizmet: 'Gebelikte Beslenme', primary: true });
+          'Gebelikte VKİ sınıflaması güncel kiloyla yapılmaz; gebelik boyunca önerilen toplam kilo artışı gebelik öncesi VKİ’ye göre belirlenir. Gebelik öncesi VKİ’nizi öğrenmek için “Gebeyim” kutusunu işaretlemeden gebelik öncesindeki boy ve kilonuzu girin.';
+        setCta({ label: 'Gebelikte Beslenme İçin Randevu Talebi Oluştur', hizmet: 'Gebelikte Beslenme', primary: true });
         reveal();
         return;
       }
@@ -711,7 +711,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
           setChip('18 Yaş Altı', '#ece5da', '#292c29');
           useScale('none');
           $('[data-bmi-text]').textContent =
-            '18 yaş altındaki çocuk ve gençlerde VKİ, yaşa ve cinsiyete özel büyüme tablolarıyla (persentil) değerlendirilir. Büyüme ve beslenme durumunu birlikte değerlendirebiliriz.';
+            '18 yaş altındaki çocuk ve gençlerde VKİ, yaşa ve cinsiyete özel büyüme tablolarıyla (persentil) değerlendirilir. Büyüme ve beslenme durumu görüşmede değerlendirilebilir.';
           setCta(CHILD_CTA(true));
           reveal();
           return;
@@ -760,7 +760,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
         $('[data-waist-text]').textContent = wr.text;
         box.hidden = false;
         if (cat.key === 'normal' && wr.key !== 'normal') {
-          cta = { label: 'Değerlendirme İçin Randevu Oluştur', hizmet: 'Online & Yüz Yüze Beslenme Danışmanlığı', primary: true };
+          cta = { label: 'Değerlendirme İçin Randevu Talebi Oluştur', hizmet: 'Yüz Yüze ve Online Danışmanlık', primary: true };
         }
       }
       if (yas >= 65) {

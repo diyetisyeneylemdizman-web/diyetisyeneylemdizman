@@ -10,7 +10,7 @@ import PostCard from '../components/PostCard.astro';
 import ReelsGrid from '../components/ReelsGrid.astro';
 import MapEmbed from '../components/MapEmbed.astro';
 import CtaBand from '../components/CtaBand.astro';
-import { serviceCategories } from '../data/services';
+import { serviceAreas } from '../data/services';
 import { site, fullAddress } from '../data/site';
 import portrait from '../assets/eylem-dizman.jpg';
 import { featuredCertificates } from '../data/certificates';
@@ -18,11 +18,14 @@ import { processSteps } from '../data/process';
 
 // Sertifika bandı: src/assets/sertifikalar/ klasöründeki belgelerden seçilen üç görsel ve toplam belge sayısı
 const certModules = import.meta.glob<{ default: ImageMetadata }>(
-  '../assets/sertifikalar/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}',
+  [
+    '../assets/sertifikalar/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}',
+    // Sitede gösterilmeyecek belgeler
+    '!../assets/sertifikalar/duru-bulgur.jpg',
+  ],
   { eager: true },
 );
 const certImages = new Map(Object.entries(certModules).map(([path, mod]) => [path.split('/').pop()!, mod.default]));
-const certCount = certImages.size;
 const certPreview = featuredCertificates
   .map((file) => certImages.get(file))
   .filter((img): img is ImageMetadata => Boolean(img))
@@ -33,6 +36,7 @@ const posts = (await getCollection('blog'))
   .slice(0, 3);
 
 const steps = processSteps;
+const homeAreas = serviceAreas.filter((a) => a.home);
 ---
 
 <BaseLayout>
@@ -44,11 +48,11 @@ const steps = processSteps;
         <p class="eyebrow">Diyetisyen Eylem Dizman</p>
         <h1>Size özel, <em class="accent">sürdürülebilir</em> bir beslenme düzeni</h1>
         <p class="lead">
-          Yüz yüze ya da WhatsApp araması ile online; yaşam tarzınıza, sağlık durumunuza ve hedeflerinize uygun bir
-          beslenme planını birlikte oluşturalım.
+          Yüz yüze veya online görüşmelerde sağlık durumunuzu, günlük yaşamınızı ve hedeflerinizi birlikte
+          değerlendirerek size uygun bir beslenme planı oluşturalım.
         </p>
         <div class="hero-actions">
-          <a href="/randevu-olustur/" class="btn btn-primary"><Icon name="calendar" size={19} />Randevu Oluştur</a>
+          <a href="/randevu-olustur/" class="btn btn-primary"><Icon name="calendar" size={19} />Randevu Talebi Oluştur</a>
           <a href="/vucut-kitle-indeksi-hesaplama/" class="btn btn-outline"><Icon name="scale" size={19} />VKİ’nizi Hesaplayın</a>
         </div>
         <ul class="hero-points">
@@ -106,7 +110,7 @@ const steps = processSteps;
           </li>
           <li>
             <Icon name="consult" size={22} />
-            <span><strong>Online & Yüz Yüze Beslenme Danışmanlığı</strong>Klinikte yüz yüze veya WhatsApp araması ile online</span>
+            <span><strong>Online & Yüz Yüze Beslenme Danışmanlığı</strong>Kişiye özel beslenme planı ve düzenli takip</span>
           </li>
         </ul>
       </div>
@@ -114,10 +118,10 @@ const steps = processSteps;
         <p class="eyebrow">Hakkında</p>
         <h2>Diyetisyen Eylem Dizman</h2>
         <p class="lead">
-          Eylem Dizman, lisans öncesi öğreniminin ardından İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi
-          Beslenme ve Diyetetik Bölümünde başladığı eğitimini başarıyla tamamlayarak diyetisyen unvanını almıştır.
+          Eylem Dizman, İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve Diyetetik Bölümünden mezun
+          olarak diyetisyen unvanını almıştır.
         </p>
-        <p>Mesleki çalışmalarına {site.clinicName}nde devam etmektedir.</p>
+        <p>Mesleki çalışmalarını {site.clinicName}nde sürdürmektedir.</p>
         <a href="/hakkinda/" class="link-arrow">Hakkında Daha Fazlası <Icon name="arrowRight" size={18} /></a>
       </div>
     </div>
@@ -129,25 +133,21 @@ const steps = processSteps;
       <div class="section-head center">
         <p class="eyebrow">Hizmetler</p>
         <h2>Hangi konularda destek alabilirsiniz?</h2>
-        <p>Danışmanlıktan hastalıklarda beslenmeye, kilo yönetiminden özel dönemlere kadar kişiye özel beslenme desteği.</p>
+        <p>Kilo yönetimi, hastalıklarda beslenme ve özel dönemlerde size özel danışmanlık ve takip desteği.</p>
       </div>
       <div class="service-grid">
         {
-          serviceCategories.map((cat) => (
-            <article class="service-card reveal">
+          homeAreas.map((a) => (
+            <a href={`/hizmetler/#${a.id}`} class="service-card reveal">
               <span class="icon-badge">
-                <Icon name={cat.icon} size={26} />
+                <Icon name={a.icon} size={26} />
               </span>
-              <h3>{cat.title}</h3>
-              <p>{cat.intro}</p>
-              <ul>
-                {cat.services.map((s) => (
-                  <li>
-                    <a href={`/hizmetler/#${s.slug}`}>{s.name}</a>
-                  </li>
-                ))}
-              </ul>
-            </article>
+              <h3>{a.short}</h3>
+              <p>{a.summary}</p>
+              <span class="more">
+                İncele <Icon name="arrowRight" size={16} />
+              </span>
+            </a>
           ))
         }
       </div>
@@ -162,7 +162,7 @@ const steps = processSteps;
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">Süreç</p>
-        <h2>Birlikte nasıl ilerliyoruz?</h2>
+        <h2>Süreç nasıl ilerler?</h2>
       </div>
       <ol class="steps">
         {
@@ -189,7 +189,7 @@ const steps = processSteps;
         <h2>VKİ’nizi hesaplayın, nerede olduğunuzu görün</h2>
         <p>
           Boyunuzu, kilonuzu ve yaşınızı girin; vücut kitle indeksinizi ve hangi aralıkta olduğunuzu hemen öğrenin. Sonucunuza
-          göre sizin için uygun hizmete kolayca randevu oluşturabilirsiniz.
+          göre size uygun hizmet için kolayca randevu talebi oluşturabilirsiniz.
         </p>
         <a href="/vucut-kitle-indeksi-hesaplama/" class="link-dark">VKİ Hakkında Ayrıntılı Bilgi <Icon name="arrowRight" size={18} /></a>
       </div>
@@ -203,7 +203,7 @@ const steps = processSteps;
       <div class="online-visual reveal" aria-hidden="true">
         <div class="phone">
           <div class="phone-screen">
-            <div class="call-top"><span></span>WhatsApp araması</div>
+            <div class="call-top"><span></span>Online görüşme</div>
             <div class="call-avatar">
               <span class="ring"></span><span class="ring"></span><span class="ring"></span>
               <img src="/logo/logo-simge.svg" width="136" height="206" alt="" />
@@ -222,17 +222,15 @@ const steps = processSteps;
       <div class="reveal">
         <p class="eyebrow">Online Görüşme</p>
         <h2>Nerede olursanız olun, <em class="accent">online</em> görüşme</h2>
-        <p class="lead">
-          Kliniğe gelemediğiniz durumlarda WhatsApp araması ile birebir beslenme danışmanlığı alabilirsiniz.
-        </p>
+        <p class="lead">Kliniğe gelinemeyen durumlarda birebir beslenme danışmanlığı online olarak da alınabilir.</p>
         <ul class="checks">
-          <li><Icon name="check" size={20} />Randevu formunda görüşme türü olarak “Online”ı seçin</li>
-          <li><Icon name="check" size={20} />Takvimden size uygun gün ve saati seçin</li>
-          <li><Icon name="check" size={20} />Görüşme saatinde sizi WhatsApp üzerinden arayalım</li>
+          <li><Icon name="check" size={20} />Randevu formunda görüşme türü olarak “Online” seçilir</li>
+          <li><Icon name="check" size={20} />Takvimden uygun gün ve saat seçilir</li>
+          <li><Icon name="check" size={20} />Randevu saatinde danışan aranır</li>
         </ul>
         <div class="hero-actions">
           <a href="/randevu-olustur/?tur=online#randevu-formu" class="btn btn-primary"
-            ><Icon name="phone" size={19} />Online Randevu Oluştur</a
+            ><Icon name="phone" size={19} />Online Randevu Talebi Oluştur</a
           >
           <a href="/online-gorusme/" class="btn btn-outline">Nasıl İşliyor?</a>
         </div>
@@ -258,13 +256,7 @@ const steps = processSteps;
         <div>
           <p class="eyebrow">Eğitimler ve Sertifikalar</p>
           <h2>Mesleki gelişim hiç durmaz</h2>
-          <p>
-            {
-              certCount > 0
-                ? `Eylem Dizman’ın lisans diploması ile katıldığı eğitim, kongre ve seminerlere ait ${certCount} belgeyi inceleyin.`
-                : 'Eylem Dizman’ın tamamladığı mesleki eğitim ve sertifika programlarını inceleyin.'
-            }
-          </p>
+          <p>Eylem Dizman’ın lisans diplomasını ve katıldığı eğitim, kongre ve seminerlere ait belgeleri inceleyin.</p>
           <a href="/sertifikalar/" class="btn btn-sage">Sertifikaları Görüntüle <Icon name="arrowRight" size={18} /></a>
         </div>
       </div>
@@ -295,7 +287,7 @@ const steps = processSteps;
     <div class="container contact-grid">
       <div>
         <p class="eyebrow">İletişim</p>
-        <h2>Kliniğimize bekleriz</h2>
+        <h2>Klinik ve iletişim bilgileri</h2>
         <ul class="contact-list">
           <li>
             <span class="icon-badge"><Icon name="pin" /></span>
@@ -526,49 +518,49 @@ const steps = processSteps;
     gap: 20px;
   }
   .service-card {
+    display: flex;
+    flex-direction: column;
     background: var(--paper);
     border-radius: var(--radius-lg);
-    padding: 28px 24px;
+    padding: 28px 24px 24px;
     box-shadow: var(--shadow-sm);
     border: 1px solid rgb(41 44 41 / 0.05);
+    color: var(--ink);
+    text-decoration: none;
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease,
+      border-color 0.25s ease;
+  }
+  .service-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+    border-color: var(--sage);
   }
   .service-card h3 {
     margin: 18px 0 8px;
+    font-size: 1.2rem;
   }
   .service-card > p {
     font-size: 0.93rem;
     color: var(--ink-2);
     line-height: 1.6;
+    margin-bottom: 18px;
   }
-  .service-card ul {
-    list-style: none;
-    margin: 18px 0 0;
-    padding: 16px 0 0;
-    border-top: 1px solid var(--beige-soft);
-    display: grid;
-    gap: 8px;
-  }
-  .service-card li a {
-    display: block;
+  .service-card .more {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--ink);
-    text-decoration: none;
-    padding-left: 16px;
-    position: relative;
-  }
-  .service-card li a::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0.62em;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--sage);
-  }
-  .service-card li a:hover {
+    font-weight: 700;
     color: var(--terracotta-700);
+  }
+  .service-card:hover .more :global(svg) {
+    transform: translateX(3px);
+  }
+  .service-card .more :global(svg) {
+    transition: transform 0.2s ease;
   }
   .center-link {
     display: flex;
@@ -877,7 +869,7 @@ const steps = processSteps;
   /* ---------- İletişim ---------- */
   .contact-grid {
     display: grid;
-    grid-template-columns: 0.95fr 1.05fr;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
     gap: clamp(32px, 5vw, 72px);
     align-items: center;
   }
@@ -909,6 +901,10 @@ const steps = processSteps;
     font-weight: 600;
     text-decoration: none;
     line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+  .contact-list li > div {
+    min-width: 0;
   }
   .contact-list a:hover {
     text-decoration: underline;
@@ -928,7 +924,7 @@ const steps = processSteps;
     .online-grid,
     .contact-grid,
     .cert-band {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
     .hero-visual {
       width: min(86%, 420px);

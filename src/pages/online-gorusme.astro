@@ -4,21 +4,27 @@ import PageHero from '../components/PageHero.astro';
 import Icon from '../components/Icon.astro';
 import CtaBand from '../components/CtaBand.astro';
 
-import { onlineSteps as steps, onlinePrepare as prepare, onlineTech as tech, onlineFaqs as faqs } from '../data/online-gorusme';
+import {
+  onlineSteps as steps,
+  onlinePrepare as prepare,
+  onlineHealthNote,
+  paymentNote,
+  onlineFaqs as faqs,
+} from '../data/online-gorusme';
 ---
 
 <BaseLayout
   title="Online Görüşme"
-  description="WhatsApp araması ile online beslenme danışmanlığı: nasıl işler, görüşmeden önce neler hazırlanmalı, sık sorulan sorular."
+  description="Online beslenme danışmanlığı: nasıl işler, görüşmeden önce neler hazırlanmalı, sık sorulan sorular."
 >
   <PageHero
     title="Online Görüşme"
-    eyebrow="WhatsApp Araması ile"
+    eyebrow="Online Beslenme Danışmanlığı"
     lead="Nerede olursanız olun, birebir beslenme danışmanlığını online alabilirsiniz."
     crumbs={[{ label: 'Online Görüşme' }]}
   >
     <div class="hero-cta">
-      <a href="/randevu-olustur/?tur=online#randevu-formu" class="btn btn-primary"><Icon name="phone" size={18} />Online Randevu Oluştur</a>
+      <a href="/randevu-olustur/?tur=online#randevu-formu" class="btn btn-primary"><Icon name="phone" size={18} />Online Randevu Talebi Oluştur</a>
     </div>
   </PageHero>
 
@@ -54,22 +60,18 @@ import { onlineSteps as steps, onlinePrepare as prepare, onlineTech as tech, onl
         </ul>
       </div>
       <div class="card prep">
-        <h2>İhtiyacınız olanlar</h2>
+        <h2>Bilmeniz gerekenler</h2>
         <ul class="tech">
-          {
-            tech.map((t) => (
-              <li>
-                <span class="icon-badge">
-                  <Icon name={t.icon} size={22} />
-                </span>
-                {t.text}
-              </li>
-            ))
-          }
+          <li>
+            <span class="icon-badge">
+              <Icon name="clipboard" size={22} />
+            </span>
+            <span>{onlineHealthNote}</span>
+          </li>
         </ul>
         <p class="pay-note">
           <Icon name="info" size={18} />
-          Görüşme ücreti ve ödeme bilgileri, randevunuz netleştiğinde size ayrıca iletilir.
+          {paymentNote}
         </p>
       </div>
     </div>
@@ -98,7 +100,7 @@ import { onlineSteps as steps, onlinePrepare as prepare, onlineTech as tech, onl
   </section>
 
   <CtaBand
-    title="Online görüşme için randevu oluşturun"
+    title="Online görüşme için randevu talebi oluşturun"
     text="Formda görüşme türü olarak “Online”ı seçin, takvimden size uygun gün ve saati işaretleyin."
   />
 </BaseLayout>
@@ -179,11 +181,13 @@ import { onlineSteps as steps, onlinePrepare as prepare, onlineTech as tech, onl
   }
   .tech li {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 14px;
-    font-weight: 600;
+    font-weight: 500;
+    line-height: 1.6;
   }
   .tech .icon-badge {
+    flex: none;
     width: 44px;
     height: 44px;
     border-radius: 14px;

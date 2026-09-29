@@ -52,7 +52,7 @@ export const GET: APIRoute = async () => {
   const topicIntents = topics.map((t) => {
     if (t.id === 'blog' && posts.length) {
       return pack(t, 'topic', {
-        a: `${t.a}\nSon yazılarımız:\n${posts.map((p) => `- ${p.data.title}`).join('\n')}`,
+        a: `${t.a}\nSon yazılar:\n${posts.map((p) => `- ${p.data.title}`).join('\n')}`,
       });
     }
     return pack(t, 'topic');
@@ -64,7 +64,7 @@ export const GET: APIRoute = async () => {
     const a = [
       `${s.name}: ${s.description}`,
       note.extra ?? '',
-      note.noOnline || /online/i.test(s.name) ? '' : 'Klinikte yüz yüze ya da WhatsApp araması ile online destek alabilirsiniz.',
+      note.noOnline || /online/i.test(s.name) ? '' : 'Yüz yüze veya online olarak destek alınabilir.',
     ]
       .filter(Boolean)
       .join(' ');

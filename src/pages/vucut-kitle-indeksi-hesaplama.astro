@@ -5,6 +5,14 @@ import BmiCalculator from '../components/BmiCalculator.astro';
 import Icon from '../components/Icon.astro';
 import CtaBand from '../components/CtaBand.astro';
 
+// Gebelikte önerilen toplam ağırlık artışı (tekil gebelik) – CDC / IOM 2009 önerileri
+const pregnancy = [
+  { bmi: '18,5’in altında', label: 'Düşük ağırlık', gain: '12,5–18 kg' },
+  { bmi: '18,5–24,9', label: 'Normal aralık', gain: '11,5–16 kg' },
+  { bmi: '25,0–29,9', label: 'Fazla ağırlık', gain: '7–11,5 kg' },
+  { bmi: '30 ve üzeri', label: 'Obezite aralığı', gain: '5–9 kg' },
+];
+
 const ranges = [
   { range: '18,5’in altı', label: 'Zayıf', color: '#cfc4b3' },
   { range: '18,5–24,9', label: 'Normal', color: '#8e9b82' },
@@ -30,6 +38,14 @@ const ranges = [
     <div class="container bmi-page">
       <div>
         <BmiCalculator />
+        <p class="preg-note">
+          <Icon name="bloom" size={20} />
+          <span
+            ><strong>Gebeyseniz:</strong> Gebelik öncesi VKİ’nizi hesaplamak için gebelik öncesindeki boy ve kilonuzu
+            kullanın. Gebelik sırasındaki güncel kilonuzla yapılan standart VKİ hesabı, gebelikte kilo artışını tek başına
+            değerlendirmez. <a href="#gebelikte-kilo-takibi">Gebelikte kilo takibi</a></span
+          >
+        </p>
       </div>
       <aside class="info card">
         <h2>VKİ nedir?</h2>
@@ -64,6 +80,60 @@ const ranges = [
     </div>
   </section>
 
+  <section class="section-sm preg" id="gebelikte-kilo-takibi">
+    <div class="container preg-grid">
+      <div>
+        <p class="eyebrow">Gebelik Dönemi</p>
+        <h2>Gebelikte kilo takibi</h2>
+        <p>
+          Gebelikte önerilen toplam ağırlık artışı, <strong>gebelik öncesi VKİ’ye</strong> göre değişir. Aşağıdaki aralıklar
+          tekil gebelikler için kullanılan genel rehber değerlerdir; kişisel hedefiniz sağlık durumunuz ve gebelik
+          takibinizle birlikte değerlendirilmelidir.
+        </p>
+      </div>
+      <div class="card preg-card">
+        <h3>Gebelik öncesi VKİ’nize göre gebelik boyunca önerilen toplam kilo artışı</h3>
+        <p class="preg-caption">
+          Tablodaki değerler tekil gebelik için genel rehber olarak sunulur. Çoğul gebeliklerde ve kişiye özel sağlık
+          durumlarında değerlendirme farklı olabilir.
+        </p>
+        <div class="table-wrap">
+          <table class="preg-table">
+            <thead>
+              <tr>
+                <th scope="col">Gebelik öncesi VKİ</th>
+                <th scope="col">VKİ sınıfı</th>
+                <th scope="col">Tekil gebelikte önerilen toplam ağırlık artışı</th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                pregnancy.map((r) => (
+                  <tr>
+                    <td>{r.bmi}</td>
+                    <td>{r.label}</td>
+                    <td class="gain">{r.gain}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="preg-foot">
+          <strong>Not:</strong> Bu tablo tekil gebelikler için genel bir referanstır. İkiz veya çoğul gebeliklerde, bazı
+          sağlık durumlarında ve kişisel takip gerektiren durumlarda hedefler değişebilir. Kilo artışı tek başına
+          değerlendirilmemeli; gebelik takibini yapan hekim ve diyetisyenle birlikte ele alınmalıdır.
+        </p>
+        <p class="source">
+          Kaynak: ABD Hastalık Kontrol ve Önleme Merkezleri (CDC),{' '}
+          <a href="https://www.cdc.gov/maternal-infant-health/pregnancy-weight/index.html" target="_blank" rel="noopener"
+            >Weight Gain During Pregnancy</a
+          >; Institute of Medicine (IOM) 2009 önerileri.
+        </p>
+      </div>
+    </div>
+  </section>
+
   <section class="section-sm bg-sage-soft">
     <div class="container limits">
       <div>
@@ -91,12 +161,12 @@ const ranges = [
         <div>
           <h2>Daha ayrıntılı bir değerlendirme için: vücut analizi</h2>
           <p>
-            Vücut analiziyle kilonuzun ne kadarının yağ, kas ve sıvıdan oluştuğunu görebilirsiniz; beslenme planınızı da
-            bu ölçümlere göre şekillendirebiliriz.
+            Vücut analiziyle kilonun ne kadarının yağ, kas ve sıvıdan oluştuğu görülebilir; beslenme planı da uygun
+            olduğunda bu ölçümlere göre şekillendirilir.
           </p>
         </div>
-        <a href="/randevu-olustur/?hizmet=V%C3%BCcut%20Analizi#randevu-formu" class="btn btn-primary">
-          <Icon name="calendar" size={18} />Randevu Oluştur
+        <a href={`/randevu-olustur/?hizmet=${encodeURIComponent('Vücut Bileşimi Takibi')}#randevu-formu`} class="btn btn-primary">
+          <Icon name="calendar" size={18} />Randevu Talebi Oluştur
         </a>
       </div>
       <p class="disclaimer">
@@ -182,6 +252,75 @@ const ranges = [
     margin: 14px 0 0;
   }
 
+  .preg-note {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin: 16px 0 0;
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: var(--terracotta-50);
+    color: var(--ink);
+    font-size: 0.94rem;
+    line-height: 1.6;
+  }
+  .preg-note :global(svg) {
+    flex: none;
+    margin-top: 2px;
+    color: var(--terracotta-700);
+  }
+  .preg-note a {
+    font-weight: 700;
+    color: var(--terracotta-700);
+    white-space: nowrap;
+  }
+  .preg {
+    scroll-margin-top: calc(var(--header-h) + 8px);
+  }
+  .preg-grid {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: clamp(24px, 5vw, 64px);
+    align-items: start;
+  }
+  .preg-grid > div:first-child p:not(.eyebrow) {
+    color: var(--ink-2);
+  }
+  .preg-card {
+    padding: clamp(22px, 3vw, 34px);
+  }
+  .preg-card h3 {
+    font-size: clamp(1.15rem, 2vw, 1.35rem);
+    margin-bottom: 8px;
+  }
+  .preg-caption {
+    font-style: italic;
+    color: var(--ink-3);
+    font-size: 0.9rem;
+    margin-bottom: 18px;
+  }
+  .table-wrap {
+    overflow-x: auto;
+  }
+  .preg-table th {
+    vertical-align: bottom;
+    padding-right: 12px;
+    line-height: 1.35;
+  }
+  .preg-table td {
+    padding-right: 12px;
+  }
+  .preg-table .gain {
+    font-weight: 700;
+    color: var(--terracotta-700);
+    white-space: nowrap;
+  }
+  .preg-foot {
+    margin: 18px 0 0;
+    font-size: 0.9rem;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
   .limits {
     display: grid;
     grid-template-columns: 0.9fr 1.1fr;
@@ -246,6 +385,7 @@ const ranges = [
   }
   @media (max-width: 960px) {
     .bmi-page,
+    .preg-grid,
     .limits {
       grid-template-columns: 1fr;
     }

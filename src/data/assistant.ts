@@ -78,7 +78,7 @@ export const assistant = {
   hint: 'Aşağıdan bir konu seçebilir ya da sorunuzu yazabilirsiniz.',
   inputPlaceholder: 'Sorunuzu yazın…',
   privacyNote: 'Asistan hazır bilgilerle yanıt verir, kişisel sağlık değerlendirmesi yapmaz. Yazdıklarınız hiçbir yere gönderilmez.',
-  loadError: 'Asistan şu anda yüklenemedi. Sorunuzu WhatsApp’tan iletebilir ya da bizi arayabilirsiniz.',
+  loadError: 'Asistan şu anda yüklenemedi. Sorunuzu WhatsApp’tan iletebilir veya telefonla arayabilirsiniz.',
 };
 
 /** Hazır sorular ve cevaplar */
@@ -87,7 +87,7 @@ export const topics: Topic[] = [
     id: 'randevu',
     chip: true,
     q: 'Randevu nasıl alırım?',
-    a: 'Randevu Oluştur sayfasında görüşme türünü seçip takvimden size uygun gün ve saati işaretlemeniz yeterli. Bilgileriniz hazır bir mesaj olarak WhatsApp’a aktarılır; randevunuzu WhatsApp üzerinden onaylarız. İsterseniz doğrudan WhatsApp’tan yazabilir ya da arayabilirsiniz.',
+    a: 'Randevu Talebi Oluştur sayfasında görüşme türünü seçip takvimden size uygun gün ve saati işaretlemeniz yeterli. Bilgileriniz hazır bir mesaj olarak WhatsApp’a aktarılır; seçtiğiniz gün ve saat bir taleptir, randevu WhatsApp üzerinden onaylandıktan sonra kesinleşir. İsterseniz doğrudan WhatsApp’tan yazabilir veya telefonla arayabilirsiniz.',
     actions: ['randevu', 'whatsapp'],
     k: ['randevu', 'randevu al', 'görüşme ayarla', 'görüşme almak', 'görüşmek istiyorum', 'kayıt ol', 'başvuru', 'müsait', 'boş saat', 'boş gün', 'ne zaman gelebilir'],
   },
@@ -95,7 +95,7 @@ export const topics: Topic[] = [
     id: 'online',
     chip: true,
     q: 'Online görüşme nasıl oluyor?',
-    a: 'Online görüşmeler WhatsApp araması ile yapılır. Randevu formunda görüşme türü olarak “Online”ı seçip takvimden size uygun gün ve saati işaretlemeniz yeterli; randevunuz WhatsApp üzerinden onaylanır. Değerlendirme ve planlama süreci yüz yüze görüşmeyle aynıdır; yalnızca cihazla yapılan vücut analizi için kliniğe gelmeniz gerekir. Başka bir şehirden veya yurt dışından da görüşebilirsiniz.',
+    a: 'Randevu formunda görüşme türü olarak “Online” seçilir ve takvimden uygun gün ve saat işaretlenir. Randevu talebi WhatsApp üzerinden iletilir ve onaylanır; randevu saatinde danışan aranır. Değerlendirme ve planlama süreci yüz yüze görüşmeyle aynıdır; yalnızca cihazla yapılan vücut analizi klinikte yapılabilir. Online görüşme başka bir şehirden veya yurt dışından da yapılabilir.',
     actions: ['online', 'sayfa:/online-gorusme/'],
     k: ['online', 'online randevu', 'online görüşme', 'onlain', 'uzaktan', 'internetten', 'internet üzerinden', 'görüntülü', 'video', 'şehir dışı', 'başka şehir', 'başka ilde', 'yurt dışı', 'yurtdışı', 'gelemiyorum', 'gelemem', 'evden'],
   },
@@ -103,7 +103,7 @@ export const topics: Topic[] = [
     id: 'ilk-gorusme',
     chip: true,
     q: 'İlk görüşmede neler yapılıyor?',
-    a: 'İlk görüşmede beslenme alışkanlıklarınız, sağlık geçmişiniz ve hedefleriniz konuşulur; yüz yüze görüşmelerde vücut analiziyle başlangıç noktanız belirlenir. Ardından günlük rutininize uygun, kişiye özel bir beslenme planı hazırlanır ve kontrol görüşmeleriyle süreç takip edilir.',
+    a: 'İlk görüşmede beslenme alışkanlıkları, sağlık geçmişi ve hedefler konuşulur; uygun olduğunda vücut bileşimi ölçümüyle başlangıç noktası belirlenir. Ardından günlük rutine uygun, kişiye özel bir beslenme planı hazırlanır ve kontrol görüşmeleriyle süreç takip edilir.',
     actions: ['randevu'],
     k: ['ilk görüşme', 'ilk seans', 'ilk randevu', 'ilk geliş', 'süreç', 'nasıl ilerli', 'nasıl çalış', 'neler yapıl', 'ne yapılıyor', 'takip', 'kontrol görüşme', 'kontrole'],
   },
@@ -111,7 +111,7 @@ export const topics: Topic[] = [
     id: 'hizmetler',
     chip: true,
     q: 'Hangi konularda destek alabilirim?',
-    a: 'Kilo yönetimi (zayıflama, kilo alma, obezite), hastalıklarda beslenme (diyabet, insülin direnci, polikistik over sendromu, hipertansiyon, yüksek kolesterol, gut, bağırsak sorunları gibi), gebelik ve çocuk beslenmesi konularında danışmanlık verilmektedir. Vücut analizi, kişiye özel beslenme planı ve düzenli takip de hizmetler arasındadır.',
+    a: 'Beslenme danışmanlığı ve takip, kilo yönetimi, metabolik ve hormonal sağlık (diyabet, insülin direnci, PMOS, tiroid hastalıkları gibi), sindirim sistemi ve bağırsak sağlığı, besin alerjisi ve intoleranslar, deri sağlığı, kalp-damar sağlığı ve gut, sporcu beslenmesi ile gebelik, emzirme, çocukluk ve menopoz gibi yaşam dönemlerinde beslenme konularında danışmanlık verilmektedir.',
     actions: ['sayfa:/hizmetler/', 'randevu'],
     k: ['hizmet', 'konular', 'hangi konu', 'neler yapıyor', 'diyet yap', 'diyet program', 'diyetler', 'diyetleri', 'hangi diyet', 'beslenme danışman', 'danışmanlık', 'program', 'hangi hastalık'],
   },
@@ -135,7 +135,7 @@ export const topics: Topic[] = [
     id: 'ucret',
     chip: true,
     q: 'Ücret bilgisi',
-    a: 'Görüşme ücreti ve ödeme bilgileri, randevunuz netleştiğinde size ayrıca iletilir. Bilgi almak için WhatsApp’tan yazabilir ya da arayabilirsiniz.',
+    a: 'Ödeme bilgileri randevunuz netleşmeden size ayrıca iletilir. Bilgi almak için WhatsApp’tan yazabilir veya telefonla arayabilirsiniz.',
     actions: ['whatsapp', 'telefon'],
     k: ['ücret', 'fiyat', 'kaç para', 'kaç tl', 'kaç lira', 'para', 'ödeme', 'tutar', 'tutuyor', 'pahalı', 'indirim', 'kampanya', 'taksit', 'kredi kart', 'havale', 'eft', 'ücretli', 'ücretsiz', 'bedava'],
   },
@@ -143,7 +143,7 @@ export const topics: Topic[] = [
     id: 'vki',
     chip: true,
     q: 'Vücut kitle indeksi hesaplama',
-    a: 'Vücut Kitle İndeksi Hesaplama sayfamızda cinsiyetinizi, boyunuzu, kilonuzu ve yaşınızı girerek VKİ değerinizi öğrenebilirsiniz. Bilgileriniz hiçbir yere gönderilmez; hesaplama cihazınızda yapılır.',
+    a: 'Vücut Kitle İndeksi Hesaplama sayfasında cinsiyetinizi, boyunuzu, kilonuzu ve yaşınızı girerek VKİ değerinizi öğrenebilirsiniz. Gebelikte gebelik öncesi boy ve kilo kullanılır. Bilgileriniz hiçbir yere gönderilmez; hesaplama cihazınızda yapılır.',
     actions: ['sayfa:/vucut-kitle-indeksi-hesaplama/'],
     k: ['vki', 'vücut kitle', 'beden kitle', 'bmi', 'ideal kilo', 'kilom', 'boyum', 'boy kilo', 'hesapla', 'normal kilo'],
   },
@@ -164,7 +164,7 @@ export const topics: Topic[] = [
   {
     id: 'iptal',
     q: 'Randevumu nasıl değiştirebilir veya iptal edebilirim?',
-    a: 'Randevunuzu değiştirmek veya iptal etmek için WhatsApp’tan ya da telefonla bize ulaşabilirsiniz.',
+    a: 'Randevu değişikliği veya iptali için WhatsApp’tan yazabilir ya da telefonla arayabilirsiniz.',
     actions: ['whatsapp', 'telefon'],
     k: ['iptal', 'ertele', 'değiştir', 'randevumu', 'randevuma', 'gelemeyeceğim', 'gelemiyecem'],
   },
@@ -178,14 +178,14 @@ export const topics: Topic[] = [
   {
     id: 'hakkinda',
     q: 'Diyetisyen Eylem Dizman hakkında',
-    a: `${site.name}, İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve Diyetetik Bölümü mezunudur. Seyhan/Adana’daki kliniğinde yüz yüze, WhatsApp araması ile de online danışmanlık vermektedir. Katıldığı eğitim ve kongrelere ait belgeleri Sertifikalar sayfasında inceleyebilirsiniz.`,
+    a: `${site.name}, İzmir Kâtip Çelebi Üniversitesi Sağlık Bilimleri Fakültesi Beslenme ve Diyetetik Bölümünden mezun olarak diyetisyen unvanını almıştır. Mesleki çalışmalarını ${site.clinicName}nde sürdürmekte; danışanlarıyla yüz yüze veya online olarak görüşmektedir. Katıldığı eğitim ve kongrelere ait belgeler Sertifikalar sayfasında yer alır.`,
     actions: ['sayfa:/hakkinda/', 'sayfa:/sertifikalar/'],
     k: ['kimdir', 'kimsiniz', 'hakkında', 'eğitim', 'mezun', 'üniversite', 'diploma', 'sertifika', 'deneyim', 'tecrübe', 'özgeçmiş', 'uzman', 'uzman diyetisyen'],
   },
   {
     id: 'blog',
     q: 'Blog & Reels',
-    a: 'Blog & Reels sayfamızda beslenme üzerine yazılar ve Instagram’da paylaştığımız Reels videoları yer alıyor.',
+    a: 'Blog & Reels sayfasında beslenme üzerine yazılar ve Instagram’da paylaşılan Reels videoları yer alıyor.',
     actions: ['sayfa:/blog/'],
     k: ['blog', 'yazı', 'makale', 'okumak', 'okuyabilir', 'reels', 'reel', 'video', 'videolar', 'izlemek', 'içerik'],
   },
@@ -217,7 +217,7 @@ export const sensitive: Topic = {
 /** Kişiye özel sağlık/beslenme soruları: kişisel tavsiye verilmez, görüşmeye yönlendirilir */
 export const personal: Topic = {
   id: 'kisisel',
-  a: 'Size özel beslenme önerisi, tahlil ya da ilaç değerlendirmesi kişisel bir inceleme gerektirir; bu nedenle burada tavsiye veremiyorum. Bunu görüşmede birlikte ele alabiliriz.',
+  a: 'Size özel beslenme önerisi, tahlil ya da ilaç değerlendirmesi kişisel bir inceleme gerektirir; bu nedenle burada tavsiye veremiyorum. Bu konular görüşmede ele alınır.',
   actions: ['randevu', 'whatsapp'],
   k: ['ne yemeli', 'ne yiyebil', 'yiyebilir miyim', 'yesem', 'yersem', 'içebilir miyim', 'içsem', 'kaç kalori', 'kalori', 'diyet listesi', 'liste ver', 'liste atar', 'liste gönder', 'program yaz', 'menü yaz', 'tahlilim', 'tahlil sonuç', 'sonuçlarım', 'değerim', 'değerlerim', 'ilaç', 'takviye', 'vitamin', 'hapı', 'zararlı mı', 'faydalı mı', 'yararlı mı', 'sağlıklı mı', 'işe yarar mı', 'yapmalı mıyım', 'kilo aldırır mı', 'kilo yaptırır mı', 'zayıflatır mı'],
 };
@@ -237,38 +237,49 @@ export const thanks: Topic = {
 /** Eşleşme bulunamazsa */
 export const fallback: Topic = {
   id: 'bulunamadi',
-  a: 'Bu sorunun cevabını burada bulamadım. Aşağıdaki konulardan birini seçebilir, sorunuzu WhatsApp’tan iletebilir ya da bizi arayabilirsiniz.',
+  a: 'Bu sorunun cevabını burada bulamadım. Aşağıdaki konulardan birini seçebilir, sorunuzu WhatsApp’tan iletebilir veya telefonla arayabilirsiniz.',
   actions: ['whatsapp', 'telefon'],
   k: [],
 };
 
 /** Hizmetler için ek anahtar kelimeler (hizmet adı ayrıca otomatik eklenir). Anahtar, services.ts'teki adla aynı olmalı. */
 export const serviceKeywords: Record<string, string[]> = {
-  'Online & Yüz Yüze Beslenme Danışmanlığı': ['yüz yüze', 'kliniğe gel', 'birebir'],
-  'Sağlıklı Beslenme Önerileri': ['sağlıklı beslen', 'dengeli beslen', 'beslenme öneri', 'sağlıklı yaşam'],
+  'Yüz Yüze ve Online Danışmanlık': ['yüz yüze', 'kliniğe gel', 'birebir'],
   'Beslenme Planı Oluşturma': ['beslenme planı', 'diyet planı', 'kişiye özel plan', 'kişiye özel diyet'],
+  'Sağlıklı Beslenme Alışkanlıkları': ['sağlıklı beslen', 'dengeli beslen', 'beslenme öneri', 'sağlıklı yaşam', 'alışkanlık'],
   'Beslenme Takibi': ['beslenme takibi', 'düzenli takip'],
-  'Vücut Analizi': ['vücut analiz', 'yağ oranı', 'kas oranı', 'sıvı oranı', 'ölçüm', 'analiz cihaz', 'tanita'],
-  'Zayıflama Diyeti': ['zayıfla', 'kilo ver', 'kilomu ver', 'kilolarımı ver', 'kilolarımdan kurtul', 'incel', 'kilo kayb', 'yağ yak', 'göbek', 'fazla kilo', 'kilolu'],
-  'Kilo Alma Diyeti': ['kilo al', 'zayıfım', 'çok zayıf', 'kilo alamıyorum'],
-  'Obezitede Beslenme': ['obez', 'obezite', 'morbid'],
-  'Polikistik Over Diyeti': ['polikistik', 'pkos', 'pcos'],
-  'Diyabet (Şeker) Beslenmesi': ['diyabet', 'şeker hasta', 'şeker hastalığı', 'kan şekeri', 'şekerim', 'tip 1', 'tip 2'],
-  'İnsülin Direncinde Beslenme': ['insülin', 'insülin direnc', 'prediyabet'],
+  'Vücut Bileşimi Takibi': ['vücut analiz', 'vücut bileşim', 'yağ oranı', 'kas oranı', 'sıvı oranı', 'ölçüm', 'analiz cihaz', 'tanita'],
+  'Kilo Verme Diyeti': ['zayıfla', 'kilo ver', 'kilomu ver', 'kilolarımı ver', 'kilolarımdan kurtul', 'incel', 'kilo kayb', 'yağ yak', 'göbek', 'fazla kilo', 'kilolu'],
+  'Sağlıklı Kilo Alma': ['kilo al', 'zayıfım', 'çok zayıf', 'kilo alamıyorum'],
+  'Obezitede Beslenme Desteği': ['obez', 'obezite', 'morbid'],
+  'Kilo Koruma ve Alışkanlıkların Sürdürülmesi': ['kilo koru', 'kilomu koru', 'kiloyu koru', 'geri alma', 'geri aldım', 'geri alıyorum'],
+  'Diyabette Beslenme': ['diyabet', 'şeker hasta', 'şeker hastalığı', 'kan şekeri', 'şekerim', 'tip 1', 'tip 2'],
+  'İnsülin Direnci ve Prediyabet': ['insülin', 'insülin direnc', 'prediyabet', 'gizli şeker'],
+  'PMOS (Polikistik Over Sendromu)': ['polikistik', 'pkos', 'pcos', 'pmos', 'poliendokrin'],
+  'Tiroid Hastalıklarında Beslenme': ['tiroid', 'tiroit', 'hashimoto', 'hipotiroid', 'hipertiroid', 'guatr'],
+  'Metabolik Sendrom ve Karaciğer Yağlanması': ['metabolik sendrom', 'karaciğer', 'yağlanma', 'yağlı karaciğer'],
+  SIBO: ['sibo', 'bakteri çoğalma'],
+  'İrritabl Bağırsak Sendromu (IBS)': ['ibs', 'irritabl', 'huzursuz bağırsak', 'spastik kolon'],
+  'İnflamatuvar Bağırsak Hastalıkları': ['crohn', 'ülseratif', 'kolit', 'inflamatuvar'],
+  'Diğer Sindirim Sistemi Yakınmaları': ['bağırsak', 'şişkinlik', 'şişlik', 'gaz', 'kabız', 'ishal', 'hazımsızlık', 'reflü', 'gastrit', 'sindirim', 'karın ağrı'],
+  'Çölyak Hastalığı': ['çölyak', 'gluten', 'glutensiz'],
+  'Besin Alerjisi ve İntoleranslar': ['alerji', 'alerjim', 'intolerans', 'laktoz', 'besin hassasiyet', 'tolere'],
+  'Deri Sağlığı ve Beslenme': ['cilt', 'cildim', 'deri sağlığ', 'deri hastalığ', 'akne', 'sivilce', 'egzama', 'atopik', 'sedef', 'psoriazis'],
   'Hipertansiyonda Beslenme': ['hipertansiyon', 'tansiyon', 'yüksek tansiyon', 'kan basınc'],
-  'Kolesterol Yüksekliğinde Beslenme': ['kolesterol', 'trigliserit', 'kan yağ', 'ldl'],
+  'Kolesterol ve Kan Yağları Yüksekliğinde Beslenme': ['kolesterol', 'trigliserit', 'kan yağ', 'ldl'],
   'Kalp-Damar Hastalıklarında Beslenme': ['kalp', 'damar', 'koroner', 'stent', 'bypass'],
   'Gut Hastalığında Beslenme': ['gut', 'ürik asit', 'pürin'],
-  'İç Hastalıklarında Beslenme': ['iç hastalık', 'kronik hastalık', 'tiroid', 'tiroit', 'hashimoto', 'böbrek', 'karaciğer', 'kansızlık', 'anemi'],
-  'Bağırsak Problemlerinde Beslenme': ['bağırsak', 'şişkinlik', 'şişlik', 'gaz', 'kabız', 'ishal', 'hazımsızlık', 'ibs', 'irritabl', 'reflü', 'gastrit', 'sindirim'],
+  'Sporcu Beslenmesi': ['spor', 'sporcu', 'antrenman', 'fitness', 'kas kütle', 'kas yap', 'performans', 'maraton', 'vücut geliştirme'],
   'Gebelikte Beslenme': ['gebe', 'hamile', 'gebelik', 'bebek bekli'],
-  'Çocuk Beslenmesi': ['çocuk', 'çocuğum', 'oğlum', 'kızım', 'bebek', 'ek gıda', 'okul çağı', 'ergen'],
+  'Emzirme Döneminde Beslenme': ['emzir', 'lohusa', 'anne sütü', 'doğum sonrası'],
+  'Çocuk ve Ergen Beslenmesi': ['çocuk', 'çocuğum', 'oğlum', 'kızım', 'bebek', 'ek gıda', 'okul çağı', 'ergen'],
+  'Menopoz Döneminde Beslenme': ['menopoz', 'menapoz', 'klimakteri'],
 };
 
 /** Bazı hizmetlerin cevabına eklenecek not */
 export const serviceNotes: Record<string, { extra?: string; noOnline?: boolean }> = {
-  'Vücut Analizi': {
-    extra: 'Cihazla yapılan vücut analizi için kliniğe gelmeniz gerekir; online görüşmelerde bazı ölçümleri evde kendiniz alırsınız.',
+  'Vücut Bileşimi Takibi': {
+    extra: 'Cihazla yapılan vücut analizi yalnızca klinikte yapılabilir; online görüşmelerde bazı ölçümler evde alınır.',
     noOnline: true,
   },
 };
@@ -283,13 +294,13 @@ export const assistantPages: Record<string, string> = {
   '/blog/': 'Blog & Reels',
   '/iletisim/': 'İletişim',
   '/online-gorusme/': 'Online Görüşme',
-  '/randevu-olustur/': 'Randevu Oluştur',
+  '/randevu-olustur/': 'Randevu Talebi Oluştur',
   '/kvkk-aydinlatma-metni/': 'KVKK Aydınlatma Metni',
 };
 
 export const actionDefs: Record<'randevu' | 'online' | 'whatsapp' | 'telefon' | 'harita' | 'acil', ResolvedAction> = {
-  randevu: { label: 'Randevu Oluştur', href: '/randevu-olustur/#randevu-formu', primary: true },
-  online: { label: 'Online Randevu Oluştur', href: '/randevu-olustur/?tur=online#randevu-formu', primary: true },
+  randevu: { label: 'Randevu Talebi Oluştur', href: '/randevu-olustur/#randevu-formu', primary: true },
+  online: { label: 'Online Randevu Talebi Oluştur', href: '/randevu-olustur/?tur=online#randevu-formu', primary: true },
   whatsapp: {
     label: 'WhatsApp’tan Yaz',
     href: whatsappLink('Merhaba, web sitenizden ulaşıyorum. Bilgi almak istiyorum.'),
@@ -312,7 +323,7 @@ export function resolveAction(
     const name = t.slice('randevu:'.length).trim();
     if (!services.includes(name)) return null;
     return {
-      label: `Randevu: ${name}`,
+      label: `Randevu Talebi: ${name}`,
       href: `/randevu-olustur/?hizmet=${encodeURIComponent(name)}#randevu-formu`,
       primary: true,
     };

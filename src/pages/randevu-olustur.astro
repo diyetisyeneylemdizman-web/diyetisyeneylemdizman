@@ -5,7 +5,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import Icon from '../components/Icon.astro';
-import { serviceCategories } from '../data/services';
+import { serviceOptions } from '../data/services';
 import { site } from '../data/site';
 
 const takvim = JSON.stringify({ hours: site.hours, closed: site.closedDates, ahead: site.bookingDaysAhead });
@@ -13,19 +13,27 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 ---
 
 <BaseLayout
-  title="Randevu Oluştur"
+  title="Randevu Talebi Oluştur"
   description="Diyetisyen Eylem Dizman ile yüz yüze veya online görüşme için takvimden gün ve saat seçerek randevu talebinizi birkaç adımda iletin."
 >
   <PageHero
-    title="Randevu Oluştur"
+    title="Randevu Talebi Oluştur"
     eyebrow="Yüz Yüze veya Online"
-    lead="Görüşme türünü seçin, takvimden size uygun gün ve saati işaretleyin; talebiniz hazır bir mesaj olarak WhatsApp üzerinden bize ulaşsın."
-    crumbs={[{ label: 'Randevu Oluştur' }]}
+    lead="Görüşme türünü seçin, takvimden size uygun gün ve saati işaretleyin; talebiniz hazır bir mesaj olarak WhatsApp üzerinden iletilir."
+    crumbs={[{ label: 'Randevu Talebi Oluştur' }]}
   />
 
   <section class="section">
     <div class="container booking">
       <form class="card booking-form" id="randevu-formu" novalidate data-booking data-wa={site.whatsappNumber} data-takvim={takvim}>
+        <p class="request-note">
+          <Icon name="info" size={20} />
+          <span
+            >Bu form bir <strong>randevu talebi</strong> oluşturur. Seçtiğiniz gün ve saat bir taleptir; randevunuz onaydan
+            sonra kesinleşir.</span
+          >
+        </p>
+
         <ol class="stepper" data-stepper>
           <li class="is-current" data-step-tab="1">
             <button type="button" data-goto="1"><span class="st-num">1</span><span class="st-label">Görüşme</span></button>
@@ -54,14 +62,14 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
                 <input type="radio" name="tur" value="yuz-yuze" checked />
                 <span class="type-card">
                   <Icon name="clinic" size={24} />
-                  <span><strong>Yüz Yüze</strong><small>Seyhan/Adana’daki klinikte</small></span>
+                  <span><strong>Yüz Yüze</strong></span>
                 </span>
               </label>
               <label class="type-option">
                 <input type="radio" name="tur" value="online" />
                 <span class="type-card">
                   <Icon name="phone" size={24} />
-                  <span><strong>Online</strong><small>WhatsApp araması ile</small></span>
+                  <span><strong>Online</strong></span>
                 </span>
               </label>
             </div>
@@ -72,10 +80,10 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
             <select class="select" id="hizmet" name="hizmet">
               <option value="">Emin değilim / Genel danışmanlık</option>
               {
-                serviceCategories.map((c) => (
-                  <optgroup label={c.title}>
-                    {c.services.map((s) => (
-                      <option value={s.name}>{s.name}</option>
+                serviceOptions.map((g) => (
+                  <optgroup label={g.group}>
+                    {g.names.map((name) => (
+                      <option value={name}>{name}</option>
                     ))}
                   </optgroup>
                 ))
@@ -91,7 +99,12 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
         <!-- ADIM 2: Takvim -->
         <fieldset class="step" data-step="2">
-          <legend class="step-title">Takvimden gün ve saat seçin</legend>
+          <legend class="step-title">Tercih ettiğiniz gün ve saati seçin</legend>
+
+          <p class="confirm-note">
+            <Icon name="info" size={18} />
+            <span>Seçiminiz bir tercihtir; randevunuz WhatsApp üzerinden onaylandıktan sonra kesinleşir.</span>
+          </p>
 
           <div class="calendar" data-calendar>
             <div class="cal-head">
@@ -155,7 +168,7 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
           <div class="field">
             <label for="not">Eklemek İstedikleriniz <span class="hint">(isteğe bağlı)</span></label>
             <textarea class="textarea" id="not" name="not" maxlength="500" placeholder="Kısaca belirtmek istediğiniz bir not varsa yazabilirsiniz."></textarea>
-            <p class="hint">Lütfen ayrıntılı sağlık bilgilerinizi burada paylaşmayın; bunları görüşmede birlikte konuşacağız.</p>
+            <p class="hint">Lütfen ayrıntılı sağlık bilgilerinizi burada paylaşmayın; bunlar görüşmede ele alınır.</p>
           </div>
 
           <label class="consent">
@@ -173,7 +186,7 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
           <p class="after-note">
             Butona bastığınızda WhatsApp, bilgilerinizi içeren hazır bir mesajla açılır. Mesajı göndermek için
             WhatsApp’ta <strong>Gönder</strong>’e basmanız yeterli. Seçtiğiniz tarih ve saat bir tercihtir; randevunuz
-            WhatsApp üzerinden onaylanır.
+            WhatsApp üzerinden onaylandıktan sonra kesinleşir.
           </p>
 
           <div class="step-actions">
@@ -187,15 +200,15 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
         <div class="card side-card">
           <h2>Nasıl işliyor?</h2>
           <ol class="mini-steps">
-            <li><span>1</span>Görüşme türünü ve konuyu seçin.</li>
-            <li><span>2</span>Takvimden size uygun gün ve saati işaretleyin.</li>
-            <li><span>3</span>Bilgilerinizi yazın, WhatsApp’ta hazır mesajı gönderin.</li>
-            <li><span>4</span>Randevunuzu WhatsApp üzerinden onaylayalım.</li>
+            <li><span>1</span>Görüşme türü ve konu seçilir.</li>
+            <li><span>2</span>Takvimden tercih edilen gün ve saat işaretlenir.</li>
+            <li><span>3</span>Bilgiler yazılır ve WhatsApp’taki hazır mesaj gönderilir.</li>
+            <li><span>4</span>Randevu WhatsApp üzerinden onaylanır ve kesinleşir.</li>
           </ol>
         </div>
         <div class="card side-card">
           <h2>WhatsApp kullanmıyor musunuz?</h2>
-          <p>Bizi doğrudan arayabilir veya e-posta gönderebilirsiniz.</p>
+          <p>Telefonla arayabilir veya e-posta gönderebilirsiniz.</p>
           <a href={site.phoneHref} class="side-link"><Icon name="phone" size={20} />{site.phoneDisplay}</a>
           <a href={`mailto:${site.email}`} class="side-link"><Icon name="mail" size={20} />{site.email}</a>
         </div>
@@ -412,12 +425,6 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
   .type-card strong {
     display: block;
     font-size: 1rem;
-  }
-  .type-card small {
-    display: block;
-    color: var(--ink-3);
-    font-size: 0.82rem;
-    font-weight: 500;
   }
   .type-option input:checked + .type-card {
     border-color: var(--sage-700);
@@ -650,6 +657,32 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     font-size: 0.84rem;
     color: var(--ink-3);
     text-align: center;
+  }
+  .request-note,
+  .confirm-note {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 0 0 20px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--sage-50);
+    color: var(--ink);
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+  .request-note :global(svg),
+  .confirm-note :global(svg) {
+    flex: none;
+    margin-top: 1px;
+    color: var(--sage-700);
+  }
+  .confirm-note {
+    margin: 0 0 16px;
+    background: var(--terracotta-50);
+  }
+  .confirm-note :global(svg) {
+    color: var(--terracotta-700);
   }
   .bmi-note {
     display: flex;
@@ -988,7 +1021,7 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     };
 
     const turText = () =>
-      ($<HTMLInputElement>('input[name="tur"]:checked')?.value ?? 'yuz-yuze') === 'online' ? 'Online (WhatsApp araması)' : 'Yüz yüze (klinikte)';
+      ($<HTMLInputElement>('input[name="tur"]:checked')?.value ?? 'yuz-yuze') === 'online' ? 'Online' : 'Yüz yüze';
     const tarihText = () => (anyDate || !selDate ? 'Fark etmez' : longDate(fromIso(selDate)));
     const saatText = () => (anyDate || !selTime ? 'Fark etmez' : selTime);
 

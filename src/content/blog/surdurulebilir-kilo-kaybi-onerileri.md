@@ -5,7 +5,7 @@ date: 2026-09-06
 category: 'Kilo Yönetimi'
 tone: 'beige'
 icon: 'scale'
-relatedService: 'Zayıflama Diyeti'
+relatedService: 'Kilo Verme Diyeti'
 ---
 
 Hızlı kilo verdirdiğini iddia eden şok diyetler kısa vadede cazip görünebilir. Ancak çok düşük kalorili ve kısıtlayıcı programlar; kas kaybı, halsizlik, besin öğesi eksiklikleri ve verilen kiloların kısa sürede geri alınması gibi sorunlara yol açabilir. Sağlıklı kilo kaybının anahtarı, **uzun süre uygulayabileceğiniz alışkanlıklar** edinmektir.

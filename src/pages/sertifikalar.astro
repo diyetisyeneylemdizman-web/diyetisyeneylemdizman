@@ -9,7 +9,11 @@ import { certificateGroups, type CertificateGroup } from '../data/certificates';
 
 // src/assets/sertifikalar/ klasöründeki tüm görseller
 const modules = import.meta.glob<{ default: ImageMetadata }>(
-  '../assets/sertifikalar/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}',
+  [
+    '../assets/sertifikalar/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}',
+    // Sitede gösterilmeyecek belgeler
+    '!../assets/sertifikalar/duru-bulgur.jpg',
+  ],
   { eager: true },
 );
 const images = new Map(Object.entries(modules).map(([path, mod]) => [path.split('/').pop()!, mod.default]));
@@ -71,7 +75,7 @@ const diplomaItem = diplomaSet?.items[0];
   <PageHero
     title="Sertifikalar"
     eyebrow="Eğitimler ve Belgeler"
-    lead="Eylem Dizman’ın lisans diploması ile mesleki gelişim için katıldığı eğitim, kongre ve seminerlere ait belgeler. Büyütmek için belgenin üzerine tıklayın."
+    lead="Eylem Dizman’ın lisans diplomasını ve katıldığı eğitim, kongre ve seminerlere ait belgeleri inceleyin. Büyütmek için belgenin üzerine tıklayın."
     crumbs={[{ label: 'Sertifikalar' }]}
   >
     {

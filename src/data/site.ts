@@ -7,7 +7,7 @@ export const site = {
   url: 'https://www.diyetisyeneylemdizman.com',
   defaultTitle: 'Diyetisyen Eylem Dizman | Seyhan/Adana ve Online Diyetisyen',
   defaultDescription:
-    'Diyetisyen Eylem Dizman ile Seyhan/Adana’da yüz yüze veya WhatsApp üzerinden online beslenme danışmanlığı. Kişiye özel beslenme planı ve düzenli takip.',
+    'Diyetisyen Eylem Dizman ile Seyhan/Adana’da yüz yüze veya online beslenme danışmanlığı. Kişiye özel beslenme planı ve düzenli takip.',
 
   phoneDisplay: '0 505 825 87 45',
   phoneHref: 'tel:+905058258745',

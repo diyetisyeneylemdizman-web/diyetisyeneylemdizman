@@ -3,22 +3,22 @@
 export const processSteps = [
   {
     icon: 'calendar',
-    title: 'Randevunuzu oluşturun',
-    text: 'Takvimden size uygun gün ve saati seçin, talebiniz WhatsApp üzerinden bize ulaşsın. Randevunuzu birlikte onaylayalım.',
+    title: 'Randevu talebi',
+    text: 'Takvimden uygun gün ve saat seçilir; randevu talebi WhatsApp üzerinden iletilir ve onaydan sonra kesinleşir.',
   },
   {
     icon: 'consult',
     title: 'Tanışma ve değerlendirme',
-    text: 'Beslenme alışkanlıklarınızı, sağlık geçmişinizi ve hedeflerinizi konuşuyor; vücut analiziyle başlangıç noktanızı belirliyoruz.',
+    text: 'Beslenme alışkanlıkları, sağlık geçmişi ve hedefler konuşulur; uygun olduğunda vücut bileşimi ölçümüyle başlangıç noktası belirlenir.',
   },
   {
     icon: 'clipboard',
-    title: 'Size özel beslenme planı',
-    text: 'Günlük rutininize, damak tadınıza ve ihtiyaçlarınıza uygun, uygulanabilir bir plan hazırlıyoruz.',
+    title: 'Kişiye özel beslenme planı',
+    text: 'Günlük rutine ve kişisel ihtiyaçlara uygun, uygulanabilir bir beslenme planı hazırlanır.',
   },
   {
     icon: 'chart',
     title: 'Düzenli takip',
-    text: 'Kontrol görüşmeleriyle sürecinizi izliyor, planınızı ihtiyaçlarınıza göre güncelliyoruz.',
+    text: 'Süreç kontrol görüşmeleriyle izlenir; plan ihtiyaçlara göre güncellenir.',
   },
 ] as const;
