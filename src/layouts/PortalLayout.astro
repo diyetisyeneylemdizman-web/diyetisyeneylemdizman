@@ -1,0 +1,63 @@
+---
+// Danışan ve diyetisyen panelleri için sade sayfa düzeni (arama motorlarına kapalı, asistan/WhatsApp butonları yok)
+import '@fontsource-variable/fraunces/wght.css';
+import '@fontsource-variable/manrope';
+import '../styles/global.css';
+import '../styles/portal.css';
+import { site } from '../data/site';
+import { portalBelgeleri } from '../data/portal';
+
+interface Props {
+  title: string;
+  alan: 'danisan' | 'yonetim';
+  genis?: boolean;
+}
+const { title, alan, genis = false } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{`${title} | ${site.name}`}</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <meta name="theme-color" content="#F7F3EC" />
+  </head>
+  <body class:list={['portal', `portal-${alan}`]}>
+    <a class="skip-link" href="#icerik">İçeriğe Geç</a>
+    <div class="deneme-bandi" data-deneme-bandi hidden>
+      <strong>Deneme sürümü.</strong> Bu panel yalnızca deneme içindir; gerçek kişisel veya sağlık bilgisi girmeyin.
+    </div>
+    <header class="p-header">
+      <div class:list={['p-container', { genis }]}>
+        <a href="/" class="p-brand" aria-label="Ana sayfaya dön">
+          <img src="/logo/logo-yatay.svg" width="654" height="206" alt="Diyetisyen Eylem Dizman logosu" />
+        </a>
+        <span class="p-alan">{alan === 'danisan' ? 'Danışan Paneli' : 'Diyetisyen Paneli'}</span>
+        <div class="p-header-actions" data-ust-eylemler></div>
+      </div>
+    </header>
+    <main id="icerik" class:list={['p-main', 'p-container', { genis }]}>
+      <slot />
+    </main>
+    <footer class="p-footer">
+      <div class:list={['p-container', { genis }]}>
+        <p>
+          {`© ${year} ${site.name}`}{' · '}
+          <a href={portalBelgeleri.aydinlatma.yol} target="_blank" rel="noopener">{portalBelgeleri.aydinlatma.baslik}</a>{' · '}
+          <a href={portalBelgeleri.acikRiza.yol} target="_blank" rel="noopener">Açık Rıza Metni</a>{' · '}
+          <a href={portalBelgeleri.sozlesme.yol} target="_blank" rel="noopener">Kullanım Sözleşmesi</a>
+        </p>
+        <p class="p-uyari">
+          Paneldeki bilgiler beslenme danışmanlığı sürecinin takibi içindir; tanı ve tedavinin yerini tutmaz. Acil
+          durumlarda 112’yi arayın.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

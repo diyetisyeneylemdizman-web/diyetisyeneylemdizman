@@ -1,0 +1,140 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import { site, fullAddress } from '../data/site';
+import { portalBelgeleri } from '../data/portal';
+// NOT: Bu metin genel bir şablondur; hukukçu kontrolü önerilir. Metin değiştiğinde src/data/portal.ts içindeki
+// "sozlesme.surum" güncellenmelidir (danışanlar bir sonraki girişlerinde yeniden onay verir).
+const surum = portalBelgeleri.sozlesme.surum.split('-').reverse().join('.');
+---
+
+<BaseLayout
+  title="Danışan Paneli Kullanım Sözleşmesi"
+  description="Diyetisyen Eylem Dizman danışan panelinin kullanım koşulları."
+>
+  <PageHero title="Danışan Paneli Kullanım Sözleşmesi" eyebrow="Kullanım Koşulları" crumbs={[{ label: 'Kullanım Sözleşmesi' }]} />
+
+  <section class="section">
+    <div class="container-narrow prose">
+      <p class="surum">Metin sürümü: {surum}</p>
+
+      <h2>1. Taraflar</h2>
+      <p>
+        Bu sözleşme; {fullAddress} adresinde hizmet veren <strong>Diyetisyen Eylem Dizman</strong> (“Diyetisyen”) ile
+        {site.url.replace('https://', '')} adresindeki danışan paneline üye olan kişi (“Danışan”) arasında, Danışan’ın üyelik
+        sırasında elektronik ortamda onay vermesiyle kurulur.
+      </p>
+
+      <h2>2. Konu</h2>
+      <p>
+        Bu sözleşme, danışan panelinin kullanım koşullarını düzenler. Beslenme danışmanlığı paketlerinin içeriği, süresi,
+        ücreti, ödeme ve iptal koşulları, paket seçildiğinde ve ödeme öncesinde Danışan’a ayrıca yazılı olarak bildirilir.
+      </p>
+
+      <h2>3. Üyelik ve hesap güvenliği</h2>
+      <ul>
+        <li>Danışan, üyelikte ve panelde verdiği bilgilerin doğru, eksiksiz ve güncel olduğunu kabul eder.</li>
+        <li>18 yaşından küçükler, veli veya vasilerinin onayıyla üye olabilir.</li>
+        <li>Her kişi yalnızca kendi adına hesap açabilir; başkası adına veya başkasının bilgileriyle üyelik oluşturulamaz.</li>
+        <li>
+          Şifrenin gizliliğinden Danışan sorumludur. Hesabının yetkisiz kullanıldığından şüphelenen Danışan, şifresini
+          değiştirir ve durumu Diyetisyen’e bildirir.
+        </li>
+      </ul>
+
+      <h2>4. Hizmetin niteliği</h2>
+      <ul>
+        <li>
+          Sunulan hizmet beslenme danışmanlığıdır; tıbbi tanı ve tedavinin yerini tutmaz. Danışan, hekiminin önerdiği tedaviyi
+          ve ilaçlarını hekimine danışmadan değiştirmez.
+        </li>
+        <li>Beslenme danışmanlığında belirli bir sonuç (kilo kaybı, süre vb.) vaat edilmez; sonuçlar kişiden kişiye değişir.</li>
+        <li>
+          Danışan; hastalıklarını, kullandığı ilaç ve takviyeleri, alerji ve intoleranslarını, gebelik ve emzirme durumunu
+          eksiksiz bildirir ve değişiklikleri güncel tutar. Eksik veya yanlış bilgiden kaynaklanan sonuçlarda Diyetisyen’in
+          sorumluluğu, mevzuatın izin verdiği ölçüde sınırlıdır.
+        </li>
+        <li>
+          Beslenme planını uygularken beklenmeyen bir yakınma ortaya çıkarsa Danışan uygulamayı bırakır, hekime başvurur ve
+          Diyetisyen’i bilgilendirir. Acil durumlarda 112 aranır. Panel mesajları acil durum iletişimi için kullanılmaz.
+        </li>
+      </ul>
+
+      <h2>5. Randevular</h2>
+      <ul>
+        <li>Panelden oluşturulan randevu bir taleptir; Diyetisyen tarafından onaylandıktan sonra kesinleşir.</li>
+        <li>
+          Danışan, katılamayacağı randevuyu mümkün olan en kısa sürede panelden iptal eder veya Diyetisyen’e bildirir.
+          Katılım sağlanmayan randevuların paket haklarına etkisi, paket bilgilendirmesinde belirtilir.
+        </li>
+      </ul>
+
+      <h2>6. Paketler ve ödeme</h2>
+      <ul>
+        <li>
+          Panelden yapılan paket seçimi bir taleptir. Paket; içeriği, süresi, ücreti ve ödeme bilgisi Danışan’a bildirilip
+          ödeme ve başlangıç tarihi Diyetisyen tarafından onaylandığında aktif olur.
+        </li>
+        <li>Sitede ve panelde banka veya kredi kartı bilgisi alınmaz.</li>
+        <li>Danışan’ın 6502 sayılı Tüketicinin Korunması Hakkında Kanun’dan doğan hakları saklıdır.</li>
+      </ul>
+
+      <h2>7. Beslenme planları ve paylaşılan içerikler</h2>
+      <p>
+        Panelde paylaşılan beslenme planları ve belgeler Danışan’a özeldir ve yalnızca Danışan’ın kişisel kullanımı içindir.
+        Bu içerikler Diyetisyen’in yazılı izni olmadan çoğaltılamaz, satılamaz, başkalarıyla paylaşılamaz veya sosyal
+        medyada yayımlanamaz.
+      </p>
+
+      <h2>8. Kişisel veriler</h2>
+      <p>
+        Kişisel veriler <a href={portalBelgeleri.aydinlatma.yol}>KVKK Aydınlatma Metni</a>’ne uygun olarak işlenir; sağlık
+        verilerinin panelde işlenmesi <a href={portalBelgeleri.acikRiza.yol}>Açık Rıza Metni</a> ile Danışan’ın rızasına
+        dayanır. Danışan panelde kayıtlı verilerini indirebilir, açık rızasını geri çekebilir ve hesabının silinmesini talep
+        edebilir.
+      </p>
+
+      <h2>9. Hizmetin sürekliliği</h2>
+      <p>
+        Panelin güvenli ve kesintisiz çalışması için makul teknik önlemler alınır; ancak bakım, güncelleme veya altyapı
+        sağlayıcısından kaynaklanan sorunlar nedeniyle panele geçici olarak erişilemeyebilir. Bu durumda beslenme planı ve
+        randevu bilgileri Danışan’a başka bir yolla iletilebilir.
+      </p>
+
+      <h2>10. Hesabın kapatılması</h2>
+      <ul>
+        <li>Danışan, hesabının silinmesini panelden istediği zaman talep edebilir.</li>
+        <li>
+          Bu sözleşmeye aykırı kullanım, başkasının bilgileriyle üyelik veya panelin kötüye kullanılması hâlinde Diyetisyen,
+          Danışan’a bilgi vererek hesabı pasif duruma getirebilir.
+        </li>
+      </ul>
+
+      <h2>11. Değişiklikler</h2>
+      <p>
+        Bu sözleşme ve ilgili metinler güncellenebilir. Güncellenen metinler, Danışan’ın bir sonraki girişinde panelde onaya
+        sunulur; onaylanmadıkça panelin kullanımına devam edilemez.
+      </p>
+
+      <h2>12. Uyuşmazlıklar</h2>
+      <p>
+        Bu sözleşmeye Türk hukuku uygulanır. Uyuşmazlıklarda, Ticaret Bakanlığınca her yıl belirlenen parasal sınırlar
+        dâhilinde Danışan’ın yerleşim yerindeki veya işlemin yapıldığı yerdeki Tüketici Hakem Heyetleri, bu sınırları aşan
+        durumlarda Tüketici Mahkemeleri yetkilidir.
+      </p>
+
+      <h2>13. Yürürlük</h2>
+      <p>
+        Sözleşme, Danışan’ın üyelik sırasında elektronik ortamda onay vermesiyle yürürlüğe girer. Onayın tarihi ve onaylanan
+        metin sürümü kayıt altına alınır.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .surum {
+    color: var(--ink-3);
+    font-size: 0.9rem;
+  }
+</style>

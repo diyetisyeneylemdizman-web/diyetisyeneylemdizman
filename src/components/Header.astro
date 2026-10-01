@@ -41,6 +41,13 @@ const isActive = (href: string) => path === href || path.startsWith(href);
     </nav>
 
     <div class="header-actions">
+      {
+        site.portalYayinda && (
+          <a href="/danisan/giris/" class="btn btn-outline btn-sm header-login" aria-label="Danışan Girişi" title="Danışan Girişi">
+            <Icon name="user" size={18} />
+          </a>
+        )
+      }
       <a href="/randevu-olustur/" class="btn btn-primary btn-sm header-cta">
         <Icon name="calendar" size={18} />
         <span>Randevu Talebi Oluştur</span>
@@ -70,6 +77,14 @@ const isActive = (href: string) => path === href || path.startsWith(href);
       <a href="/randevu-olustur/" class="btn btn-primary btn-block">
         <Icon name="calendar" size={18} />Randevu Talebi Oluştur
       </a>
+      {
+        site.portalYayinda && (
+          <a href="/danisan/giris/" class="btn btn-outline btn-block" style="margin-top:10px">
+            <Icon name="user" size={18} />
+            Danışan Girişi
+          </a>
+        )
+      }
       <div class="mobile-contact">
         <a href={site.phoneHref}><Icon name="phone" size={18} />{site.phoneDisplay}</a>
         <a href={site.instagram} target="_blank" rel="noopener"><Icon name="instagram" size={18} />{site.instagramHandle}</a>
@@ -193,6 +208,9 @@ const isActive = (href: string) => path === href || path.startsWith(href);
     color: var(--sage-800);
   }
 
+  .header-login {
+    padding-inline: 0.8em;
+  }
   .header-actions {
     display: flex;
     align-items: center;

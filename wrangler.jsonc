@@ -1,8 +1,9 @@
 {
   // Cloudflare ayarları:
   // - Site, derlenen "dist" klasöründen statik olarak yayınlanır.
-  // - Yalnızca /api/* adresleri worker/index.ts dosyasına gider (Instagram Reels bölümü).
-  // - Instagram erişim anahtarı burada DEĞİL, Cloudflare panelinde gizli değişken (INSTAGRAM_TOKEN) olarak tutulur.
+  // - Yalnızca /api/* adresleri worker/index.ts dosyasına gider (Instagram Reels bölümü ve danışan sistemi).
+  // - Gizli bilgiler burada DEĞİL, Cloudflare panelinde Secret olarak tutulur:
+  //     INSTAGRAM_TOKEN (Instagram), VERI_ANAHTARI ve KURULUM_KODU (danışan sistemi).
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "diyetisyeneylemdizman",
   "main": "worker/index.ts",
@@ -15,10 +16,21 @@
     "run_worker_first": ["/api/*"]
   },
   // Reels listesi, önizleme görselleri ve yenilenen anahtar burada saklanır (ek kurulum gerekmez)
+  // Danışan sistemi verileri PortalStore'da (SQLite) saklanır; sağlık verileri ayrıca şifrelenir.
   "durable_objects": {
-    "bindings": [{ "name": "REELS", "class_name": "ReelsStore" }]
+    "bindings": [
+      { "name": "REELS", "class_name": "ReelsStore" },
+      { "name": "PORTAL", "class_name": "PortalStore" }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReelsStore"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ReelsStore"] },
+    { "tag": "v2", "new_sqlite_classes": ["PortalStore"] }
+  ],
+  // "deneme": kayıt yalnızca KURULUM_KODU ile yapılır, gerçek danışan verisi girilmez. Yayına alırken "canli" yapılır.
+  "vars": {
+    "PORTAL_MODU": "deneme"
+  },
   // Instagram'daki yeni videolar her 3 saatte bir kontrol edilir
   "triggers": {
     "crons": ["17 */3 * * *"]

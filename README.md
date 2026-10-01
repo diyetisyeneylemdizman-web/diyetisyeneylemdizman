@@ -22,12 +22,16 @@ derlenip yayına alınır.
 | Sayfa geçişi ve açılış animasyonları | `src/styles/global.css` (“Hafif animasyonlar” bölümü) |
 | Menü sırası ve adları | `src/data/site.ts` (`nav`) |
 | Randevu takvimi: çalışma saatleri, kapalı günler (tatiller), kaç gün sonrası seçilebilir | `src/data/site.ts` (`hours`, `closedDates`, `bookingDaysAhead`) |
+| Danışan paneli: ölçüm alanları, üyelik formu seçenekleri, yasal metin sürümleri | `src/data/portal.ts` |
+| Danışan paneli yasal metinleri | `src/pages/kvkk-aydinlatma-metni.astro`, `acik-riza-metni.astro`, `danisan-sozlesmesi.astro` |
 
 ## Sayfalar
 
 Ana sayfa · Hakkında · Sertifikalar · Hizmetler · Vücut Kitle İndeksi Hesaplama · Online Görüşme · Blog & Reels ·
 İletişim · Randevu Talebi Oluştur (3 adım: görüşme → takvimden tercih edilen tarih ve saat → bilgiler; WhatsApp mesajı olarak gönderilir, randevu onaydan sonra kesinleşir) ·
-KVKK Aydınlatma Metni
+KVKK Aydınlatma Metni · Açık Rıza Metni · Danışan Paneli Kullanım Sözleşmesi
+
+Arama motorlarına kapalı sayfalar: `/danisan/…` (danışan paneli) ve `/yonetim/…` (diyetisyen paneli).
 
 ## Site asistanı
 
@@ -74,11 +78,64 @@ yapılmış olsa bile, yasaklıyor.
   tablosu (CDC / IOM 2009) ve “Gebeyseniz” uyarısı yer alır.
 - Hesaplama tarayıcıda yapılır; girilen bilgiler hiçbir yere gönderilmez.
 
+## Danışan paneli (deneme sürümü)
+
+Danışanların üye olup süreçlerini takip ettiği panel ile diyetisyenin danışanlarını yönettiği panel. Ücretsiz Cloudflare
+planında çalışır (Durable Objects + SQLite); ek hizmet veya kart tanımı gerekmez.
+
+**Danışan (`/danisan/`):** 5 adımlı üyelik (hesap → kişisel → hedef/ölçüler → sağlık → onaylar) · özet · gelişim
+grafikleri (kilo, yağ ve kas kütlesi, yağ oranı, bel…) · ölçüm ekleme (kilo, bel, kalça) · paket talebi · randevu
+talebi · belgeler · mesajlar · profil · verilerini indirme, açık rızayı geri çekme, hesap silme talebi.
+
+**Diyetisyen (`/yonetim/`):** iki adımlı doğrulamalı giriş · özet · danışan listesi ve danışan dosyası (profil, sağlık,
+klinik ölçümleri, paketler, randevular, belgeler, mesajlar, özel notlar, erişim kayıtları) · paket tanımları · randevu
+onayı · tüm danışanlara tek tuşla panel duyurusu · WhatsApp tek tık mesaj şablonları · erişim kayıtları.
+
+**Otomatik hatırlatmalar:** Her gün saat 09.00’dan sonra, ertesi gün onaylı randevusu olan ve paketinin bitmesine 3 gün
+kalan danışanların paneline hatırlatma düşer. WhatsApp mesajları diyetisyen tarafından tek tıkla gönderilir.
+
+**Ödeme:** Sitede ödeme alınmaz. Paket talebi panele düşer, ödeme bilgisi danışana ayrıca iletilir, ödeme alınınca
+diyetisyen paketi “Aktif” yapar. (Kartla ödeme ileride eklenebilir; ödeme kuruluşu ücretlidir.)
+
+**Güvenlik:** Sağlık verileri, belgeler, notlar ve mesajlar AES-256 ile şifrelenir · şifreler PBKDF2 ile saklanır ·
+hatalı girişlerde geçici kilit · oturum çerezleri Secure/HttpOnly/SameSite=Strict · diyetisyende iki adımlı doğrulama ·
+belge yüklemede yalnızca PDF/JPG/PNG/WEBP (en fazla 10 MB) · tüm görüntüleme ve değişiklikler kayıt altında (2 yıl).
+
+### İlk kurulum (bir kez)
+
+1. Cloudflare panelinde Worker → **Settings → Variables and Secrets** bölümüne **Secret** türünde iki değer eklenir:
+   `VERI_ANAHTARI` ve `KURULUM_KODU`. Bu değerler `/yonetim/kurulum/` sayfası açıldığında sayfada üretilir.
+2. `/yonetim/kurulum/` sayfasında kurulum kodu, e-posta ve şifre girilir; telefondaki doğrulama uygulamasıyla
+   (Google Authenticator vb.) QR kodu okutulur.
+3. **`VERI_ANAHTARI` güvenli bir yerde saklanmalı ve değiştirilmemelidir.** Değişirse veya kaybolursa panel verileri
+   okunamaz.
+4. Deneme sürümünde üyelik yalnızca `KURULUM_KODU` ile yapılabilir (ör. test için). Gerçek kişisel veya sağlık bilgisi
+   girilmez.
+
+### Yayına alma kontrol listesi
+
+- [ ] Yasal metinler (aydınlatma, açık rıza, kullanım sözleşmesi) bir hukukçu tarafından gözden geçirildi.
+- [ ] Yurt dışı aktarım: Cloudflare ile KVKK standart sözleşmesi imzalandı ve imzadan sonra 5 iş günü içinde Kuruma
+      bildirildi — ya da panel verileri Türkiye’de barındırılan bir altyapıya taşındı.
+- [ ] Paket fiyatlarının gösterimi, Sağlık Hizmetlerinde Tanıtım ve Bilgilendirme Faaliyetleri Hakkında Yönetmelik
+      md. 5(1)(m) açısından değerlendirildi (fiyat gösterimi paket bazında kapatılabilir).
+- [ ] `wrangler.jsonc` içinde `PORTAL_MODU` → `"canli"`; `src/data/site.ts` içinde `portalYayinda` → `true`
+      (menüde “Danışan Girişi” görünür, deneme notları kalkar).
+- [ ] Deneme sırasında girilen test hesapları silindi.
+
+### Kural: her yenilikte KVKK teyidi
+
+Panelde veya sitede kişisel veri işleyen her değişiklikte (yeni form alanı, yeni hizmet sağlayıcı, yeni bildirim
+kanalı, ödeme vb.) üç yasal metin kontrol edilir; metin değişirse `src/data/portal.ts` içindeki ilgili `surum` tarihi
+güncellenir. Sürüm değişince danışanlar bir sonraki girişlerinde güncel metni yeniden onaylar.
+
 ## Mevzuat notları
 
 - Sitede danışan yorumu, teşekkür/memnuniyet ifadesi, ücret/indirim/kampanya bilgisi ve öncesi-sonrası görseli
   bulunmamalıdır (Sağlık Hizmetlerinde Tanıtım ve Bilgilendirme Faaliyetleri Hakkında Yönetmelik).
 - Alt bilgide “Son güncelleme” tarihi (her yayında otomatik) ve site editörü iletişim bilgisi yer alır.
+- Paket fiyatları, diyetisyenin tercihiyle danışan panelinde gösterilir (paket bazında kapatılabilir).
+- “Uzman” unvanı kullanılmaz.
 
 ## Geliştirme
 
@@ -89,7 +146,11 @@ npm run build    # yayın dosyalarını dist/ klasörüne üretir
 ```
 
 Cloudflare ayarları: `wrangler.jsonc` (derleme komutu `npm run build`, yayın komutu `npx wrangler deploy`). Sayfalar
-statik dosya olarak sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır (Instagram Reels).
+statik dosya olarak sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır (Instagram Reels ve
+danışan paneli). Panel sunucu kodu `worker/portal/`, arayüz kodu `src/scripts/portal/` klasöründedir.
+
+Paneli bilgisayarda denemek için `npx wrangler dev` kullanılır (`VERI_ANAHTARI` ve `KURULUM_KODU` değerleri
+`--var` ile verilir).
 
 ## Yazım kuralları
 

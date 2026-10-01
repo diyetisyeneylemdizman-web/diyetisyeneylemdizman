@@ -38,6 +38,10 @@ export const site = {
     email: 'diyetisyeneylemdizman@gmail.com',
   },
 
+  // Danışan paneli herkese açıldığında true yapılır (menüde "Danışan Girişi" görünür, KVKK metnindeki deneme notu kalkar).
+  // Aynı anda wrangler.jsonc içindeki PORTAL_MODU da "canli" yapılmalıdır. Yayına almadan önce README'deki listeye bakın.
+  portalYayinda: false,
+
   // Randevu takviminde seçilemeyecek günler (resmî tatiller vb.): "AA-GG" her yıl, "YYYY-AA-GG" yalnızca o tarih
   closedDates: ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '10-29'] as string[],
   // Randevu takviminde en fazla kaç gün sonrası seçilebilir

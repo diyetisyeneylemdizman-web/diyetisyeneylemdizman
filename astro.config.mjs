@@ -11,7 +11,8 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
-      filter: (page) => !page.includes('/404'),
+      // Danışan ve diyetisyen panelleri arama motorlarına kapalıdır
+      filter: (page) => !page.includes('/404') && !page.includes('/danisan/') && !page.includes('/yonetim/'),
     }),
   ],
 });

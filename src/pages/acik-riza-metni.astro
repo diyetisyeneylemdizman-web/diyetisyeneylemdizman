@@ -1,0 +1,74 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import { site } from '../data/site';
+import { portalBelgeleri } from '../data/portal';
+// NOT: Bu metin genel bir şablondur; hukukçu kontrolü önerilir. Metin değiştiğinde src/data/portal.ts içindeki
+// "acikRiza.surum" güncellenmelidir (danışanlar bir sonraki girişlerinde yeniden onay verir).
+const surum = portalBelgeleri.acikRiza.surum.split('-').reverse().join('.');
+---
+
+<BaseLayout
+  title="Sağlık Verileri İçin Açık Rıza Metni"
+  description="Diyetisyen Eylem Dizman danışan panelinde sağlık verilerinin işlenmesine ilişkin açık rıza metni."
+>
+  <PageHero
+    title="Açık Rıza Metni"
+    eyebrow="Sağlık Verileri"
+    crumbs={[{ label: 'KVKK Aydınlatma Metni', href: portalBelgeleri.aydinlatma.yol }, { label: 'Açık Rıza Metni' }]}
+  />
+
+  <section class="section">
+    <div class="container-narrow prose">
+      <p class="surum">Metin sürümü: {surum}</p>
+      <p>
+        <a href={portalBelgeleri.aydinlatma.yol}>KVKK Aydınlatma Metni</a>’ni okudum. Bu kapsamda, veri sorumlusu
+        <strong>Eylem Dizman</strong> ({site.clinicName}) tarafından;
+      </p>
+      <ul>
+        <li>
+          danışan paneline girdiğim ve diyetisyen tarafından eklenen <strong>sağlık verilerimin</strong> (boy, kilo, vücut
+          ölçümleri ve vücut analizi sonuçları, tanı konmuş hastalıklar, kullandığım ilaç ve takviyeler, besin alerjileri ve
+          intoleransları, gebelik ve emzirme durumu, geçirilmiş ameliyatlar, beslenme planları, paylaşmayı tercih ettiğim
+          sağlık raporu ve tahlil sonuçları ile diyetisyenin danışmanlık notları),
+        </li>
+        <li>
+          beslenme danışmanlığı sürecimin danışan paneli üzerinden yürütülmesi, ölçümlerimin ve gelişimimin panelde
+          gösterilmesi, beslenme planlarımın ve belgelerimin panel üzerinden paylaşılması ve randevu hatırlatmalarının
+          iletilmesi amaçlarıyla,
+        </li>
+        <li>
+          elektronik ortamda şifrelenerek saklanmasına ve yalnızca diyetisyen tarafından görüntülenmesine
+        </li>
+      </ul>
+      <p>açık rızam ile onay veriyorum.</p>
+
+      <h2>Bilmeniz gerekenler</h2>
+      <ul>
+        <li>
+          <strong>Açık rıza isteğe bağlıdır.</strong> Rıza vermemeniz hâlinde yalnızca danışan paneli kullanılamaz;
+          beslenme danışmanlığı hizmetini klinikte veya online görüşmelerle panel olmadan alabilirsiniz.
+        </li>
+        <li>
+          <strong>Rızanızı istediğiniz zaman geri çekebilirsiniz.</strong> Danışan panelindeki “Hesap ve Gizlilik”
+          bölümünden veya <a href={`mailto:${site.email}`}>{site.email}</a> adresine yazarak geri çekebilirsiniz. Geri
+          çekme, o ana kadar yapılan işlemleri etkilemez; panel kapanır ve verilerinizin silinmesini talep edebilirsiniz.
+        </li>
+        <li>
+          Panel verilerinin barındırıldığı hizmet sağlayıcı ve yurt dışına aktarım koşulları
+          <a href={`${portalBelgeleri.aydinlatma.yol}#panel`}>Aydınlatma Metni</a>’nde açıklanmıştır.
+        </li>
+        <li>
+          18 yaşından küçükler için bu onay, veli veya vasi tarafından verilir.
+        </li>
+      </ul>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .surum {
+    color: var(--ink-3);
+    font-size: 0.9rem;
+  }
+</style>

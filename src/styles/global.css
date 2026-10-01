@@ -230,7 +230,9 @@ em.accent,
   justify-content: center;
   gap: 0.55em;
   min-height: 50px;
+  max-width: 100%;
   padding: 0.8em 1.45em;
+  text-align: center;
   border-radius: 999px;
   border: 1.5px solid transparent;
   background: var(--btn-bg);
@@ -249,6 +251,11 @@ em.accent,
     transform 0.2s ease,
     box-shadow 0.2s ease;
   white-space: nowrap;
+}
+@media (max-width: 380px) {
+  .btn {
+    white-space: normal;
+  }
 }
 .btn:hover {
   transform: translateY(-1px);
@@ -458,6 +465,11 @@ em.accent,
   font-size: 1.08rem;
   line-height: 1.8;
   color: var(--ink-2);
+  overflow-wrap: break-word;
+}
+.prose a,
+.prose strong {
+  overflow-wrap: anywhere;
 }
 .prose h2 {
   font-size: clamp(1.55rem, 2.6vw, 1.9rem);

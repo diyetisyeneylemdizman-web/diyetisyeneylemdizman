@@ -1,0 +1,429 @@
+---
+import PortalLayout from '../../../layouts/PortalLayout.astro';
+import {
+  aktiviteSecenekleri,
+  gebelikSecenekleri,
+  hastalikSecenekleri,
+  hedefSecenekleri,
+  kaynakSecenekleri,
+  portalBelgeleri,
+  sehirler,
+} from '../../../data/portal';
+
+const adimlar = ['Hesap Bilgileri', 'Kişisel Bilgiler', 'Hedef ve Ölçüler', 'Sağlık Bilgileri', 'Onaylar'];
+const b = portalBelgeleri;
+---
+
+<PortalLayout title="Üye Ol" alan="danisan">
+  <div class="auth genis">
+    <div class="card auth-kart">
+      <h1>Danışan Paneline Üye Olun</h1>
+      <p>
+        Kaydınızı tamamladıktan sonra paketinizi seçebilir, randevu talebi oluşturabilir ve sürecinizi panelden takip
+        edebilirsiniz. Zaten üye misiniz? <a href="/danisan/giris/" class="metin-dugme">Giriş yapın</a>.
+      </p>
+
+      <ol class="adimlar" aria-hidden="true">{adimlar.map((_, i) => <li class:list={{ aktif: i === 0 }} data-adim-cizgi={i}></li>)}</ol>
+
+      <form novalidate data-kayit>
+        <p class="form-hata" data-form-hata hidden role="alert"></p>
+
+        <!-- 1 -->
+        <fieldset class="adim" data-adim="0">
+          <p class="adim-baslik">Adım 1 / {adimlar.length}</p>
+          <legend class="sr-only">{adimlar[0]}</legend>
+          <h2>{adimlar[0]}</h2>
+          <div class="form-grid iki">
+            <div class="field tam" data-deneme-alani hidden>
+              <label for="denemeKodu">Deneme Kodu</label>
+              <input class="input" id="denemeKodu" name="denemeKodu" autocomplete="off" data-alan="Deneme kodu" />
+              <p class="hint">Deneme sürümünde kayıt yalnızca diyetisyenin verdiği kodla yapılabilir.</p>
+            </div>
+            <div class="field">
+              <label for="ad">Ad</label>
+              <input class="input" id="ad" name="ad" autocomplete="given-name" required maxlength="60" data-alan="Ad" />
+            </div>
+            <div class="field">
+              <label for="soyad">Soyad</label>
+              <input class="input" id="soyad" name="soyad" autocomplete="family-name" required maxlength="60" data-alan="Soyad" />
+            </div>
+            <div class="field">
+              <label for="eposta">E-posta</label>
+              <input class="input" id="eposta" name="eposta" type="email" autocomplete="email" required maxlength="120" data-alan="E-posta" />
+            </div>
+            <div class="field">
+              <label for="telefon">Cep Telefonu</label>
+              <input
+                class="input"
+                id="telefon"
+                name="telefon"
+                type="tel"
+                inputmode="tel"
+                autocomplete="tel"
+                placeholder="05XX XXX XX XX"
+                required
+                data-alan="Telefon"
+              />
+            </div>
+            <div class="field">
+              <label for="sifre">Şifre</label>
+              <input class="input" id="sifre" name="sifre" type="password" autocomplete="new-password" required minlength="8" data-alan="Şifre" />
+              <p class="hint">En az 8 karakter; en az bir harf ve bir rakam.</p>
+            </div>
+            <div class="field">
+              <label for="sifre2">Şifre (Tekrar)</label>
+              <input class="input" id="sifre2" type="password" autocomplete="new-password" required data-alan="Şifre tekrar" />
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- 2 -->
+        <fieldset class="adim" data-adim="1" hidden>
+          <p class="adim-baslik">Adım 2 / {adimlar.length}</p>
+          <legend class="sr-only">{adimlar[1]}</legend>
+          <h2>{adimlar[1]}</h2>
+          <div class="form-grid iki">
+            <div class="field">
+              <label for="dogumTarihi">Doğum Tarihi</label>
+              <input class="input" id="dogumTarihi" name="dogumTarihi" type="date" required data-alan="Doğum tarihi" />
+            </div>
+            <div class="field">
+              <p class="label" id="cinsiyet-l">Cinsiyet</p>
+              <div class="secim-grup" role="radiogroup" aria-labelledby="cinsiyet-l" data-alan="Cinsiyet" tabindex="-1">
+                <label class="secim"><input type="radio" name="cinsiyet" value="Kadın" required /> Kadın</label>
+                <label class="secim"><input type="radio" name="cinsiyet" value="Erkek" /> Erkek</label>
+              </div>
+            </div>
+            <div class="field">
+              <label for="sehir">Yaşadığınız Şehir</label>
+              <select class="select" id="sehir" name="sehir" required data-alan="Yaşadığınız şehir">
+                <option value="">Seçin</option>
+                {sehirler.map((s) => <option value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div class="field">
+              <label for="meslek">Meslek <span class="hint">(isteğe bağlı)</span></label>
+              <input class="input" id="meslek" name="meslek" maxlength="80" data-alan="Meslek" />
+            </div>
+            <div class="field tam">
+              <label for="kaynak">Bizi Nereden Duydunuz? <span class="hint">(isteğe bağlı)</span></label>
+              <select class="select" id="kaynak" name="kaynak" data-alan="Bizi nereden duydunuz">
+                <option value="">Seçmek istemiyorum</option>
+                {kaynakSecenekleri.map((s) => <option value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- 3 -->
+        <fieldset class="adim" data-adim="2" hidden>
+          <p class="adim-baslik">Adım 3 / {adimlar.length}</p>
+          <legend class="sr-only">{adimlar[2]}</legend>
+          <h2>{adimlar[2]}</h2>
+          <div class="form-grid iki">
+            <div class="field">
+              <label for="boy">Boy (cm)</label>
+              <input class="input" id="boy" name="boy" inputmode="decimal" required data-alan="Boy" data-min="80" data-max="230" />
+            </div>
+            <div class="field">
+              <label for="kilo">Güncel Kilo (kg)</label>
+              <input class="input" id="kilo" name="kilo" inputmode="decimal" required data-alan="Kilo" data-min="20" data-max="350" />
+            </div>
+            <div class="field">
+              <label for="hedefKilo">Hedef Kilo (kg) <span class="hint">(isteğe bağlı)</span></label>
+              <input class="input" id="hedefKilo" name="hedefKilo" inputmode="decimal" data-alan="Hedef kilo" data-min="20" data-max="350" />
+            </div>
+            <div class="field">
+              <label for="bel">Bel Çevresi (cm) <span class="hint">(isteğe bağlı)</span></label>
+              <input class="input" id="bel" name="bel" inputmode="decimal" data-alan="Bel çevresi" data-min="40" data-max="250" />
+            </div>
+            <div class="field">
+              <label for="hedef">Hedefiniz</label>
+              <select class="select" id="hedef" name="hedef" required data-alan="Hedefiniz">
+                <option value="">Seçin</option>
+                {hedefSecenekleri.map((s) => <option value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div class="field">
+              <label for="aktivite">Günlük Hareket Düzeyi</label>
+              <select class="select" id="aktivite" name="aktivite" required data-alan="Günlük hareket düzeyi">
+                <option value="">Seçin</option>
+                {aktiviteSecenekleri.map((s) => <option value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- 4 -->
+        <fieldset class="adim" data-adim="3" hidden>
+          <p class="adim-baslik">Adım 4 / {adimlar.length}</p>
+          <legend class="sr-only">{adimlar[3]}</legend>
+          <h2>{adimlar[3]}</h2>
+          <p class="bilgi-kutu">
+            Bu bilgiler sağlık verisidir. Yalnızca beslenme danışmanlığınız için diyetisyeniniz tarafından görülür ve
+            şifrelenerek saklanır. Bilmediğiniz veya paylaşmak istemediğiniz alanları boş bırakabilirsiniz.
+          </p>
+          <div class="form-grid">
+            <div class="field">
+              <p class="label" id="hastalik-l">Tanı Konmuş Hastalıklarınız</p>
+              <div class="secim-grup" role="group" aria-labelledby="hastalik-l">
+                {
+                  hastalikSecenekleri.map((s) => (
+                    <label class="secim">
+                      <input type="checkbox" name="saglik.hastaliklar[]" value={s} /> {s}
+                    </label>
+                  ))
+                }
+              </div>
+            </div>
+            <div class="field">
+              <label for="digerHastalik">Diğer Hastalıklar</label>
+              <input class="input" id="digerHastalik" name="saglik.digerHastalik" maxlength="300" data-alan="Diğer hastalıklar" />
+            </div>
+            <div class="field">
+              <label for="ilaclar">Kullandığınız İlaç ve Takviyeler</label>
+              <textarea class="textarea" id="ilaclar" name="saglik.ilaclar" maxlength="600" data-alan="Kullandığınız ilaç ve takviyeler"></textarea>
+            </div>
+            <div class="form-grid iki">
+              <div class="field">
+                <label for="alerjiler">Besin Alerjileri</label>
+                <input class="input" id="alerjiler" name="saglik.alerjiler" maxlength="400" placeholder="Örn. fıstık, yumurta" data-alan="Besin alerjileri" />
+              </div>
+              <div class="field">
+                <label for="intoleranslar">Besin İntoleransları</label>
+                <input class="input" id="intoleranslar" name="saglik.intoleranslar" maxlength="400" placeholder="Örn. laktoz" data-alan="Besin intoleransları" />
+              </div>
+            </div>
+            <div class="field" data-gebelik-alani hidden>
+              <label for="gebelik">Gebelik / Emzirme</label>
+              <select class="select" id="gebelik" name="saglik.gebelik" data-alan="Gebelik / emzirme">
+                {gebelikSecenekleri.map((s) => <option value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div class="field">
+              <label for="ameliyatlar">Geçirilmiş Ameliyatlar</label>
+              <input class="input" id="ameliyatlar" name="saglik.ameliyatlar" maxlength="400" data-alan="Geçirilmiş ameliyatlar" />
+            </div>
+            <div class="field">
+              <label for="notlar">Eklemek İstedikleriniz</label>
+              <textarea class="textarea" id="notlar" name="saglik.notlar" maxlength="1000" data-alan="Eklemek istedikleriniz"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- 5 -->
+        <fieldset class="adim" data-adim="4" hidden>
+          <p class="adim-baslik">Adım 5 / {adimlar.length}</p>
+          <legend class="sr-only">{adimlar[4]}</legend>
+          <h2>{adimlar[4]}</h2>
+          <div class="form-grid">
+            <label class="onay-satiri" data-alan="Aydınlatma" tabindex="-1">
+              <input type="checkbox" name="onaylar.aydinlatma" required />
+              <span>
+                <a href={b.aydinlatma.yol} target="_blank" rel="noopener">{b.aydinlatma.baslik}</a>’ni okudum.
+                <small>Kişisel verilerinizin nasıl işlendiğini ve haklarınızı açıklar.</small>
+              </span>
+            </label>
+            <label class="onay-satiri" data-alan="Açık rıza" tabindex="-1">
+              <input type="checkbox" name="onaylar.acikRiza" required />
+              <span>
+                <a href={b.acikRiza.yol} target="_blank" rel="noopener">{b.acikRiza.baslik}</a> kapsamında, sağlık
+                verilerimin danışan panelinde işlenmesine açık rıza veriyorum.
+                <small>
+                  Danışan paneli isteğe bağlıdır. Rıza vermezseniz panel kullanılamaz; beslenme danışmanlığını panel
+                  olmadan alabilirsiniz. Rızanızı istediğiniz zaman panelden geri çekebilirsiniz.
+                </small>
+              </span>
+            </label>
+            <label class="onay-satiri" data-alan="Sözleşme" tabindex="-1">
+              <input type="checkbox" name="onaylar.sozlesme" required />
+              <span><a href={b.sozlesme.yol} target="_blank" rel="noopener">{b.sozlesme.baslik}</a>’ni okudum ve kabul ediyorum.</span>
+            </label>
+
+            <div class="kart vurgu-kutu" data-veli-alani hidden>
+              <h3>18 Yaşından Küçükler İçin Veli Onayı</h3>
+              <div class="form-grid iki">
+                <div class="field">
+                  <label for="veliAd">Veli / Vasi Adı Soyadı</label>
+                  <input class="input" id="veliAd" name="veli.ad" maxlength="120" data-alan="Veli adı soyadı" />
+                </div>
+                <div class="field">
+                  <label for="veliTel">Veli / Vasi Telefonu</label>
+                  <input class="input" id="veliTel" name="veli.telefon" type="tel" inputmode="tel" data-alan="Veli telefonu" />
+                </div>
+              </div>
+              <label class="onay-satiri" data-alan="Veli onayı" tabindex="-1" style="margin-top:12px">
+                <input type="checkbox" name="onaylar.veli" />
+                <span>Velisi / vasisi olarak üyeliğe ve yukarıdaki metinlere onay veriyorum.</span>
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="adim-butonlar">
+          <button type="button" class="btn btn-outline" data-geri hidden>Geri</button>
+          <button type="button" class="btn btn-primary" data-ileri>Devam</button>
+          <button type="submit" class="btn btn-primary" data-gonder hidden>Üyeliği Tamamla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</PortalLayout>
+
+<script>
+  import { api, bugun, durumBandi, formHatasi, formNesnesi, formTemizle, mesgul, toast } from '../../../scripts/portal/lib';
+
+  const form = document.querySelector<HTMLFormElement>('[data-kayit]')!;
+  const adimlar = [...form.querySelectorAll<HTMLFieldSetElement>('[data-adim]')];
+  const cizgiler = [...document.querySelectorAll<HTMLElement>('[data-adim-cizgi]')];
+  const geri = form.querySelector<HTMLButtonElement>('[data-geri]')!;
+  const ileri = form.querySelector<HTMLButtonElement>('[data-ileri]')!;
+  const gonder = form.querySelector<HTMLButtonElement>('[data-gonder]')!;
+  let aktif = 0;
+
+  const dogum = form.querySelector<HTMLInputElement>('#dogumTarihi')!;
+  dogum.max = bugun();
+
+  durumBandi().then((d) => {
+    if (d?.mod === 'deneme') {
+      const f = form.querySelector<HTMLElement>('[data-deneme-alani]')!;
+      f.hidden = false;
+      f.querySelector('input')!.required = true;
+    }
+  });
+  api('GET', '/ben')
+    .then(() => location.replace('/danisan/'))
+    .catch(() => {});
+
+  const goster = (i: number) => {
+    aktif = i;
+    adimlar.forEach((a, j) => (a.hidden = j !== i));
+    cizgiler.forEach((c, j) => {
+      c.classList.toggle('aktif', j === i);
+      c.classList.toggle('tamam', j < i);
+    });
+    geri.hidden = i === 0;
+    ileri.hidden = i === adimlar.length - 1;
+    gonder.hidden = i !== adimlar.length - 1;
+    adimlar[i].querySelector('h2')?.scrollIntoView({ block: 'nearest' });
+  };
+
+  const yas = () => {
+    if (!dogum.value) return null;
+    const [y, m, d] = dogum.value.split('-').map(Number);
+    const [ty, tm, td] = bugun().split('-').map(Number);
+    return ty - y - (tm < m || (tm === m && td < d) ? 1 : 0);
+  };
+
+  const guncelle = () => {
+    const kadin = form.querySelector<HTMLInputElement>('input[name="cinsiyet"][value="Kadın"]')!.checked;
+    const g = form.querySelector<HTMLElement>('[data-gebelik-alani]')!;
+    g.hidden = !kadin;
+    if (!kadin) g.querySelector('select')!.value = 'Yok';
+    const cocuk = (yas() ?? 99) < 18;
+    const v = form.querySelector<HTMLElement>('[data-veli-alani]')!;
+    v.hidden = !cocuk;
+    v.querySelectorAll<HTMLInputElement>('input').forEach((i) => (i.required = cocuk));
+  };
+  form.addEventListener('change', guncelle);
+
+  const hata = (el: HTMLElement, mesaj: string) => {
+    const box = form.querySelector<HTMLElement>('[data-form-hata]')!;
+    box.textContent = mesaj;
+    box.hidden = false;
+    el.setAttribute('aria-invalid', 'true');
+    el.focus();
+    return false;
+  };
+
+  const sayiOku = (v: string) => Number(v.replace(',', '.'));
+
+  const kontrol = (i: number): boolean => {
+    formTemizle(form);
+    const a = adimlar[i];
+    for (const el of a.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea')) {
+      if (el.closest('[hidden]')) continue;
+      const etiket = el.dataset.alan ?? el.name;
+      if (el instanceof HTMLInputElement && el.type === 'radio') {
+        if (el.required && !a.querySelector(`input[name="${el.name}"]:checked`))
+          return hata(el.closest<HTMLElement>('[data-alan]') ?? el, `${etiket} seçin.`);
+        continue;
+      }
+      if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+        if (el.required && !el.checked) return hata(el.closest<HTMLElement>('[data-alan]') ?? el, `${etiket} onayını işaretleyin.`);
+        continue;
+      }
+      const v = el.value.trim();
+      if (el.required && !v) return hata(el, `${etiket} alanı zorunludur.`);
+      if (v && el.dataset.min) {
+        const n = sayiOku(v);
+        if (!Number.isFinite(n) || n < Number(el.dataset.min) || n > Number(el.dataset.max))
+          return hata(el, `${etiket} ${el.dataset.min}–${el.dataset.max} arasında olmalıdır.`);
+      }
+    }
+    if (i === 0) {
+      const e = form.querySelector<HTMLInputElement>('#eposta')!;
+      if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(e.value.trim())) return hata(e, 'Geçerli bir e-posta adresi yazın.');
+      const t = form.querySelector<HTMLInputElement>('#telefon')!;
+      if (!/^5\d{9}$/.test(t.value.replace(/\D/g, '').replace(/^(90|0)(?=5\d{9}$)/, '')))
+        return hata(t, 'Geçerli bir cep telefonu numarası yazın (05XX XXX XX XX).');
+      const s = form.querySelector<HTMLInputElement>('#sifre')!;
+      if (s.value.length < 8 || !/\p{L}/u.test(s.value) || !/\d/.test(s.value))
+        return hata(s, 'Şifre en az 8 karakter olmalı; en az bir harf ve bir rakam içermelidir.');
+      const s2 = form.querySelector<HTMLInputElement>('#sifre2')!;
+      if (s.value !== s2.value) return hata(s2, 'Şifreler aynı değil.');
+    }
+    if (i === 1) {
+      const y = yas();
+      if (y === null || y < 2 || y > 110) return hata(dogum, 'Doğum tarihini kontrol edin.');
+    }
+    return true;
+  };
+
+  ileri.addEventListener('click', () => {
+    if (kontrol(aktif)) goster(aktif + 1);
+  });
+  geri.addEventListener('click', () => {
+    formTemizle(form);
+    goster(aktif - 1);
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    for (let i = 0; i < adimlar.length; i++) {
+      if (!kontrol(i)) {
+        goster(i);
+        kontrol(i);
+        return;
+      }
+    }
+    const veri = formNesnesi(form);
+    mesgul(gonder, async () => {
+      try {
+        await api('POST', '/kayit', veri);
+        toast('Üyeliğiniz oluşturuldu.');
+        location.replace('/danisan/');
+      } catch (err: any) {
+        const el = err?.alan ? form.querySelector<HTMLElement>(`[data-alan="${CSS.escape(err.alan)}"]`) : null;
+        const adim = el?.closest<HTMLElement>('[data-adim]');
+        if (adim) goster(Number(adim.dataset.adim));
+        formHatasi(form, err);
+      }
+    });
+  });
+
+  goster(0);
+</script>
+
+<style>
+  h2 {
+    font-size: 1.35rem;
+    margin: 0 0 16px;
+  }
+  .adim {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+  }
+</style>

@@ -1,8 +1,9 @@
-// Cloudflare Worker — Instagram Reels bölümü
+// Cloudflare Worker — Instagram Reels bölümü ve danışan sistemi
 //
 // Sitenin sayfaları "dist" klasöründen doğrudan sunulur; bu dosya yalnızca /api/* adreslerinde çalışır:
 //   /api/reels               → son Reels videolarının listesi (JSON)
 //   /api/reels/gorsel/<id>   → videonun önizleme görseli (sitemizden sunulur)
+//   /api/portal/*            → danışan paneli ve diyetisyen (yönetici) paneli — ayrıntılar: worker/portal/store.ts
 //
 // Nasıl çalışır?
 // - Her 3 saatte bir (wrangler.jsonc → triggers) Instagram hesabındaki son videolar Instagram API'den alınır,
@@ -15,10 +16,14 @@
 // - Panelde anahtar değiştirilirse (yeni anahtar girilirse) yenisi otomatik olarak kullanılmaya başlanır.
 
 import { DurableObject } from 'cloudflare:workers';
+import { PortalStore, type PortalEnv } from './portal/store';
 
-interface Env {
+export { PortalStore };
+
+interface Env extends PortalEnv {
   ASSETS: { fetch(input: Request | URL | string, init?: RequestInit): Promise<Response> };
   REELS: DurableObjectNamespace<ReelsStore>;
+  PORTAL: DurableObjectNamespace<PortalStore>;
   /** Instagram erişim anahtarı (Cloudflare panelinde Secret) */
   INSTAGRAM_TOKEN?: string;
   /** Yalnızca yerel test için: Instagram API adresi */
@@ -175,6 +180,29 @@ export class ReelsStore extends DurableObject<Env> {
 
 const store = (env: Env) => env.REELS.get(env.REELS.idFromName('instagram'));
 
+// Danışan sistemi: tüm veriler tek bir nesnede; ilk oluşturulduğunda Türkiye'ye en yakın bölgede (Doğu Avrupa) açılır
+const portal = (env: Env) => env.PORTAL.get(env.PORTAL.idFromName('ana'), { locationHint: 'eeur' });
+
+// En büyük istek: 10 MB belge + form alanları
+const PORTAL_ISTEK_SINIRI = 11 * 1024 * 1024;
+
+async function portalRequest(request: Request, env: Env) {
+  const headers = new Headers(request.headers);
+  headers.set('X-Istemci-IP', request.headers.get('CF-Connecting-IP') ?? '');
+  let body: ArrayBuffer | null = null;
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    if (Number(request.headers.get('Content-Length') ?? '0') > PORTAL_ISTEK_SINIRI) {
+      return Response.json({ hata: 'Dosya en fazla 10 MB olabilir.' }, { status: 413, headers: { 'Cache-Control': 'no-store' } });
+    }
+    // Gövde önceden okunur: panel isteği gövdeyi okumadan reddederse (ör. yetkisiz istek) bağlantı yarıda kesilmez.
+    body = await request.arrayBuffer();
+    if (body.byteLength > PORTAL_ISTEK_SINIRI) {
+      return Response.json({ hata: 'Dosya en fazla 10 MB olabilir.' }, { status: 413, headers: { 'Cache-Control': 'no-store' } });
+    }
+  }
+  return portal(env).fetch(new Request(request.url, { method: request.method, headers, body }));
+}
+
 async function reelsList(request: Request, env: Env, ctx: ExecutionContext) {
   const cache = caches.default;
   const cacheKey = new Request(new URL('/api/reels', request.url).toString());
@@ -210,6 +238,7 @@ async function reelImage(id: string, request: Request, env: Env, ctx: ExecutionC
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/portal/')) return portalRequest(request, env);
     if (request.method === 'GET' || request.method === 'HEAD') {
       if (url.pathname === '/api/reels') return reelsList(request, env, ctx);
       const img = url.pathname.match(/^\/api\/reels\/gorsel\/(\d{1,30})$/);
@@ -221,5 +250,6 @@ export default {
 
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(store(env).sync().then((r) => console.log('Reels eşitleme:', r)));
+    ctx.waitUntil(portal(env).cron().then((r) => console.log('Danışan sistemi:', r)));
   },
 } satisfies ExportedHandler<Env>;
