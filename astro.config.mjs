@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import { takibimAcik } from './src/data/portal.ts';
 
 // Sitenin yayındaki adresi (SEO, sitemap ve paylaşım görselleri için kullanılır)
 export default defineConfig({
@@ -11,8 +12,13 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
-      // Danışan ve diyetisyen panelleri arama motorlarına kapalıdır
-      filter: (page) => !page.includes('/404') && !page.includes('/danisan/') && !page.includes('/yonetim/'),
+      // Danışan ve diyetisyen panelleri arama motorlarına kapalıdır; Takibim kapalıyken Takibim metinleri yönlendirme sayfasıdır
+      filter: (page) =>
+        !page.includes('/404') &&
+        !page.includes('/danisan/') &&
+        !page.includes('/yonetim/') &&
+        !page.includes('/takibim/') &&
+        (takibimAcik || (!page.includes('/acik-riza-metni/') && !page.includes('/danisan-sozlesmesi/'))),
     }),
   ],
 });

@@ -1,0 +1,42 @@
+---
+// Diyetisyenin telefonuna "yeni randevu talebi" bildirimi eklemek için (paneldeki 6 haneli kodla).
+// Takibim/sunucu özellikleri kapalıyken (src/data/portal.ts → takibimAcik) bu adres panele yönlenir.
+import PortalLayout from '../../../layouts/PortalLayout.astro';
+import Yonlendir from '../../../layouts/Yonlendir.astro';
+import { takibimAcik } from '../../../data/portal';
+---
+
+{
+  takibimAcik ? (
+    <PortalLayout title="Telefona Bildirim" alan="yonetim" manifest="/yonetim/bildirim.webmanifest">
+      <div class="auth">
+        <div class="auth-kart" data-bildirim>
+          <h1>Telefona Bildirim</h1>
+          <p>Siteden yeni randevu talebi geldiğinde bu telefona bildirim gelir. Bildirimde kişisel bilgi yer almaz.</p>
+          <div class="bilgi-kutu uyari" data-ios hidden>
+            <p>
+              <strong>iPhone için:</strong> Safari’de alttaki Paylaş düğmesine basıp <strong>“Ana Ekrana Ekle”</strong>yi seçin.
+              Ardından bu sayfayı ana ekrandaki simgeden açıp devam edin.
+            </p>
+          </div>
+          <div class="bilgi-kutu uyari" data-desteksiz hidden>
+            <p>Bu tarayıcı bildirimleri desteklemiyor. Android’de Chrome, iPhone’da ana ekrana eklenmiş Safari kullanın.</p>
+          </div>
+          <form class="form-grid" novalidate data-form>
+            <p class="form-hata" data-form-hata hidden role="alert"></p>
+            <div class="field">
+              <label for="kod">Panelde gösterilen 6 haneli kod</label>
+              <input class="input kod-girisi" id="kod" name="kod" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+            </div>
+            <button type="submit" class="btn btn-primary">Bildirimleri Aç</button>
+          </form>
+          <p class="bilgi-kutu" data-tamam hidden>Bildirimler bu telefonda açıldı. Bu sayfayı kapatabilirsiniz.</p>
+        </div>
+      </div>
+    </PortalLayout>
+  ) : (
+    <Yonlendir hedef="/yonetim/" />
+  )
+}
+
+{takibimAcik && <script src="../../../scripts/portal/bildirim.ts" />}

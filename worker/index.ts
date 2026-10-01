@@ -1,9 +1,10 @@
-// Cloudflare Worker — Instagram Reels bölümü ve danışan sistemi
+// Cloudflare Worker — Instagram Reels bölümü, randevu talepleri ve Takibim
 //
 // Sitenin sayfaları "dist" klasöründen doğrudan sunulur; bu dosya yalnızca /api/* adreslerinde çalışır:
 //   /api/reels               → son Reels videolarının listesi (JSON)
 //   /api/reels/gorsel/<id>   → videonun önizleme görseli (sitemizden sunulur)
-//   /api/portal/*            → danışan paneli ve diyetisyen (yönetici) paneli — ayrıntılar: worker/portal/store.ts
+//   /api/portal/*            → randevu talepleri, diyetisyen paneli bağlantısı ve Takibim (uçtan uca şifreli)
+//                              — ayrıntılar: worker/portal/store.ts. Şu an KAPALI (src/data/portal.ts → takibimAcik).
 //
 // Nasıl çalışır?
 // - Her 3 saatte bir (wrangler.jsonc → triggers) Instagram hesabındaki son videolar Instagram API'den alınır,
@@ -17,6 +18,7 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { PortalStore, type PortalEnv } from './portal/store';
+import { takibimAcik } from '../src/data/portal';
 
 export { PortalStore };
 
@@ -238,7 +240,11 @@ async function reelImage(id: string, request: Request, env: Env, ctx: ExecutionC
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/api/portal/')) return portalRequest(request, env);
+    if (url.pathname.startsWith('/api/portal/')) {
+      // Takibim kapalıyken (src/data/portal.ts → takibimAcik) bu adresler hiç çalışmaz; sunucuya danışan verisi gelmez.
+      if (!takibimAcik) return Response.json({ hata: 'Bulunamadı.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
+      return portalRequest(request, env);
+    }
     if (request.method === 'GET' || request.method === 'HEAD') {
       if (url.pathname === '/api/reels') return reelsList(request, env, ctx);
       const img = url.pathname.match(/^\/api\/reels\/gorsel\/(\d{1,30})$/);
@@ -250,6 +256,7 @@ export default {
 
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(store(env).sync().then((r) => console.log('Reels eşitleme:', r)));
-    ctx.waitUntil(portal(env).cron().then((r) => console.log('Danışan sistemi:', r)));
+    // Takibim kapalıyken de çalışır: önceki deneme sürümünden kalan tabloları siler, boş tabloları temizler.
+    ctx.waitUntil(portal(env).cron().then((r) => console.log('Panel temizliği:', r)));
   },
 } satisfies ExportedHandler<Env>;

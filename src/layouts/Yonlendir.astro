@@ -1,0 +1,22 @@
+---
+// Eski adresler için yönlendirme sayfası (arama motorlarına kapalı)
+interface Props {
+  hedef: string;
+}
+const { hedef } = Astro.props;
+---
+
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="refresh" content={`0; url=${hedef}`} />
+    <link rel="canonical" href={hedef} />
+    <title>Yönlendiriliyor…</title>
+  </head>
+  <body>
+    <p><a href={hedef}>Devam etmek için tıklayın</a>.</p>
+  </body>
+</html>

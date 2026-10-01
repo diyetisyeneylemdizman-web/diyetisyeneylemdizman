@@ -1,6 +1,7 @@
 ---
 import Icon from './Icon.astro';
 import { nav, site } from '../data/site';
+import { takibimAcik } from '../data/portal';
 
 const path = Astro.url.pathname;
 const isActive = (href: string) => path === href || path.startsWith(href);
@@ -42,9 +43,10 @@ const isActive = (href: string) => path === href || path.startsWith(href);
 
     <div class="header-actions">
       {
-        site.portalYayinda && (
-          <a href="/danisan/giris/" class="btn btn-outline btn-sm header-login" aria-label="Danışan Girişi" title="Danışan Girişi">
+        takibimAcik && (
+          <a href="/takibim/" class="btn btn-outline btn-sm header-login" aria-label="Takibim" title="Takibim">
             <Icon name="user" size={18} />
+            <span class="header-login-metin">Takibim</span>
           </a>
         )
       }
@@ -78,10 +80,10 @@ const isActive = (href: string) => path === href || path.startsWith(href);
         <Icon name="calendar" size={18} />Randevu Talebi Oluştur
       </a>
       {
-        site.portalYayinda && (
-          <a href="/danisan/giris/" class="btn btn-outline btn-block" style="margin-top:10px">
+        takibimAcik && (
+          <a href="/takibim/" class="btn btn-outline btn-block" style="margin-top:10px">
             <Icon name="user" size={18} />
-            Danışan Girişi
+            Takibim
           </a>
         )
       }
@@ -211,6 +213,14 @@ const isActive = (href: string) => path === href || path.startsWith(href);
   .header-login {
     padding-inline: 0.8em;
   }
+  .header-login-metin {
+    display: none;
+  }
+  @media (min-width: 1360px) {
+    .header-login-metin {
+      display: inline;
+    }
+  }
   .header-actions {
     display: flex;
     align-items: center;
@@ -283,7 +293,7 @@ const isActive = (href: string) => path === href || path.startsWith(href);
     text-decoration: none;
   }
 
-  @media (max-width: 1180px) {
+  @media (max-width: 1240px) {
     .main-nav {
       display: none;
     }

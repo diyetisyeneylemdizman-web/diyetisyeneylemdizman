@@ -3,7 +3,7 @@
 
 import { h, s, sayi, tarih, tarihKisa } from './lib';
 
-export type Nokta = { x: string; y: number };
+export type Nokta = { x: string; y: number; ev?: boolean };
 
 type Opts = {
   baslik: string;
@@ -16,6 +16,9 @@ type Opts = {
 const RENK = '#4a5543'; // adaçayı-800
 const HEDEF_RENK = '#9c5a45'; // terracotta-700
 const ZEMIN = '#fffdf9';
+
+const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const ayYil = (iso: string) => `${AY[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`;
 
 function niceStep(range: number, count: number) {
   const raw = range / count;
@@ -77,7 +80,7 @@ export function cizgiGrafik(o: Opts): HTMLElement {
         s(
           'text',
           { x: x(i), y: H - 8, 'text-anchor': pts.length === 1 ? 'middle' : i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle', class: 'eksen' },
-          tarihKisa(pts[i].x),
+          span > 300 * 86_400_000 ? ayYil(pts[i].x) : tarihKisa(pts[i].x),
         ),
       );
     // Hedef çizgisi
@@ -98,9 +101,16 @@ export function cizgiGrafik(o: Opts): HTMLElement {
         s('path', { d, fill: 'none', stroke: RENK, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }),
       );
     }
-    pts.forEach((p, i) =>
-      svg.append(s('circle', { cx: x(i), cy: y(p.y), r: 4, fill: RENK, stroke: ZEMIN, 'stroke-width': 2 })),
-    );
+    // Çok sayıda ölçümde noktalar çizgiyi kalabalıklaştırır: yalnızca son nokta ve evde girilenler gösterilir
+    const kalabalik = pts.length > 30;
+    pts.forEach((p, i) => {
+      if (kalabalik && !p.ev && i !== pts.length - 1) return;
+      svg.append(
+        p.ev
+          ? s('circle', { cx: x(i), cy: y(p.y), r: 4, fill: ZEMIN, stroke: RENK, 'stroke-width': 2 })
+          : s('circle', { cx: x(i), cy: y(p.y), r: 4, fill: RENK, stroke: ZEMIN, 'stroke-width': 2 }),
+      );
+    });
     // Son değer etiketi
     const son = pts[pts.length - 1];
     svg.append(
@@ -123,7 +133,7 @@ export function cizgiGrafik(o: Opts): HTMLElement {
       vurgu.setAttribute('visibility', 'visible');
       ipucu.replaceChildren(
         h('strong', null, `${sayi(p.y, o.basamak ?? 1)}${o.birim ? ` ${o.birim}` : ''}`),
-        h('span', null, tarih(p.x)),
+        h('span', null, `${tarih(p.x)}${p.ev ? ' · evde' : ''}`),
       );
       ipucu.hidden = false;
       const left = Math.min(Math.max(x(i) - 70, 0), W - 140);

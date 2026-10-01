@@ -1,5 +1,18 @@
-// Diyetisyen (yönetici) paneli — tek sayfa; bölümler adres çubuğundaki #bolum ile açılır
+// Diyetisyen paneli — tek sayfa uygulama.
+//
+// Tüm danışan kayıtları YALNIZCA bu bilgisayarda, tarayıcının içinde ve panel parolasıyla şifreli olarak durur.
+// ŞU ANKİ DÜZEN (src/data/portal.ts → takibimAcik = false): Panel hiçbir şekilde sunucuya bağlanmaz; randevu talepleri
+// WhatsApp'tan gelir ve "WhatsApp Talebi Ekle" ile mesaj yapıştırılarak eklenir. Takibim, belgeler ve mesajlar gizlidir.
+// takibimAcik = true olursa sunucu yalnızca şu işler için kullanılır (hepsi uçtan uca şifreli; sunucu içeriği okuyamaz):
+//   - Siteden gelen randevu talepleri (diyetisyenin açık anahtarıyla mühürlü gelir, burada açılır, sunucudan silinir)
+//   - Takibim: danışana özel anahtarla şifrelenmiş özet ve belgeler (danışanın telefonu okur)
+//   - Bildirimler (içeriksiz "yeni talep var" sinyali)
 
+import qrcode from 'qrcode-generator';
+import { fullAddress, site } from '../../data/site';
+import { hedefSecenekleri, randevuDurumlari, sinirlar, takibimAcik, takibimRizaSurumu, type RandevuDurumu } from '../../data/portal';
+import { Depo, ParolaHatasi, type Danisan, type PaketTanimi, type Randevu } from './depo';
+import { gelisimGorunumu, olcumSirala, olcumTablosu } from './gelisim';
 import {
   $,
   alan,
@@ -7,1214 +20,2366 @@ import {
   ApiError,
   boyut,
   bugun,
-  durumBandi,
-  formHatasi,
   formNesnesi,
-  formTemizle,
+  gunAdi,
+  gunFarki,
   h,
+  indir,
   mesgul,
-  para,
   pencere,
   sayi,
   tarih,
   tarihSaat,
   telefonGoster,
+  telNormal,
   toast,
   turAdi,
+  Uyari,
   whatsapp,
 } from './lib';
-import { cizgiGrafik } from './chart';
-import { belgeSiniri, hesapDurumlari, olcumAlanlari, paketDurumlari, randevuDurumlari } from '../../data/portal';
+import { adSadele, type TanitaSonuc } from './tanita';
+import { altiHane, b64url, ecdhAnahtarCifti, kimlik, muhurAc, rastgele, type Zarf } from './sifre';
+import {
+  belgeIndir,
+  belgeSil,
+  belgeYukle,
+  durumlariGuncelle,
+  linkAdresi,
+  panelBasligi,
+  qrAdresi,
+  takipAnahtari,
+  takipBaslat,
+  takipGonder,
+} from './takip';
+import type { Olcum, TakipBelge } from './tipler';
 
-const app = $('[data-uygulama]');
-let yonetici: { ad: string; eposta: string; mod: string; belgeler: Record<string, { baslik: string; yol: string }> };
+const kok = $('[data-uygulama]');
+let depo: Depo | null = null;
+const V = () => depo!.veri;
 
-const MENU: [string, string][] = [
-  ['ozet', 'Özet'],
-  ['danisanlar', 'Danışanlar'],
-  ['randevular', 'Randevular'],
-  ['paketler', 'Paketler'],
-  ['duyuru', 'Duyuru ve Mesaj'],
-  ['kayitlar', 'Erişim Kayıtları'],
-  ['hesap', 'Hesabım'],
-];
+// ================================================================ Şablonlar
 
-const ONAY_ADLARI: Record<string, string> = {
-  aydinlatma: 'Aydınlatma metni okundu',
-  acikRiza: 'Sağlık verileri açık rızası',
-  sozlesme: 'Kullanım sözleşmesi',
-  veli: 'Veli / vasi onayı',
+const SABLONLAR: Record<string, { ad: string; metin: string }> = {
+  onayYuzyuze: {
+    ad: 'Randevu onayı (yüz yüze)',
+    metin:
+      'Merhaba {ad}, {gun} {tarih} saat {saat} için yüz yüze randevunuz onaylanmıştır.\n\nAdres: {adres}\nKonum: {konum}\n\nGörüşmek üzere,\nDyt. Eylem Dizman',
+  },
+  onayOnline: {
+    ad: 'Randevu onayı (online)',
+    metin: 'Merhaba {ad}, {gun} {tarih} saat {saat} için online randevunuz onaylanmıştır. Randevu saatinde sizi arayacağım.\n\nDyt. Eylem Dizman',
+  },
+  uygunDegil: {
+    ad: 'Talep edilen saat uygun değil',
+    metin:
+      'Merhaba {ad}, randevu talebiniz için teşekkür ederim. Talep ettiğiniz gün ve saat dolu olduğu için randevunuzu oluşturamadım. Size uygun başka bir gün ve saati yazabilir misiniz?\n\nDyt. Eylem Dizman',
+  },
+  hatirlatma: {
+    ad: 'Randevu hatırlatma',
+    metin:
+      'Merhaba {ad}, {gun} {tarih} saat {saat} randevunuzu hatırlatmak isterim. Katılamayacaksanız lütfen önceden haber verin.\n\nDyt. Eylem Dizman',
+  },
+  paketBitiyor: {
+    ad: 'Paket bitiyor',
+    metin: 'Merhaba {ad}, {paket} paketiniz {bitis} tarihinde sona eriyor. Devam etmek isterseniz bana yazabilirsiniz.\n\nDyt. Eylem Dizman',
+  },
+  odeme: {
+    ad: 'Ödeme bilgisi',
+    metin:
+      'Merhaba {ad}, {paket} için ödeme bilgileri:\n\nIBAN: TR00 0000 0000 0000 0000 0000 00\nAlıcı: Eylem Dizman\nAçıklama: {adSoyad}\n\nDyt. Eylem Dizman',
+  },
+  takibim: {
+    ad: 'Takibim bağlantısı',
+    metin:
+      'Merhaba {ad}, Takibim sayfanızın bağlantısı:\n{baglanti}\n\nBağlantıyı açınca istenecek 6 haneli kodu size telefonda ileteceğim. Bağlantıyı kimseyle paylaşmayın.\n\nDyt. Eylem Dizman',
+  },
+  yeniSonuc: {
+    ad: 'Yeni ölçüm bildirimi',
+    metin: 'Merhaba {ad}, yeni ölçüm sonuçlarınız Takibim sayfanıza eklendi: {takibim}\n\nDyt. Eylem Dizman',
+  },
+  genel: { ad: 'Genel mesaj', metin: 'Merhaba {ad}, ' },
 };
 
-const durumEtiketi = (durum: string, sozluk: Record<string, string>) => h('span', { class: `durum ${durum}` }, sozluk[durum] ?? durum);
-const ilkAd = (ad: string) => ad.split(' ')[0];
+const sablon = (ad: keyof typeof SABLONLAR | string, d: Record<string, string | undefined>) =>
+  (V().sablonlar[ad] ?? SABLONLAR[ad]?.metin ?? '').replace(/\{(\w+)\}/g, (m, k) => d[k] ?? m);
 
-// ---------------------------------------------------------------- WhatsApp şablonları
+const ilkAd = (ad: string) => ad.trim().split(/\s+/)[0];
 
-const imza = '\nDyt. Eylem Dizman';
-const wa = {
-  randevuOnay: (ad: string, t: string, s: string, tur: string) =>
-    `Merhaba ${ilkAd(ad)}, ${tarih(t, true)} saat ${s} ${turAdi(tur).toLocaleLowerCase('tr')} randevunuz onaylanmıştır.${imza}`,
-  hatirlatma: (ad: string, t: string, s: string, tur: string) =>
-    `Merhaba ${ilkAd(ad)}, ${tarih(t, true)} saat ${s} ${turAdi(tur).toLocaleLowerCase('tr')} randevunuzu hatırlatmak isteriz. Katılamayacaksanız lütfen önceden haber veriniz.${imza}`,
-  odeme: (ad: string, paket: string) => `Merhaba ${ilkAd(ad)}, ${paket} talebiniz alınmıştır. Ödeme bilgileri: ${imza}`,
-  sifre: (ad: string, link: string) =>
-    `Merhaba ${ilkAd(ad)}, danışan paneli şifrenizi yenilemek için aşağıdaki bağlantıyı kullanabilirsiniz (48 saat geçerlidir, yalnızca bir kez kullanılabilir):\n${link}${imza}`,
-  genel: (ad: string) => `Merhaba ${ilkAd(ad)}, `,
-};
+function randevuDegiskenleri(r: { ad: string; tarih: string; saat: string }) {
+  return {
+    ad: ilkAd(r.ad),
+    adSoyad: r.ad,
+    tarih: r.tarih ? tarih(r.tarih) : '',
+    gun: r.tarih ? gunAdi(r.tarih) : '',
+    saat: r.saat,
+    adres: fullAddress,
+    konum: site.mapsUrl,
+  };
+}
+
 const waDugme = (telefon: string, metin: string, etiket = 'WhatsApp') =>
   telefon ? h('a', { class: 'btn btn-wa btn-xs', href: whatsapp(telefon, metin), target: '_blank', rel: 'noopener' }, etiket) : null;
 
-// ---------------------------------------------------------------- Başlangıç
+// ================================================================ Küçük yardımcılar
 
-async function cikis() {
-  await api('POST', '/yonetim/cikis').catch(() => {});
-  location.replace('/yonetim/giris/');
+const kart = (baslik: string | null, ...icerik: (Node | null | false | undefined)[]) =>
+  h('section', { class: 'kart' }, baslik ? h('h2', null, baslik) : null, ...icerik);
+
+const bolumBasligi = (baslik: string, alt?: string | Node | null, ...eylemler: (Node | null)[]) =>
+  h(
+    'div',
+    { class: 'bolum-baslik' },
+    h('div', null, h('h1', null, baslik), alt ? h('p', null, alt) : null),
+    eylemler.some(Boolean) ? h('div', { class: 'eylemler' }, ...eylemler) : null,
+  );
+
+const dugme = (metin: string, onclick: (e: Event) => unknown, sinif = 'btn btn-outline btn-sm', ek: Record<string, unknown> = {}) =>
+  h('button', { type: 'button', class: sinif, onclick, ...ek }, metin);
+
+const etiket = (metin: string, sinif: string) => h('span', { class: `durum ${sinif}` }, metin);
+const bos = (metin: string) => h('p', { class: 'bos' }, metin);
+const danisanBul = (id?: string) => (id ? V().danisanlar.find((d) => d.id === id) : undefined);
+const telefonlaBul = (tel: string) => V().danisanlar.find((d) => telNormal(d.telefon) === telNormal(tel));
+
+const input = (ad: string, deger: unknown = '', ek: Record<string, unknown> = {}) =>
+  h('input', { class: 'input', name: ad, value: deger === undefined || deger === null ? '' : String(deger), ...ek });
+const sayiAlani = (ad: string, deger?: number, ek: Record<string, unknown> = {}) =>
+  input(ad, deger ?? '', { inputmode: 'decimal', autocomplete: 'off', ...ek });
+const metinAlani = (ad: string, deger = '', ek: Record<string, unknown> = {}) =>
+  h('textarea', { class: 'textarea', name: ad, rows: 3, ...ek }, deger);
+const secim = (ad: string, secenekler: [string, string][], deger = '') =>
+  h('select', { class: 'select', name: ad }, secenekler.map(([v, t]) => h('option', { value: v, selected: v === deger ? true : null }, t)));
+
+const ondalik = (v: unknown, etiket_: string, min: number, max: number): number | undefined => {
+  const s = String(v ?? '').trim().replace(',', '.');
+  if (!s) return undefined;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < min || n > max) throw new Uyari(`${etiket_} ${min}–${max} arasında olmalıdır.`, etiket_);
+  return Math.round(n * 10) / 10;
+};
+
+const durumAdi = (d: RandevuDurumu) => randevuDurumlari[d];
+const randevuSirala = (a: Randevu, b: Randevu) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat);
+
+function takipEtiketi(d: Danisan) {
+  const t = d.takip;
+  if (!t) return etiket('Takibim yok', 'pasif');
+  if (t.durum === 'eslesti') return etiket(t.bekleyenGonderim ? 'Takibim: gönderilemedi' : 'Takibim açık', t.bekleyenGonderim ? 'talep' : 'onaylandi');
+  if (t.durum === 'bekliyor') return etiket('QR okutulmadı', 'talep');
+  if (t.durum === 'kapatildi') return etiket('Danışan kapattı', 'iptal');
+  return etiket('QR süresi doldu', 'pasif');
 }
 
-async function basla() {
-  durumBandi();
-  try {
-    yonetici = await api('GET', '/yonetim/ben');
-  } catch (e) {
-    if (e instanceof ApiError && (e.status === 401 || e.status === 503)) return location.replace('/yonetim/giris/');
-    app.replaceChildren(h('p', { class: 'form-hata' }, (e as Error).message));
-    return;
+/** Bir danışanda değişiklik olduğunda: kaydet ve Takibim'i güncelle */
+async function degisti(d?: Danisan, sessiz = false) {
+  if (d) d.guncelleme = Date.now();
+  await depo!.kaydet();
+  if (d?.takip && (d.takip.durum === 'eslesti' || d.takip.durum === 'bekliyor')) {
+    const r = await takipGonder(depo!, d);
+    if (!sessiz) {
+      if (r === 'tamam') toast('Kaydedildi; danışanın Takibim sayfası güncellendi.');
+      else if (r === 'hata') toast('Kaydedildi; Takibim şu an güncellenemedi, bağlantı gelince yeniden denenecek.', 'hata');
+      else if (r === 'kapatildi') toast('Kaydedildi. Danışan Takibim\'i kapatmış.', 'hata');
+    }
+  } else if (!sessiz) toast('Kaydedildi.');
+}
+
+// ================================================================ Açılış: kurulum / kilit
+
+function ortaKart(...icerik: Node[]) {
+  document.body.classList.remove('panel-acik');
+  kok.replaceChildren(h('div', { class: 'auth' }, h('div', { class: 'auth-kart' }, ...icerik)));
+}
+
+function parolaKurallari(p: string) {
+  if (p.length < 10) throw new Uyari('Parola en az 10 karakter olmalıdır.', 'Parola');
+  if (!/[A-Za-zÇĞİÖŞÜçğıöşü]/.test(p) || !/\d/.test(p)) throw new Uyari('Parolada en az bir harf ve bir rakam olmalıdır.', 'Parola');
+}
+
+function kurulumEkrani() {
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
+    alan('Parola', h('input', { class: 'input', type: 'password', name: 'parola', autocomplete: 'new-password', required: true }), 'En az 10 karakter; harf ve rakam içersin.'),
+    alan('Parola (tekrar)', h('input', { class: 'input', type: 'password', name: 'tekrar', autocomplete: 'new-password', required: true })),
+    h(
+      'div',
+      { class: 'bilgi-kutu uyari' },
+      h('p', null, h('strong', null, 'Parolayı unutmayın. '), 'Kayıtlar bu parolayla şifrelenir; parola unutulursa kayıtlar açılamaz ve kimse kurtaramaz. Parolayı güvenli bir yere yazın.'),
+    ),
+    h('button', { type: 'submit', class: 'btn btn-primary' }, 'Paneli Oluştur'),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]');
+    await mesgul(btn, async () => {
+      try {
+        const f = formNesnesi(form);
+        parolaKurallari(f.parola);
+        if (f.parola !== f.tekrar) throw new Uyari('Parolalar aynı değil.', 'Parola (tekrar)');
+        depo = await Depo.olustur(f.parola);
+        location.hash = '#ozet';
+        uygulama();
+      } catch (err) {
+        hataGoster(form, err);
+      }
+    });
+  });
+  ortaKart(
+    h('h1', null, 'Diyetisyen Paneli'),
+    h(
+      'p',
+      null,
+      'Danışan kayıtlarınız yalnızca bu bilgisayarda, şifreli olarak saklanır. Başlamak için bir panel parolası belirleyin.',
+    ),
+    form,
+    h('hr', { class: 'ayrac' }),
+    h('p', { class: 'form-alt' }, 'Başka bilgisayarda kullandığınız paneli buraya taşımak mı istiyorsunuz? ', dugme('Yedekten Yükle', () => yedektenYukle(), 'metin-dugme')),
+  );
+}
+
+function hataGoster(form: HTMLElement, err: unknown) {
+  const kutu = form.querySelector<HTMLElement>('[data-form-hata]');
+  const mesaj = err instanceof Uyari || err instanceof ApiError || err instanceof ParolaHatasi ? err.message : 'Beklenmeyen bir hata oluştu.';
+  if (!(err instanceof Uyari || err instanceof ApiError || err instanceof ParolaHatasi)) console.error(err);
+  if (kutu) {
+    kutu.textContent = mesaj;
+    kutu.hidden = false;
+  } else toast(mesaj, 'hata');
+  const alanAdi = err instanceof Uyari ? err.alan : undefined;
+  if (alanAdi) form.querySelector<HTMLElement>(`[data-alan="${CSS.escape(alanAdi)}"]`)?.focus();
+}
+
+function kilitEkrani(mesaj?: string) {
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: !mesaj, role: 'alert' }, mesaj ?? ''),
+    alan('Parola', h('input', { class: 'input', type: 'password', name: 'parola', autocomplete: 'current-password', required: true })),
+    h('button', { type: 'submit', class: 'btn btn-primary' }, 'Paneli Aç'),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]');
+    await mesgul(btn, async () => {
+      try {
+        depo = await Depo.ac(formNesnesi(form).parola);
+        if (!location.hash || location.hash === '#') location.hash = '#ozet';
+        uygulama();
+      } catch (err) {
+        hataGoster(form, err);
+        form.querySelector<HTMLInputElement>('input[name=parola]')!.select();
+      }
+    });
+  });
+  ortaKart(
+    h('h1', null, 'Diyetisyen Paneli'),
+    h('p', null, 'Panel kilitli. Devam etmek için panel parolanızı girin.'),
+    form,
+    h(
+      'p',
+      { class: 'form-alt' },
+      dugme('Yedekten Yükle', () => yedektenYukle(), 'metin-dugme'),
+      ' · ',
+      dugme('Parolamı Unuttum', () => parolaUnuttum(), 'metin-dugme'),
+    ),
+  );
+  setTimeout(() => form.querySelector<HTMLInputElement>('input')?.focus(), 50);
+}
+
+async function parolaUnuttum() {
+  await pencere({
+    baslik: 'Parolamı Unuttum',
+    tehlikeli: true,
+    kaydet: 'Tüm Verileri Sil',
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h(
+        'p',
+        null,
+        'Kayıtlar panel parolasıyla şifrelendiği için parola olmadan açılamaz. Yedek dosyanız varsa, o yedeği aldığınız sıradaki parolayla "Yedekten Yükle" seçeneğini kullanabilirsiniz.',
+      ),
+      h('p', null, 'Hiçbir yedek yoksa yapılabilecek tek şey, bu bilgisayardaki panel verilerini tamamen silip yeniden başlamaktır.'),
+      alan('Onay için SİL yazın', input('onay', '', { autocomplete: 'off' })),
+    ),
+    onKaydet: async (form) => {
+      if (formNesnesi(form).onay.trim().toLocaleUpperCase('tr') !== 'SİL') throw new Uyari('Onay için SİL yazın.', 'Onay için SİL yazın');
+      await yerelVerileriSil();
+    },
+  });
+}
+
+async function yerelVerileriSil() {
+  await new Promise<void>((resolve) => {
+    const r = indexedDB.deleteDatabase('diyetisyen-paneli');
+    r.onsuccess = r.onerror = r.onblocked = () => resolve();
+  });
+  depo = null;
+  location.hash = '';
+  location.reload();
+}
+
+async function yedektenYukle() {
+  await pencere({
+    baslik: 'Yedekten Yükle',
+    kaydet: 'Yükle',
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h('p', null, 'Panelden indirdiğiniz yedek dosyasını seçin ve yedeği aldığınız sıradaki panel parolasını girin. Bu bilgisayardaki mevcut panel kayıtlarının yerine geçer.'),
+      alan('Yedek dosyası', h('input', { class: 'input', type: 'file', name: 'dosya', accept: '.json,application/json' })),
+      alan('Parola', h('input', { class: 'input', type: 'password', name: 'parola', autocomplete: 'current-password' })),
+    ),
+    onKaydet: async (form) => {
+      const dosya = form.querySelector<HTMLInputElement>('input[type=file]')!.files?.[0];
+      if (!dosya) throw new Uyari('Yedek dosyasını seçin.', 'Yedek dosyası');
+      try {
+        depo = await Depo.yedektenYukle(dosya, formNesnesi(form).parola);
+      } catch (e) {
+        throw new Uyari(e instanceof Error ? e.message : 'Yedek açılamadı.', 'Parola');
+      }
+      toast('Yedek yüklendi.');
+      location.hash = '#ozet';
+      uygulama();
+    },
+  });
+}
+
+// ================================================================ Uygulama iskeleti
+
+const MENU: [string, string][] = [
+  ['ozet', 'Özet'],
+  ['talepler', 'Randevu Talepleri'],
+  ['randevular', 'Randevular'],
+  ['danisanlar', 'Danışanlar'],
+  ['duyuru', 'Duyuru'],
+  ['paketler', 'Paketler'],
+  ['ayarlar', 'Ayarlar'],
+];
+
+let zamanlayicilar: number[] = [];
+let sonHareket = Date.now();
+let ilkAcilis = true;
+
+function uygulama() {
+  document.body.classList.add('panel-acik');
+  for (const z of zamanlayicilar) clearInterval(z);
+  zamanlayicilar = [
+    window.setInterval(() => {
+      if (Date.now() - sonHareket > sinirlar.panelKilitDakika * 60_000) kilitle();
+    }, 30_000),
+  ];
+  if (takibimAcik)
+    zamanlayicilar.push(
+      window.setInterval(() => void talepleriAl(), 60_000),
+      window.setInterval(() => void durumlariGuncelle(depo!).then(() => cizSessiz()).catch(() => undefined), 5 * 60_000),
+    );
+  ustEylemler();
+  ciz();
+  if (takibimAcik) {
+    void talepleriAl();
+    void durumlariGuncelle(depo!).then(() => cizSessiz()).catch(() => undefined);
   }
-  document
-    .querySelector('[data-ust-eylemler]')
-    ?.replaceChildren(h('span', { class: 'hint' }, yonetici.ad), h('button', { type: 'button', class: 'btn btn-outline btn-sm', onclick: cikis }, 'Çıkış Yap'));
-  window.addEventListener('hashchange', yonlendir);
-  yonlendir();
+  if (ilkAcilis) {
+    ilkAcilis = false;
+    for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) addEventListener(ev, () => (sonHareket = Date.now()), { passive: true });
+    addEventListener('hashchange', () => depo && ciz());
+  }
 }
 
-let yukleniyor = 0;
-async function yonlendir() {
+async function kilitle() {
+  if (!depo) return;
+  await depo.simdiKaydet().catch(() => undefined);
+  depo = null;
+  for (const z of zamanlayicilar) clearInterval(z);
+  zamanlayicilar = [];
+  document.querySelector('[data-ust-eylemler]')?.replaceChildren();
+  document.title = 'Diyetisyen Paneli | Diyetisyen Eylem Dizman';
+  kilitEkrani();
+}
+
+function ustEylemler() {
+  document.querySelector('[data-ust-eylemler]')?.replaceChildren(dugme('Kilitle', () => kilitle(), 'btn btn-outline btn-sm'));
+}
+
+const yeniTalepSayisi = () => V().randevular.filter((r) => r.durum === 'talep' && !r.okundu).length;
+
+/** Kullanıcı bir alana yazarken ekranı yeniden çizmemek için */
+function cizSessiz() {
+  const aktif = document.activeElement;
+  if (aktif && kok.contains(aktif) && /INPUT|TEXTAREA|SELECT/.test(aktif.tagName)) return;
+  if (document.querySelector('dialog[open]')) return;
+  ciz();
+}
+
+function ciz() {
+  if (!depo) return;
   const [yol] = location.hash.slice(1).split('?');
-  const [bolum, id, sekme] = yol.split('/');
-  const aktif = MENU.some(([k]) => k === bolum) || bolum === 'danisan' ? bolum : 'ozet';
+  const [bolum, id, sekme] = (yol || 'ozet').split('/');
+  const n = yeniTalepSayisi();
+  document.title = `${n ? `(${n}) ` : ''}Diyetisyen Paneli | Diyetisyen Eylem Dizman`;
   const menu = h(
     'nav',
-    { class: 'panel-menu', 'aria-label': 'Panel bölümleri' },
-    MENU.map(([k, ad]) => h('a', { href: `#${k}`, 'aria-current': k === aktif || (aktif === 'danisan' && k === 'danisanlar') ? 'page' : null }, ad)),
+    { class: 'panel-menu', 'aria-label': 'Panel menüsü' },
+    MENU.map(([k, ad]) =>
+      h(
+        'a',
+        { href: `#${k}`, 'aria-current': bolum === k || (bolum === 'danisan' && k === 'danisanlar') ? 'page' : null },
+        ad,
+        k === 'talepler' && n ? h('span', { class: 'rozet', 'aria-label': `${n} yeni` }, String(n)) : null,
+      ),
+    ),
   );
-  const icerik = h('div', { class: 'panel-icerik' }, h('p', { class: 'yukleniyor' }, 'Yükleniyor…'));
-  app.replaceChildren(h('div', { class: 'panel' }, menu, icerik));
-  const sira = ++yukleniyor;
+  const icerik = h('div', { class: 'panel-icerik' });
+  kok.replaceChildren(h('div', { class: 'panel' }, menu, icerik));
+  let govde: Node[];
   try {
-    let nodes: Node[];
-    if (aktif === 'danisan' && id) nodes = await danisanDetay(id, sekme || 'genel');
-    else if (aktif === 'danisanlar') nodes = await danisanlarBolumu();
-    else if (aktif === 'randevular') nodes = await randevularBolumu();
-    else if (aktif === 'paketler') nodes = await paketlerBolumu();
-    else if (aktif === 'duyuru') nodes = await duyuruBolumu();
-    else if (aktif === 'kayitlar') nodes = await kayitlarBolumu();
-    else if (aktif === 'hesap') nodes = hesapBolumu();
-    else nodes = await ozetBolumu();
-    if (sira === yukleniyor) icerik.replaceChildren(...nodes);
+    switch (bolum) {
+      case 'talepler':
+        govde = talepler();
+        break;
+      case 'randevular':
+        govde = randevular();
+        break;
+      case 'danisanlar':
+        govde = danisanlar();
+        break;
+      case 'danisan':
+        govde = danisanDosyasi(id, sekme || 'olcumler');
+        break;
+      case 'duyuru':
+        govde = duyuru();
+        break;
+      case 'paketler':
+        govde = paketler();
+        break;
+      case 'ayarlar':
+        govde = ayarlar();
+        break;
+      default:
+        govde = ozet();
+    }
   } catch (e) {
-    if (e instanceof ApiError && e.status === 401) return location.replace('/yonetim/giris/');
-    icerik.replaceChildren(h('p', { class: 'form-hata' }, (e as Error).message));
+    console.error(e);
+    govde = [bos('Bu bölüm açılamadı.')];
   }
+  icerik.append(...govde);
 }
 
-const yenile = () => yonlendir();
+// ================================================================ Randevu talepleri (sunucudan)
 
-const baslik = (b: string, alt?: string, ...eylem: (Node | null)[]) =>
-  h('div', { class: 'bolum-baslik' }, h('div', null, h('h1', null, b), alt ? h('p', null, alt) : null), h('div', { class: 'eylemler' }, eylem));
+interface GelenTalep {
+  ad?: unknown;
+  telefon?: unknown;
+  tur?: unknown;
+  konu?: unknown;
+  tarih?: unknown;
+  saat?: unknown;
+  not?: unknown;
+  vki?: unknown;
+  gonderim?: unknown;
+}
 
-const kart = (b: string | null, ...icerik: (Node | null | false)[]) => h('div', { class: 'kart' }, b ? h('h2', null, b) : null, ...icerik);
+const metin = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
 
-// ============================================================== Özet
+let talepAliniyor = false;
+async function talepleriAl() {
+  if (!takibimAcik || !depo?.veri.sunucu || talepAliniyor) return;
+  talepAliniyor = true;
+  let yeni = 0;
+  try {
+    const { talepler: gelen } = await api<{ talepler: { id: string; tarih: number; zarf: Zarf }[] }>('GET', '/gelen', undefined, panelBasligi(depo));
+    for (const g of gelen) {
+      if (!depo) return;
+      if (V().randevular.some((r) => r.id === g.id)) {
+        await api('DELETE', `/gelen/${g.id}`, undefined, panelBasligi(depo)).catch(() => undefined);
+        continue;
+      }
+      let t: GelenTalep;
+      try {
+        t = await muhurAc<GelenTalep>(V().sunucu!.ozel, g.zarf);
+      } catch {
+        continue; // başka bir anahtarla mühürlenmiş (ör. panel yeniden bağlandı) — Ayarlar'dan temizlenebilir
+      }
+      const telefon = telNormal(metin(t.telefon, 20));
+      const tarih_ = metin(t.tarih, 10);
+      const saat_ = metin(t.saat, 5);
+      const r: Randevu = {
+        id: g.id,
+        ad: metin(t.ad, 80) || 'İsimsiz',
+        telefon,
+        tarih: /^\d{4}-\d{2}-\d{2}$/.test(tarih_) ? tarih_ : '',
+        saat: /^\d{2}:\d{2}$/.test(saat_) ? saat_ : '',
+        tur: t.tur === 'online' ? 'online' : 'yuzyuze',
+        konu: metin(t.konu, 120),
+        not: metin(t.not, 600),
+        vki: metin(t.vki, 80),
+        durum: 'talep',
+        kaynak: 'site',
+        olusturma: g.tarih,
+      };
+      r.danisanId = telefonlaBul(telefon)?.id;
+      V().randevular.push(r);
+      await depo.simdiKaydet();
+      await api('DELETE', `/gelen/${g.id}`, undefined, panelBasligi(depo)).catch(() => undefined);
+      yeni++;
+    }
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {
+      // Panel başka bir bilgisayardan yeniden bağlanmış
+      sunucuUyarisi = 'Panelin sunucu bağlantısı geçersiz. Ayarlar → Sunucu Bağlantısı bölümünden yeniden bağlayın.';
+    }
+  } finally {
+    talepAliniyor = false;
+  }
+  if (yeni && depo) {
+    toast(`${yeni} yeni randevu talebi geldi.`);
+    if (document.hidden && 'Notification' in window && Notification.permission === 'granted')
+      new Notification('Yeni randevu talebi', { body: 'Ayrıntılar diyetisyen panelinde.', icon: '/icon-192.png', tag: 'dp-randevu' });
+    cizSessiz();
+  }
+}
+let sunucuUyarisi = '';
 
-async function ozetBolumu(): Promise<Node[]> {
-  const o = await api<any>('GET', '/yonetim/ozet');
-  const tile = (etiket: string, deger: number, href?: string) =>
-    h('a', { class: 'kart gosterge', href: href ?? null, style: 'text-decoration:none;color:inherit' }, h('span', { class: 'etiket' }, etiket), h('span', { class: 'deger' }, String(deger)));
+// ================================================================ Özet
 
-  const bekleyen = o.randevular.filter((r: any) => r.durum === 'talep');
-  const yaklasan = o.randevular.filter((r: any) => r.durum === 'onaylandi');
+function ozet(): Node[] {
+  const bu = bugun();
+  const yarin = new Date(Date.parse(`${bu}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  const onayli = V().randevular.filter((r) => r.durum === 'onaylandi').sort(randevuSirala);
+  const bugunkuler = onayli.filter((r) => r.tarih === bu);
+  const yarinkiler = onayli.filter((r) => r.tarih === yarin);
+  const talepSayisi = V().randevular.filter((r) => r.durum === 'talep').length;
+  const bitenler = V().danisanlar.filter((d) => d.paket?.bitis && gunFarki(bu, d.paket.bitis) >= 0 && gunFarki(bu, d.paket.bitis) <= 7);
+  const gonderilemeyen = V().danisanlar.filter((d) => d.takip?.bekleyenGonderim);
+  const takibim = V().danisanlar.filter((d) => d.takip?.durum === 'eslesti').length;
+  const haftaSonu = new Date(Date.parse(`${bu}T00:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
+  const haftalik = onayli.filter((r) => r.tarih >= bu && r.tarih <= haftaSonu).length;
+
+  const uyarilar: Node[] = [];
+  if (takibimAcik && !V().sunucu)
+    uyarilar.push(
+      h(
+        'div',
+        { class: 'bilgi-kutu uyari' },
+        h('p', null, h('strong', null, 'Panel sunucuya bağlı değil. '), 'Sitedeki randevu talepleri panele düşmesi ve Takibim için bir kez bağlanın.'),
+        dugme('Şimdi Bağlan', () => sunucuBagla(), 'btn btn-primary btn-sm'),
+      ),
+    );
+  if (sunucuUyarisi) uyarilar.push(h('div', { class: 'bilgi-kutu uyari' }, h('p', null, sunucuUyarisi)));
+  const yedekGun = V().sonYedek ? gunFarki(new Date(V().sonYedek! + 3 * 3600_000).toISOString().slice(0, 10), bu) : null;
+  if (V().danisanlar.length && (yedekGun === null || yedekGun >= 7))
+    uyarilar.push(
+      h(
+        'div',
+        { class: 'bilgi-kutu' },
+        h('p', null, h('strong', null, 'Yedek alın. '), yedekGun === null ? 'Henüz hiç yedek alınmadı. ' : `Son yedek ${yedekGun} gün önce alındı. `, 'Kayıtlar yalnızca bu bilgisayarda durduğu için haftada bir yedek alıp USB belleğe veya ikinci bir diske kaydedin.'),
+        dugme('Yedek İndir', () => yedekIndir(), 'btn btn-outline btn-sm'),
+      ),
+    );
+
+  const randevuSatiri = (r: Randevu, yarinMi: boolean) =>
+    h(
+      'li',
+      null,
+      h(
+        'div',
+        { class: 'ana' },
+        h('strong', null, `${r.saat} · `, danisanBul(r.danisanId) ? h('a', { href: `#danisan/${r.danisanId}` }, r.ad) : r.ad),
+        h('span', null, ` ${turAdi(r.tur)}${r.konu ? ` · ${r.konu}` : ''}`),
+      ),
+      h(
+        'div',
+        { class: 'eylemler' },
+        yarinMi
+          ? waDugme(r.telefon, sablon('hatirlatma', randevuDegiskenleri(r)), 'Hatırlat')
+          : dugme('Tamamlandı', () => randevuDurum(r, 'tamamlandi'), 'btn btn-outline btn-xs'),
+      ),
+    );
 
   return [
-    baslik('Özet', `Bugün: ${tarih(o.bugun, true)}`),
+    bolumBasligi('Özet', `Bugün: ${tarih(bu, true)}`, dugme('WhatsApp Talebi Ekle', () => whatsappTalebiEkle(), 'btn btn-primary btn-sm')),
+    ...uyarilar,
     h(
       'div',
       { class: 'izgara' },
-      tile('Danışan', o.sayilar.danisan, '#danisanlar'),
-      tile('Aktif Paket', o.sayilar.aktifPaket),
-      tile('Onay Bekleyen Randevu', o.sayilar.bekleyenRandevu, '#randevular'),
-      tile('Bekleyen Paket Talebi', o.sayilar.bekleyenPaket),
+      h('a', { class: 'kart gosterge tiklanir', href: '#talepler' }, h('span', { class: 'etiket' }, 'Bekleyen Talep'), h('span', { class: 'deger' }, String(talepSayisi))),
+      h('div', { class: 'kart gosterge' }, h('span', { class: 'etiket' }, 'Bugünkü Randevu'), h('span', { class: 'deger' }, String(bugunkuler.length))),
+      h('a', { class: 'kart gosterge tiklanir', href: '#danisanlar' }, h('span', { class: 'etiket' }, 'Danışan'), h('span', { class: 'deger' }, String(V().danisanlar.length))),
+      takibimAcik
+        ? h('div', { class: 'kart gosterge' }, h('span', { class: 'etiket' }, 'Takibim Kullanan'), h('span', { class: 'deger' }, String(takibim)))
+        : h('a', { class: 'kart gosterge tiklanir', href: '#randevular' }, h('span', { class: 'etiket' }, '7 Gün İçindeki Randevu'), h('span', { class: 'deger' }, String(haftalik))),
+    ),
+    kart('Bugün', bugunkuler.length ? h('ul', { class: 'liste' }, bugunkuler.map((r) => randevuSatiri(r, false))) : bos('Bugün onaylı randevu yok.')),
+    kart(
+      'Yarın',
+      h('p', { class: 'hint' }, 'Hatırlat düğmesi, hazır hatırlatma mesajıyla WhatsApp\'ı açar.'),
+      yarinkiler.length ? h('ul', { class: 'liste' }, yarinkiler.map((r) => randevuSatiri(r, true))) : bos('Yarın onaylı randevu yok.'),
     ),
     kart(
-      'Onay Bekleyen Randevu Talepleri',
-      bekleyen.length ? h('ul', { class: 'liste' }, bekleyen.map((r: any) => randevuSatiri(r, true))) : h('p', { class: 'bos' }, 'Bekleyen talep yok.'),
-    ),
-    kart(
-      'Yaklaşan Randevular (7 Gün)',
-      h('p', { class: 'hint' }, 'Yarınki randevular için danışanın panelinde otomatik hatırlatma oluşur; WhatsApp ile de hatırlatabilirsiniz.'),
-      yaklasan.length ? h('ul', { class: 'liste' }, yaklasan.map((r: any) => randevuSatiri(r, true))) : h('p', { class: 'bos' }, 'Yaklaşan randevu yok.'),
-    ),
-    kart(
-      'Paket Talepleri',
-      o.paketTalepleri.length
+      'Paketi 7 Gün İçinde Bitenler',
+      bitenler.length
         ? h(
             'ul',
             { class: 'liste' },
-            o.paketTalepleri.map((p: any) =>
+            bitenler.map((d) =>
               h(
                 'li',
                 null,
-                h('div', { class: 'ana' }, h('a', { href: `#danisan/${p.danisanId}/paketler` }, h('strong', null, p.ad)), h('span', null, `${p.paket} · ${tarihSaat(p.tarih)}${p.fiyat !== null ? ` · ${para(p.fiyat)}` : ''}`)),
-                h(
-                  'div',
-                  { class: 'eylemler' },
-                  durumEtiketi(p.durum, paketDurumlari),
-                  waDugme(p.telefon, wa.odeme(p.ad, p.paket), 'Ödeme Bilgisi Gönder'),
-                  h('a', { class: 'btn btn-outline btn-xs', href: `#danisan/${p.danisanId}/paketler` }, 'Düzenle'),
-                ),
+                h('div', { class: 'ana' }, h('strong', null, h('a', { href: `#danisan/${d.id}/paket` }, d.ad)), h('span', null, ` ${d.paket!.ad} · bitiş ${tarih(d.paket!.bitis)}`)),
+                h('div', { class: 'eylemler' }, waDugme(d.telefon, sablon('paketBitiyor', { ad: ilkAd(d.ad), paket: d.paket!.ad, bitis: tarih(d.paket!.bitis) }), 'Hatırlat')),
               ),
             ),
           )
-        : h('p', { class: 'bos' }, 'Bekleyen paket talebi yok.'),
+        : bos('Önümüzdeki 7 günde biten paket yok.'),
     ),
-    o.bitenPaketler.length
+    takibimAcik && gonderilemeyen.length
       ? kart(
-          'Süresi Dolacak Paketler (7 Gün)',
-          h(
-            'ul',
-            { class: 'liste' },
-            o.bitenPaketler.map((p: any) =>
-              h(
-                'li',
-                null,
-                h('div', { class: 'ana' }, h('a', { href: `#danisan/${p.danisanId}/paketler` }, h('strong', null, p.ad)), h('span', null, `${p.paket} · bitiş ${tarih(p.bitis)}`)),
-                waDugme(p.telefon, `${wa.genel(p.ad)}${p.paket} paketinizin süresi ${tarih(p.bitis)} tarihinde doluyor.${imza}`),
-              ),
-            ),
-          ),
-        )
-      : null,
-    o.talepler.length
-      ? kart(
-          'KVKK Talepleri',
-          h('p', { class: 'hint' }, 'Silme talepleri ve açık rızasını geri çekenler. Talebi değerlendirip danışan dosyasından hesabı silebilirsiniz.'),
-          h(
-            'ul',
-            { class: 'liste' },
-            o.talepler.map((t: any) =>
-              h('li', null, h('div', { class: 'ana' }, h('a', { href: `#danisan/${t.id}/genel` }, h('strong', null, t.ad))), durumEtiketi(t.durum, hesapDurumlari)),
-            ),
-          ),
+          'Takibim Güncellenemeyenler',
+          h('p', null, `${gonderilemeyen.length} danışanın Takibim sayfası güncellenemedi (bağlantı sorunu).`),
+          dugme('Tekrar Dene', async (e) => {
+            await mesgul(e.currentTarget as HTMLButtonElement, async () => {
+              for (const d of gonderilemeyen) await takipGonder(depo!, d);
+            });
+            ciz();
+          }),
         )
       : null,
   ].filter(Boolean) as Node[];
 }
 
-function randevuSatiri(r: any, danisanBaglantisi: boolean) {
-  const guncelle = async (durum: string) => {
-    try {
-      await api('PUT', `/yonetim/randevu/${r.id}`, { durum });
-      toast(`Randevu: ${randevuDurumlari[durum as keyof typeof randevuDurumlari]}`);
-      if (durum === 'onaylandi' && r.telefon)
-        await pencere({
-          baslik: 'Danışana Bildirin',
-          kaydet: 'Kapat',
-          icerik: h(
-            'div',
-            { class: 'form-grid' },
-            h('p', null, 'Randevu onaylandı ve danışanın panelinde görünüyor. İsterseniz WhatsApp ile de bildirin:'),
-            waDugme(r.telefon, wa.randevuOnay(r.ad, r.tarih, r.saat, r.tur), 'WhatsApp ile Onay Mesajı Gönder'),
-          ),
-        });
-      yenile();
-    } catch (e) {
-      toast((e as Error).message, 'hata');
-    }
+// ================================================================ Randevu talepleri
+
+function talepler(): Node[] {
+  const liste = V().randevular.filter((r) => r.durum === 'talep').sort((a, b) => b.olusturma - a.olusturma);
+  const okunmamis = liste.filter((r) => !r.okundu);
+  if (okunmamis.length) {
+    for (const r of okunmamis) r.okundu = true;
+    void depo!.kaydet();
+    setTimeout(() => document.querySelector('.panel-menu .rozet')?.remove(), 1500);
+  }
+  return [
+    bolumBasligi(
+      'Randevu Talepleri',
+      takibimAcik
+        ? 'Siteden gelen talepler burada görünür. Onayladığınızda danışana WhatsApp\'tan onay mesajı gönderebilirsiniz.'
+        : 'Siteden WhatsApp\'a gelen talep mesajını "WhatsApp Talebi Ekle" ile buraya yapıştırın. Onayladığınızda danışana hazır onay mesajı gönderebilirsiniz.',
+      dugme('WhatsApp Talebi Ekle', () => whatsappTalebiEkle(), 'btn btn-primary btn-sm'),
+      takibimAcik
+        ? dugme('Yenile', async (e) => {
+            await mesgul(e.currentTarget as HTMLButtonElement, () => talepleriAl());
+            ciz();
+          })
+        : null,
+    ),
+    takibimAcik && !V().sunucu ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, 'Talepler, panel sunucuya bağlandıktan sonra buraya düşer. '), dugme('Şimdi Bağlan', () => sunucuBagla(), 'btn btn-primary btn-sm')) : null,
+    kart(
+      null,
+      liste.length
+        ? h(
+            'ul',
+            { class: 'liste' },
+            liste.map((r) => {
+              const d = danisanBul(r.danisanId);
+              return h(
+                'li',
+                { class: okunmamis.includes(r) ? 'yeni' : null },
+                h(
+                  'div',
+                  { class: 'ana' },
+                  h('strong', null, d ? h('a', { href: `#danisan/${d.id}` }, r.ad) : r.ad, okunmamis.includes(r) ? etiket('Yeni', 'talep') : null),
+                  h('span', null, ` ${telefonGoster(r.telefon)} · ${turAdi(r.tur)}${r.konu ? ` · ${r.konu}` : ''}`),
+                  h('p', null, `Tercih: ${r.tarih ? `${tarih(r.tarih, true)}` : 'Tarih fark etmez'}${r.saat ? ` · ${r.saat}` : ''}`),
+                  r.vki ? h('p', null, `VKİ: ${r.vki}`) : null,
+                  r.not ? h('p', null, `Not: ${r.not}`) : null,
+                  h('p', { class: 'ince' }, `${r.kaynak === 'whatsapp' ? 'WhatsApp\'tan eklendi' : 'Talep'}: ${tarihSaat(r.olusturma)}${d ? ' · Kayıtlı danışan' : ''}`),
+                ),
+                h(
+                  'div',
+                  { class: 'eylemler' },
+                  dugme('Onayla', () => randevuOnayla(r), 'btn btn-primary btn-xs'),
+                  dugme('Uygun Değil', () => randevuUygunDegil(r), 'btn btn-outline btn-xs'),
+                  waDugme(r.telefon, sablon('genel', { ad: ilkAd(r.ad) })),
+                ),
+              );
+            }),
+          )
+        : bos(takibimAcik ? 'Bekleyen randevu talebi yok.' : 'Bekleyen talep yok. WhatsApp\'tan gelen talep mesajını "WhatsApp Talebi Ekle" ile ekleyebilirsiniz.'),
+    ),
+  ].filter(Boolean) as Node[];
+}
+
+// ---------------------------------------------------------------- WhatsApp'tan gelen talebi yapıştırarak ekleme
+
+const AYLAR_KUCUK = ['ocak', 'şubat', 'mart', 'nisan', 'mayıs', 'haziran', 'temmuz', 'ağustos', 'eylül', 'ekim', 'kasım', 'aralık'];
+
+/** Sitedeki randevu formunun hazırladığı WhatsApp mesajını okur ("• Ad Soyad: …" satırları) */
+export function waMesajiCoz(m: string) {
+  const al = (etiket: string) => {
+    const r = m.match(new RegExp(`${etiket}\\s*:\\s*(.+)`, 'iu'));
+    return r ? r[1].replace(/[*_~]/g, '').trim() : '';
   };
+  const turMetni = al('Görüşme türü').toLocaleLowerCase('tr');
+  const tarihMetni = al('Tercih ettiğim tarih').toLocaleLowerCase('tr');
+  const t = tarihMetni.match(/(\d{1,2})\s+(ocak|şubat|mart|nisan|mayıs|haziran|temmuz|ağustos|eylül|ekim|kasım|aralık)\s+(\d{4})/);
+  const saat = al('Tercih ettiğim saat').match(/(\d{1,2}):(\d{2})/);
+  return {
+    ad: al('Ad Soyad'),
+    telefon: al('Telefon'),
+    tur: turMetni.includes('online') ? 'online' : turMetni ? 'yuzyuze' : '',
+    konu: al('Konu'),
+    tarih: t ? `${t[3]}-${String(AYLAR_KUCUK.indexOf(t[2]) + 1).padStart(2, '0')}-${t[1].padStart(2, '0')}` : '',
+    saat: saat ? `${saat[1].padStart(2, '0')}:${saat[2]}` : '',
+    vki: al('VKİ sonucum'),
+    not: al('Not'),
+  };
+}
+
+async function whatsappTalebiEkle() {
+  let eklenen: Randevu | null = null;
+  const mesaj = h('textarea', {
+    class: 'textarea',
+    name: 'mesaj',
+    rows: 6,
+    placeholder: 'WhatsApp\'ta gelen randevu talebi mesajını kopyalayıp buraya yapıştırın. Bilgiler aşağıya kendiliğinden dolar.',
+  });
+  const icerik = h(
+    'div',
+    { class: 'form-grid' },
+    alan('WhatsApp mesajı', mesaj),
+    h(
+      'div',
+      { class: 'form-grid iki' },
+      alan('Ad Soyad', input('ad', '', { autocomplete: 'off', maxlength: 80 })),
+      alan('Telefon', input('telefon', '', { type: 'tel', autocomplete: 'off' })),
+      alan('Görüşme', secim('tur', [['yuzyuze', 'Yüz yüze'], ['online', 'Online']])),
+      alan('Konu', input('konu', '', { maxlength: 120 })),
+      alan('Tercih edilen tarih', input('tarih', '', { type: 'date' }), 'Boşsa: tarih fark etmez'),
+      alan('Tercih edilen saat', input('saat', '', { type: 'time', step: 300 }), 'Boşsa: saat fark etmez'),
+    ),
+    alan('VKİ sonucu', input('vki', '', { maxlength: 80 })),
+    alan('Not', metinAlani('not', '', { rows: 2, maxlength: 600 })),
+    h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'hemenOnayla', checked: true }), h('span', null, 'Ekledikten sonra onay penceresini aç')),
+  );
+  mesaj.addEventListener('input', () => {
+    const c = waMesajiCoz((mesaj as HTMLTextAreaElement).value);
+    const yaz = (ad: string, v: string) => {
+      const el = icerik.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`[name=${ad}]`);
+      if (el && v) el.value = ad === 'telefon' ? telefonGoster(v) : v;
+    };
+    for (const [k, v] of Object.entries(c)) yaz(k, v);
+  });
+  const ok = await pencere({
+    baslik: 'WhatsApp Talebi Ekle',
+    kaydet: 'Talebi Ekle',
+    genis: true,
+    icerik,
+    onKaydet: async (form) => {
+      const f = formNesnesi(form);
+      const ad = String(f.ad).replace(/\s+/g, ' ').trim();
+      if (ad.length < 2) throw new Uyari('Ad soyad yazın (mesajı yapıştırınca kendiliğinden dolar).', 'Ad Soyad');
+      const tel = telNormal(f.telefon);
+      if (tel.length < 10 || tel.length > 15) throw new Uyari('Geçerli bir telefon yazın.', 'Telefon');
+      const r: Randevu = {
+        id: kimlik(),
+        ad,
+        telefon: tel,
+        tarih: /^\d{4}-\d{2}-\d{2}$/.test(f.tarih) ? f.tarih : '',
+        saat: /^\d{2}:\d{2}$/.test(f.saat) ? f.saat : '',
+        tur: f.tur === 'online' ? 'online' : 'yuzyuze',
+        konu: String(f.konu).trim(),
+        not: String(f.not).trim(),
+        vki: String(f.vki).trim(),
+        durum: 'talep',
+        kaynak: 'whatsapp',
+        olusturma: Date.now(),
+        okundu: true,
+      };
+      r.danisanId = telefonlaBul(tel)?.id;
+      V().randevular.push(r);
+      await depo!.simdiKaydet();
+      if (f.hemenOnayla) eklenen = r;
+    },
+  });
+  if (!ok) return;
+  if (location.hash.split('?')[0] !== '#talepler') location.hash = '#talepler';
+  else ciz();
+  toast('Talep eklendi.');
+  if (eklenen) await randevuOnayla(eklenen);
+}
+
+async function randevuOnayla(r: Randevu) {
+  const kayitli = danisanBul(r.danisanId);
+  const ok = await pencere({
+    baslik: 'Randevuyu Onayla',
+    kaydet: 'Onayla',
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h('p', null, h('strong', null, r.ad), ` · ${telefonGoster(r.telefon)}`),
+      h(
+        'div',
+        { class: 'form-grid iki' },
+        alan('Tarih', input('tarih', r.tarih, { type: 'date', required: true })),
+        alan('Saat', input('saat', r.saat, { type: 'time', required: true, step: 300 })),
+      ),
+      alan('Görüşme', secim('tur', [['yuzyuze', 'Yüz yüze'], ['online', 'Online']], r.tur)),
+      kayitli
+        ? h('p', { class: 'hint' }, 'Bu telefon numarası kayıtlı bir danışana ait; randevu onun dosyasına eklenecek.')
+        : h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'ekle', checked: true }), h('span', null, 'Danışan listesine ekle')),
+    ),
+    onKaydet: async (form) => {
+      const f = formNesnesi(form);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f.tarih)) throw new Uyari('Tarih seçin.', 'Tarih');
+      if (!/^\d{2}:\d{2}$/.test(f.saat)) throw new Uyari('Saat seçin.', 'Saat');
+      r.tarih = f.tarih;
+      r.saat = f.saat;
+      r.tur = f.tur === 'online' ? 'online' : 'yuzyuze';
+      r.durum = 'onaylandi';
+      if (!kayitli && f.ekle) r.danisanId = yeniDanisanKaydi({ ad: r.ad, telefon: r.telefon }).id;
+      await degisti(danisanBul(r.danisanId), true);
+    },
+  });
+  if (!ok) return;
+  ciz();
+  await onayMesajiPenceresi(r);
+}
+
+async function onayMesajiPenceresi(r: Randevu) {
+  const mesaj = sablon(r.tur === 'online' ? 'onayOnline' : 'onayYuzyuze', randevuDegiskenleri(r));
+  await pencere({
+    baslik: 'Randevu Onaylandı',
+    kaydet: 'Kapat',
+    vazgecYok: true,
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h('p', null, 'Danışana onay mesajını WhatsApp\'tan göndermek için düğmeye basın. Mesaj hazır olarak açılır; WhatsApp\'ta Gönder\'e basmanız yeterli.'),
+      h('pre', { class: 'mesaj-onizleme' }, mesaj),
+      h('a', { class: 'btn btn-wa', href: whatsapp(r.telefon, mesaj), target: '_blank', rel: 'noopener' }, 'WhatsApp ile Onay Gönder'),
+    ),
+  });
+}
+
+async function randevuUygunDegil(r: Randevu) {
+  const mesaj = sablon('uygunDegil', randevuDegiskenleri(r));
+  await pencere({
+    baslik: 'Talep Uygun Değil',
+    kaydet: 'Talebi Kapat',
+    tehlikeli: true,
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h('p', null, 'İsterseniz danışana başka bir gün önermek için WhatsApp mesajı gönderin, ardından talebi kapatın.'),
+      h('pre', { class: 'mesaj-onizleme' }, mesaj),
+      h('a', { class: 'btn btn-wa btn-sm', href: whatsapp(r.telefon, mesaj), target: '_blank', rel: 'noopener' }, 'WhatsApp ile Yaz'),
+    ),
+    onKaydet: async () => {
+      r.durum = 'iptal';
+      await depo!.kaydet();
+    },
+  });
+  ciz();
+}
+
+async function randevuDurum(r: Randevu, durum: RandevuDurumu) {
+  r.durum = durum;
+  await degisti(danisanBul(r.danisanId), true);
+  toast(`Randevu: ${durumAdi(durum)}`);
+  ciz();
+}
+
+// ================================================================ Randevular
+
+function randevular(): Node[] {
+  const [, sorgu] = location.hash.split('?');
+  const gecmisMi = new URLSearchParams(sorgu ?? '').get('g') === '1';
+  const bu = bugun();
+  const tum = V().randevular.filter((r) => r.durum !== 'talep');
+  const liste = gecmisMi
+    ? tum.filter((r) => r.tarih < bu || r.durum !== 'onaylandi').sort(randevuSirala).reverse().slice(0, 200)
+    : tum.filter((r) => r.tarih >= bu && r.durum === 'onaylandi').sort(randevuSirala);
+  const gruplar = new Map<string, Randevu[]>();
+  for (const r of liste) gruplar.set(r.tarih, [...(gruplar.get(r.tarih) ?? []), r]);
+  return [
+    bolumBasligi('Randevular', null, dugme('Yeni Randevu', () => randevuDuzenle(), 'btn btn-primary btn-sm')),
+    h(
+      'div',
+      { class: 'sekme-cubugu' },
+      h('a', { href: '#randevular', 'aria-current': gecmisMi ? null : 'page' }, 'Yaklaşan'),
+      h('a', { href: '#randevular?g=1', 'aria-current': gecmisMi ? 'page' : null }, 'Geçmiş ve İptal'),
+    ),
+    liste.length
+      ? h(
+          'div',
+          null,
+          [...gruplar].map(([t, rs]) =>
+            kart(
+              t === bu ? `Bugün · ${tarih(t, true)}` : tarih(t, true),
+              h('ul', { class: 'liste' }, rs.map((r) => randevuSatiri(r))),
+            ),
+          ),
+        )
+      : kart(null, bos(gecmisMi ? 'Geçmiş randevu yok.' : 'Yaklaşan onaylı randevu yok.')),
+  ];
+}
+
+function randevuSatiri(r: Randevu, danisanDosyasinda = false): HTMLElement {
+  const d = danisanBul(r.danisanId);
   return h(
     'li',
     null,
     h(
       'div',
       { class: 'ana' },
-      danisanBaglantisi ? h('a', { href: `#danisan/${r.danisanId}/randevular` }, h('strong', null, r.ad)) : h('strong', null, `${tarih(r.tarih, true)} · ${r.saat}`),
-      h('span', null, danisanBaglantisi ? `${tarih(r.tarih, true)} · ${r.saat} · ${turAdi(r.tur)}` : turAdi(r.tur)),
+      h(
+        'strong',
+        null,
+        danisanDosyasinda ? `${tarih(r.tarih, true)} · ${r.saat}` : `${r.saat} · `,
+        danisanDosyasinda ? null : d ? h('a', { href: `#danisan/${d.id}/randevular` }, r.ad) : r.ad,
+      ),
+      h('span', null, ` ${turAdi(r.tur)}${r.konu ? ` · ${r.konu}` : ''}`),
       r.not ? h('p', null, r.not) : null,
     ),
     h(
       'div',
       { class: 'eylemler' },
-      durumEtiketi(r.durum, randevuDurumlari),
-      r.durum === 'talep' ? h('button', { type: 'button', class: 'btn btn-sage btn-xs', onclick: () => guncelle('onaylandi') }, 'Onayla') : null,
-      r.durum === 'onaylandi' && r.tarih <= bugun() ? h('button', { type: 'button', class: 'btn btn-outline btn-xs', onclick: () => guncelle('tamamlandi') }, 'Tamamlandı') : null,
-      r.durum === 'onaylandi' ? waDugme(r.telefon, wa.hatirlatma(r.ad, r.tarih, r.saat, r.tur), 'Hatırlat') : null,
-      r.durum === 'talep' || r.durum === 'onaylandi' ? h('button', { type: 'button', class: 'metin-dugme', onclick: () => guncelle('iptal') }, 'İptal') : null,
+      etiket(durumAdi(r.durum), r.durum),
+      r.durum === 'onaylandi' ? waDugme(r.telefon, sablon('hatirlatma', randevuDegiskenleri(r)), 'Hatırlat') : null,
+      r.durum === 'onaylandi' ? dugme('Tamamlandı', () => randevuDurum(r, 'tamamlandi'), 'btn btn-outline btn-xs') : null,
+      dugme('Düzenle', () => randevuDuzenle(r), 'btn btn-outline btn-xs'),
     ),
   );
 }
 
-// ============================================================== Danışanlar
-
-async function danisanlarBolumu(): Promise<Node[]> {
-  const { danisanlar } = await api<any>('GET', '/yonetim/danisanlar');
-  const arama = h('input', { class: 'input arama', type: 'search', placeholder: 'Ad, e-posta veya telefon ara', 'aria-label': 'Danışan ara' });
-  const govde = h('tbody');
-  const doldur = () => {
-    const q = arama.value.trim().toLocaleLowerCase('tr');
-    const qd = q.replace(/\D/g, '');
-    const liste = danisanlar.filter((d: any) => !q || d.ad.toLocaleLowerCase('tr').includes(q) || d.eposta.includes(q) || (qd && d.telefon.includes(qd)));
-    govde.replaceChildren(
-      ...liste.map((d: any) =>
-        h(
-          'tr',
-          { class: 'tiklanir', tabindex: '0', onclick: () => (location.hash = `danisan/${d.id}/genel`), onkeydown: (e: KeyboardEvent) => e.key === 'Enter' && (location.hash = `danisan/${d.id}/genel`) },
-          h('td', null, h('strong', null, d.ad), h('div', { class: 'hint' }, d.eposta)),
-          h('td', null, telefonGoster(d.telefon)),
-          h('td', null, d.paket ? [d.paket, ' ', durumEtiketi(d.paketDurum, paketDurumlari)] : '—'),
-          h('td', null, d.sonOlcum ? tarih(d.sonOlcum) : '—'),
-          h('td', null, d.sonrakiRandevu ? `${tarih(d.sonrakiRandevu.slice(0, 10))} ${d.sonrakiRandevu.slice(11)}` : '—'),
-          h('td', null, durumEtiketi(d.durum, hesapDurumlari)),
-        ),
-      ),
-    );
-    if (!liste.length) govde.append(h('tr', null, h('td', { colspan: '6', class: 'bos' }, q ? 'Aramaya uygun danışan yok.' : 'Henüz kayıtlı danışan yok.')));
+async function randevuDuzenle(r?: Randevu, danisanId?: string) {
+  const yeni = !r;
+  const kayit: Randevu = r ?? {
+    id: kimlik(),
+    danisanId,
+    ad: danisanBul(danisanId)?.ad ?? '',
+    telefon: danisanBul(danisanId)?.telefon ?? '',
+    tarih: bugun(),
+    saat: '',
+    tur: 'yuzyuze',
+    durum: 'onaylandi',
+    kaynak: 'panel',
+    olusturma: Date.now(),
   };
-  arama.addEventListener('input', doldur);
-  doldur();
+  const kisiler = [...V().danisanlar].sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+  const ok = await pencere({
+    baslik: yeni ? 'Yeni Randevu' : 'Randevuyu Düzenle',
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      alan('Danışan', secim('danisan', [['', 'Listede olmayan kişi'], ...kisiler.map((d) => [d.id, `${d.ad} · ${telefonGoster(d.telefon)}`] as [string, string])], kayit.danisanId ?? '')),
+      h('div', { class: 'form-grid iki', 'data-serbest': true }, alan('Ad Soyad', input('ad', kayit.ad)), alan('Telefon', input('telefon', kayit.telefon ? telefonGoster(kayit.telefon) : '', { type: 'tel' }))),
+      h(
+        'div',
+        { class: 'form-grid iki' },
+        alan('Tarih', input('tarih', kayit.tarih, { type: 'date' })),
+        alan('Saat', input('saat', kayit.saat, { type: 'time', step: 300 })),
+        alan('Görüşme', secim('tur', [['yuzyuze', 'Yüz yüze'], ['online', 'Online']], kayit.tur)),
+        alan('Durum', secim('durum', (Object.entries(randevuDurumlari) as [string, string][]).filter(([k]) => k !== 'talep' || !yeni), kayit.durum)),
+      ),
+      alan('Konu', input('konu', kayit.konu ?? '', { maxlength: 120 })),
+      alan('Not', metinAlani('not', kayit.not ?? '', { maxlength: 600 })),
+      yeni ? null : h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'sil' }), h('span', null, 'Bu randevuyu sil')),
+    ),
+    onKaydet: async (form) => {
+      const f = formNesnesi(form);
+      if (f.sil) {
+        V().randevular = V().randevular.filter((x) => x !== r);
+        await degisti(danisanBul(kayit.danisanId), true);
+        return;
+      }
+      const d = danisanBul(f.danisan);
+      if (!d && String(f.ad).trim().length < 2) throw new Uyari('Ad soyad yazın veya listeden danışan seçin.', 'Ad Soyad');
+      if (!d && telNormal(f.telefon).length < 10) throw new Uyari('Geçerli bir telefon yazın.', 'Telefon');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f.tarih)) throw new Uyari('Tarih seçin.', 'Tarih');
+      if (!/^\d{2}:\d{2}$/.test(f.saat)) throw new Uyari('Saat seçin.', 'Saat');
+      const eskiDanisan = kayit.danisanId;
+      Object.assign(kayit, {
+        danisanId: d?.id,
+        ad: d?.ad ?? String(f.ad).trim(),
+        telefon: d ? d.telefon : telNormal(f.telefon),
+        tarih: f.tarih,
+        saat: f.saat,
+        tur: f.tur === 'online' ? 'online' : 'yuzyuze',
+        durum: f.durum as RandevuDurumu,
+        konu: String(f.konu).trim(),
+        not: String(f.not).trim(),
+      });
+      if (yeni) V().randevular.push(kayit);
+      await degisti(d, true);
+      if (eskiDanisan && eskiDanisan !== d?.id) await degisti(danisanBul(eskiDanisan), true);
+    },
+  });
+  if (!ok) return;
+  ciz();
+  if (yeni && kayit.durum === 'onaylandi') await onayMesajiPenceresi(kayit);
+}
+
+// ================================================================ Danışanlar
+
+function yeniDanisanKaydi(v: Partial<Danisan> & { ad: string; telefon: string }): Danisan {
+  const d: Danisan = {
+    id: kimlik(),
+    olusturma: Date.now(),
+    guncelleme: Date.now(),
+    olcumler: [],
+    paket: null,
+    mesajlar: [],
+    belgeler: [],
+    notlar: [],
+    takip: null,
+    ...v,
+    telefon: telNormal(v.telefon),
+  };
+  V().danisanlar.push(d);
+  return d;
+}
+
+function danisanlar(): Node[] {
+  const [, sorgu] = location.hash.split('?');
+  const ara = new URLSearchParams(sorgu ?? '').get('ara') ?? '';
+  const a = adSadele(ara);
+  const liste = [...V().danisanlar]
+    .filter((d) => !a || adSadele(d.ad).includes(a) || telNormal(d.telefon).includes(ara.replace(/\D/g, '') || '§'))
+    .sort((x, y) => y.guncelleme - x.guncelleme);
+  const arama = h('input', { class: 'input arama', type: 'search', placeholder: 'Ad veya telefon ile ara', value: ara, 'aria-label': 'Danışan ara' });
+  arama.addEventListener('input', () => {
+    const konum = arama.selectionStart;
+    history.replaceState(null, '', `#danisanlar${arama.value ? `?ara=${encodeURIComponent(arama.value)}` : ''}`);
+    ciz();
+    const yeni = document.querySelector<HTMLInputElement>('.arama');
+    yeni?.focus();
+    if (konum !== null) yeni?.setSelectionRange(konum, konum);
+  });
+  const birakma = pdfBirakmaAlani('Vücut analizi PDF\'ini buraya bırakın: ad soyada göre danışan bulunur, yoksa yeni danışan olarak eklenir.', (dosya) =>
+    pdfIleDanisanBul(dosya),
+  );
   return [
-    baslik('Danışanlar', `${danisanlar.length} kayıtlı danışan. Danışanlar siteden kendileri üye olur.`, arama),
+    bolumBasligi('Danışanlar', `${V().danisanlar.length} danışan`, dugme('Yeni Danışan', () => danisanDuzenle(), 'btn btn-primary btn-sm')),
+    birakma,
     kart(
       null,
-      h(
-        'div',
-        { class: 'tablo-kap' },
-        h(
-          'table',
-          { class: 'tablo' },
-          h('thead', null, h('tr', null, h('th', null, 'Danışan'), h('th', null, 'Telefon'), h('th', null, 'Paket'), h('th', null, 'Son Ölçüm'), h('th', null, 'Sonraki Randevu'), h('th', null, 'Hesap'))),
-          govde,
-        ),
-      ),
-    ),
-  ];
-}
-
-// ---------------------------------------------------------------- Danışan dosyası
-
-const SEKMELER: [string, string][] = [
-  ['genel', 'Genel'],
-  ['profil', 'Profil ve Sağlık'],
-  ['olcumler', 'Ölçümler'],
-  ['paketler', 'Paketler'],
-  ['randevular', 'Randevular'],
-  ['belgeler', 'Belgeler'],
-  ['mesajlar', 'Mesajlar'],
-  ['notlar', 'Notlarım'],
-  ['kayitlar', 'Erişim Kayıtları'],
-];
-
-let detayOnbellek: { id: string; zaman: number; veri: any } | null = null;
-
-async function danisanVerisi(id: string, zorla = false) {
-  if (!zorla && detayOnbellek?.id === id && Date.now() - detayOnbellek.zaman < 60_000) return detayOnbellek.veri;
-  const veri = await api<any>('GET', `/yonetim/danisan/${id}`);
-  detayOnbellek = { id, zaman: Date.now(), veri };
-  return veri;
-}
-
-const yenileDetay = () => {
-  detayOnbellek = null;
-  yenile();
-};
-
-async function danisanDetay(id: string, sekme: string): Promise<Node[]> {
-  const v = await danisanVerisi(id);
-  const d = v.danisan;
-  const sekmeler = h(
-    'ul',
-    { class: 'sekme-cubugu' },
-    SEKMELER.map(([k, ad]) => h('li', null, h('a', { href: `#danisan/${id}/${k}`, 'aria-current': k === sekme ? 'page' : null }, ad))),
-  );
-  const alerji = [v.profil?.saglik?.alerjiler, v.profil?.saglik?.intoleranslar].filter(Boolean).join(' · ');
-  const govde: Record<string, () => Node[] | Promise<Node[]>> = {
-    genel: () => genelSekme(v),
-    profil: () => profilSekme(v),
-    olcumler: () => olcumSekme(v),
-    paketler: () => paketSekme(v),
-    randevular: () => randevuSekme(v),
-    belgeler: () => belgeSekme(v),
-    mesajlar: () => mesajSekme(v),
-    notlar: () => notSekme(v),
-    kayitlar: () => kayitSekme(v),
-  };
-  return [
-    h('a', { href: '#danisanlar', class: 'geri-baglanti' }, '← Danışanlar'),
-    baslik(
-      d.ad,
-      `${telefonGoster(d.telefon)} · ${d.eposta}`,
-      durumEtiketi(d.durum, hesapDurumlari),
-      waDugme(d.telefon, wa.genel(d.ad), 'WhatsApp’tan Yaz'),
-    ),
-    alerji ? h('p', { class: 'bilgi-kutu uyari' }, h('span', null, h('strong', null, 'Alerji / intolerans: '), alerji)) : null,
-    sekmeler,
-    ...(await (govde[sekme] ?? govde.genel)()),
-  ].filter(Boolean) as Node[];
-}
-
-function genelSekme(v: any): Node[] {
-  const d = v.danisan;
-  const durumDugme = h(
-    'button',
-    {
-      type: 'button',
-      class: 'btn btn-outline btn-sm',
-      onclick: async () => {
-        const yeni = d.durum === 'pasif' ? 'aktif' : 'pasif';
-        await api('PUT', `/yonetim/danisan/${d.id}/durum`, { durum: yeni }).catch((e) => toast(e.message, 'hata'));
-        toast(yeni === 'pasif' ? 'Hesap pasif yapıldı; danışan giriş yapamaz.' : 'Hesap aktif.');
-        yenileDetay();
-      },
-    },
-    d.durum === 'pasif' ? 'Hesabı Aktif Et' : 'Hesabı Pasif Yap',
-  );
-  const sifreDugme = h(
-    'button',
-    {
-      type: 'button',
-      class: 'btn btn-outline btn-sm',
-      onclick: async () => {
-        try {
-          const r = await api<{ baglanti: string }>('POST', `/yonetim/danisan/${d.id}/sifre-baglantisi`);
-          await pencere({
-            baslik: 'Şifre Yenileme Bağlantısı',
-            kaydet: 'Kapat',
-            icerik: h(
-              'div',
-              { class: 'form-grid' },
-              h('p', null, 'Bağlantı 48 saat geçerlidir ve bir kez kullanılabilir. Yalnızca danışanın kendi telefonuna gönderin.'),
-              h('p', { class: 'kod-kutu' }, r.baglanti),
-              waDugme(d.telefon, wa.sifre(d.ad, r.baglanti), 'WhatsApp ile Gönder'),
-            ),
-          });
-        } catch (e) {
-          toast((e as Error).message, 'hata');
-        }
-      },
-    },
-    'Şifre Yenileme Bağlantısı',
-  );
-  const silDugme = h(
-    'button',
-    {
-      type: 'button',
-      class: 'btn btn-tehlike btn-sm',
-      onclick: async () => {
-        const ok = await pencere({
-          baslik: 'Hesabı ve Verileri Sil',
-          kaydet: 'Kalıcı Olarak Sil',
-          tehlikeli: true,
-          icerik: h(
-            'div',
-            { class: 'form-grid' },
-            h('p', null, `${d.ad} adlı danışanın hesabı, profili, ölçümleri, belgeleri, randevu ve paket kayıtları kalıcı olarak silinecek. Bu işlem geri alınamaz. Yasal olarak saklamanız gereken kayıtlar varsa önce ayrıca arşivleyin.`),
-            alan('Onaylamak için SİL yazın', h('input', { class: 'input', name: 'onay', autocomplete: 'off' })),
-          ),
-          onKaydet: async (form) => {
-            await api('POST', `/yonetim/danisan/${d.id}/sil`, formNesnesi(form));
-          },
-        });
-        if (ok) {
-          toast('Hesap ve veriler silindi.');
-          detayOnbellek = null;
-          location.hash = 'danisanlar';
-        }
-      },
-    },
-    'Hesabı ve Verileri Sil',
-  );
-  const bil = (k: string, val: Node | string) => [h('dt', null, k), h('dd', null, val)];
-  return [
-    kart(
-      'Hesap',
-      h(
-        'dl',
-        { class: 'sabit-bilgi' },
-        bil('Ad Soyad', d.ad),
-        bil('E-posta', d.eposta),
-        bil('Telefon', telefonGoster(d.telefon)),
-        bil('Kayıt', tarihSaat(d.kayit)),
-        bil('Son giriş', d.sonGiris ? tarihSaat(d.sonGiris) : '—'),
-        bil('Durum', durumEtiketi(d.durum, hesapDurumlari)),
-        !d.resit ? bil('Yaş', '18 yaşından küçük (veli onaylı)') : null,
-      ),
-      h('div', { class: 'eylemler', style: 'margin-top:14px' }, sifreDugme, durumDugme),
-    ),
-    kart(
-      'KVKK Onay Kayıtları',
-      v.eksikOnaylar.length ? h('p', { class: 'bilgi-kutu uyari' }, `Eksik/güncel olmayan onay: ${v.eksikOnaylar.map((t: string) => ONAY_ADLARI[t] ?? t).join(', ')}. Danışan girişte yeniden onay verene kadar panel verileri ona kapalıdır.`) : null,
-      h(
-        'div',
-        { class: 'tablo-kap' },
-        h(
-          'table',
-          { class: 'tablo' },
-          h('thead', null, h('tr', null, h('th', null, 'Onay'), h('th', null, 'Metin Sürümü'), h('th', null, 'Tarih'), h('th', null, 'Geri Çekme'))),
-          h('tbody', null, v.onaylar.map((o: any) => h('tr', null, h('td', null, ONAY_ADLARI[o.tur] ?? o.tur), h('td', null, o.surum), h('td', null, tarihSaat(o.tarih)), h('td', null, o.geriCekme ? tarihSaat(o.geriCekme) : '—')))),
-        ),
-      ),
-    ),
-    kart(
-      'Hesabı Silme',
-      h('p', null, d.durum === 'silme_talebi' ? 'Danışan hesabının silinmesini talep etti.' : 'Danışanın talebi veya açık rızasını geri çekmesi hâlinde hesabı ve paneldeki verilerini silebilirsiniz.'),
-      silDugme,
-    ),
-  ];
-}
-
-function profilSekme(v: any): Node[] {
-  const p = v.profil ?? {};
-  const s = p.saglik ?? {};
-  const satir = (k: string, val: any) => (val === null || val === undefined || val === '' || (Array.isArray(val) && !val.length) ? null : [h('dt', null, k), h('dd', null, Array.isArray(val) ? val.join(', ') : String(val))]);
-  const kiloSon = [...v.olcumler].reverse().find((m: any) => m.degerler.kilo)?.degerler.kilo;
-  const vki = kiloSon && p.boy ? kiloSon / (p.boy / 100) ** 2 : null;
-  return [
-    kart(
-      'Kişisel Bilgiler',
-      h(
-        'dl',
-        { class: 'sabit-bilgi' },
-        satir('Doğum tarihi', p.dogumTarihi ? tarih(p.dogumTarihi) : ''),
-        satir('Cinsiyet', p.cinsiyet),
-        satir('Şehir', p.sehir),
-        satir('Meslek', p.meslek),
-        satir('Bizi nereden duydu', p.kaynak),
-        p.veli ? satir('Veli / vasi', `${p.veli.ad} · ${telefonGoster(p.veli.telefon)}`) : null,
-      ),
-    ),
-    kart(
-      'Hedef ve Ölçüler',
-      h(
-        'dl',
-        { class: 'sabit-bilgi' },
-        satir('Boy', p.boy ? `${sayi(p.boy)} cm` : ''),
-        satir('Son kilo', kiloSon ? `${sayi(kiloSon)} kg` : ''),
-        satir('VKİ (son kilo)', vki ? sayi(vki) : ''),
-        satir('Hedef kilo', p.hedefKilo ? `${sayi(p.hedefKilo)} kg` : ''),
-        satir('Hedef', p.hedef),
-        satir('Hareket düzeyi', p.aktivite),
-      ),
-    ),
-    kart(
-      'Sağlık Bilgileri',
-      h(
-        'dl',
-        { class: 'sabit-bilgi' },
-        satir('Hastalıklar', s.hastaliklar),
-        satir('Diğer hastalıklar', s.digerHastalik),
-        satir('İlaç ve takviyeler', s.ilaclar),
-        satir('Besin alerjileri', s.alerjiler),
-        satir('Besin intoleransları', s.intoleranslar),
-        satir('Gebelik / emzirme', s.gebelik !== 'Yok' ? s.gebelik : ''),
-        satir('Geçirilmiş ameliyatlar', s.ameliyatlar),
-        satir('Danışanın notu', s.notlar),
-      ),
-      h('p', { class: 'hint' }, 'Bu bilgileri danışan kendi panelinden günceller.'),
-    ),
-  ];
-}
-
-function olcumFormu(mevcut?: any) {
-  const d = mevcut?.degerler ?? {};
-  return h(
-    'div',
-    { class: 'form-grid' },
-    alan('Tarih', h('input', { class: 'input', type: 'date', name: 'tarih', value: mevcut?.tarih ?? bugun(), max: bugun(), 'data-alan': 'Tarih' })),
-    h(
-      'div',
-      { class: 'form-grid uc' },
-      olcumAlanlari.map((f) => alan(`${f.label}${f.unit ? ` (${f.unit})` : ''}`, h('input', { class: 'input', name: `degerler.${f.key}`, inputmode: 'decimal', value: d[f.key] ?? '', 'data-alan': f.label }))),
-    ),
-    h('p', { class: 'hint' }, 'Boş bıraktığınız alanlar kaydedilmez. Yağ kütlesi boşsa kilo ve yağ oranından hesaplanarak gösterilir.'),
-  );
-}
-
-function olcumSekme(v: any): Node[] {
-  const d = v.danisan;
-  const olcumler = v.olcumler as any[];
-  const deger = (m: any, key: string) => (m.degerler[key] ?? (key === 'yagKg' && m.degerler.kilo && m.degerler.yagOrani ? Math.round(m.degerler.kilo * m.degerler.yagOrani) / 100 : null));
-  const seri = (key: string) => {
-    const map = new Map<string, { x: string; y: number }>();
-    for (const m of olcumler) {
-      const val = deger(m, key);
-      if (val !== null) map.set(m.tarih, { x: m.tarih, y: val });
-    }
-    return [...map.values()].sort((a, b) => a.x.localeCompare(b.x));
-  };
-  const kullanilan = olcumAlanlari.filter((f) => olcumler.some((m) => deger(m, f.key) !== null));
-  const ekle = async () => {
-    const ok = await pencere({
-      baslik: 'Klinik Ölçümü Ekle',
-      icerik: olcumFormu(),
-      onKaydet: async (form) => {
-        await api('POST', `/yonetim/danisan/${d.id}/olcum`, formNesnesi(form));
-      },
-    });
-    if (ok) {
-      toast('Ölçüm eklendi; danışanın panelinde görünüyor.');
-      yenileDetay();
-    }
-  };
-  const grafikler = ['kilo', 'yagKg', 'kasKg']
-    .map((k) => ({ k, s: seri(k), f: olcumAlanlari.find((f) => f.key === k)! }))
-    .filter((x) => x.s.length)
-    .map((x) => kart(null, cizgiGrafik({ baslik: x.f.label, birim: x.f.unit, noktalar: x.s, hedef: x.k === 'kilo' ? v.profil?.hedefKilo : null })));
-  return [
-    h('div', { class: 'eylemler', style: 'margin-bottom:14px' }, h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: ekle }, 'Klinik Ölçümü Ekle')),
-    grafikler.length ? h('div', { class: 'izgara', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))' }, grafikler) : null,
-    kart(
-      'Ölçüm Geçmişi',
-      olcumler.length
+      arama,
+      liste.length
         ? h(
             'div',
             { class: 'tablo-kap' },
             h(
               'table',
               { class: 'tablo' },
-              h('thead', null, h('tr', null, h('th', null, 'Tarih'), kullanilan.map((f) => h('th', { class: 'sayi' }, `${f.label}${f.unit ? ` (${f.unit})` : ''}`)), h('th', null, 'Kaynak'), h('th', null, ''))),
+              h('thead', null, h('tr', null, h('th', null, 'Ad Soyad'), h('th', null, 'Telefon'), h('th', null, 'Son Ölçüm'), h('th', null, 'Paket'), takibimAcik ? h('th', null, 'Takibim') : null)),
               h(
                 'tbody',
                 null,
-                [...olcumler].reverse().map((m) =>
-                  h(
+                liste.map((d) => {
+                  const son = olcumSirala(d.olcumler).at(-1);
+                  const tr = h(
                     'tr',
-                    null,
-                    h('td', null, tarih(m.tarih)),
-                    kullanilan.map((f) => h('td', { class: 'sayi' }, sayi(deger(m, f.key)))),
-                    h('td', null, m.kaynak === 'klinik' ? 'Klinik' : m.kaynak === 'kayit' ? 'Kayıt' : 'Danışan'),
-                    h(
-                      'td',
-                      null,
-                      h(
-                        'div',
-                        { class: 'eylemler' },
-                        h(
-                          'button',
-                          {
-                            type: 'button',
-                            class: 'metin-dugme',
-                            onclick: async () => {
-                              const ok = await pencere({
-                                baslik: 'Ölçümü Düzenle',
-                                icerik: olcumFormu(m),
-                                onKaydet: async (form) => {
-                                  await api('PUT', `/yonetim/olcum/${m.id}`, formNesnesi(form));
-                                },
-                              });
-                              if (ok) yenileDetay();
-                            },
-                          },
-                          'Düzenle',
-                        ),
-                        h(
-                          'button',
-                          {
-                            type: 'button',
-                            class: 'metin-dugme',
-                            onclick: async () => {
-                              const ok = await pencere({
-                                baslik: 'Ölçümü Sil',
-                                icerik: h('p', null, `${tarih(m.tarih)} tarihli ölçüm silinsin mi?`),
-                                kaydet: 'Sil',
-                                tehlikeli: true,
-                                onKaydet: async () => {
-                                  await api('DELETE', `/yonetim/olcum/${m.id}`);
-                                },
-                              });
-                              if (ok) yenileDetay();
-                            },
-                          },
-                          'Sil',
-                        ),
-                      ),
-                    ),
-                  ),
+                    { class: 'tiklanir', tabindex: '0' },
+                    h('td', null, h('a', { href: `#danisan/${d.id}` }, d.ad)),
+                    h('td', null, telefonGoster(d.telefon)),
+                    h('td', null, son ? `${tarih(son.tarih)}${son.kilo ? ` · ${sayi(son.kilo)} kg` : ''}` : '—'),
+                    h('td', null, d.paket ? `${d.paket.ad}${d.paket.bitis ? ` · ${tarih(d.paket.bitis)}` : ''}` : '—'),
+                    takibimAcik ? h('td', null, takipEtiketi(d)) : null,
+                  );
+                  tr.addEventListener('click', (e) => {
+                    if (!(e.target as HTMLElement).closest('a')) location.hash = `#danisan/${d.id}`;
+                  });
+                  tr.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') location.hash = `#danisan/${d.id}`;
+                  });
+                  return tr;
+                }),
+              ),
+            ),
+          )
+        : bos(ara ? 'Aramaya uyan danışan yok.' : 'Henüz danışan yok. "Yeni Danışan" ile ekleyin veya PDF\'i yukarıdaki alana bırakın.'),
+    ),
+  ];
+}
+
+async function danisanDuzenle(d?: Danisan, onDolgu?: Partial<Danisan>): Promise<Danisan | null> {
+  const k = { ...onDolgu, ...d } as Partial<Danisan>;
+  let sonuc: Danisan | null = null;
+  const yil = new Date().getFullYear();
+  const ok = await pencere({
+    baslik: d ? 'Danışan Bilgileri' : 'Yeni Danışan',
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h(
+        'div',
+        { class: 'form-grid iki' },
+        alan('Ad Soyad', input('ad', k.ad ?? '', { autocomplete: 'off', maxlength: 80 })),
+        alan('Telefon', input('telefon', k.telefon ? telefonGoster(k.telefon) : '', { type: 'tel', autocomplete: 'off' })),
+        alan('E-posta', input('eposta', k.eposta ?? '', { type: 'email', autocomplete: 'off' }), 'İsteğe bağlı'),
+        alan('Cinsiyet', secim('cinsiyet', [['', 'Seçilmedi'], ['K', 'Kadın'], ['E', 'Erkek']], k.cinsiyet ?? '')),
+        alan('Doğum Yılı', input('dogumYili', k.dogumYili ?? '', { inputmode: 'numeric', maxlength: 4 })),
+        alan('Boy (cm)', sayiAlani('boy', k.boy)),
+        alan('Hedef Kilo (kg)', sayiAlani('hedefKilo', k.hedefKilo)),
+        alan('Hedef', secim('hedef', [['', 'Seçilmedi'], ...hedefSecenekleri.map((x) => [x, x] as [string, string])], k.hedef ?? '')),
+      ),
+      alan('Alerji ve İntoleranslar', metinAlani('alerjiler', k.alerjiler ?? '', { rows: 2, maxlength: 500 })),
+      alan('Hastalıklar', metinAlani('hastaliklar', k.hastaliklar ?? '', { rows: 2, maxlength: 800 })),
+      alan('İlaç ve Takviyeler', metinAlani('ilaclar', k.ilaclar ?? '', { rows: 2, maxlength: 800 })),
+      h('p', { class: 'hint' }, 'Alerji, hastalık ve ilaç bilgileri yalnızca bu panelde durur; danışanın Takibim sayfasına gönderilmez.'),
+    ),
+    onKaydet: async (form) => {
+      const f = formNesnesi(form);
+      const ad = String(f.ad).replace(/\s+/g, ' ').trim();
+      if (ad.length < 2) throw new Uyari('Ad soyad yazın.', 'Ad Soyad');
+      const tel = telNormal(f.telefon);
+      if (tel.length < 10 || tel.length > 15) throw new Uyari('Geçerli bir telefon yazın (örn. 0532 123 45 67).', 'Telefon');
+      const ayni = V().danisanlar.find((x) => x !== d && telNormal(x.telefon) === tel);
+      if (ayni) throw new Uyari(`Bu telefon "${ayni.ad}" adlı danışanda kayıtlı.`, 'Telefon');
+      const dy = String(f.dogumYili).trim() ? Number(f.dogumYili) : undefined;
+      if (dy !== undefined && (!Number.isInteger(dy) || dy < yil - 110 || dy > yil)) throw new Uyari('Doğum yılını kontrol edin.', 'Doğum Yılı');
+      const v: Partial<Danisan> = {
+        ad,
+        telefon: tel,
+        eposta: String(f.eposta).trim() || undefined,
+        cinsiyet: f.cinsiyet === 'K' || f.cinsiyet === 'E' ? f.cinsiyet : undefined,
+        dogumYili: dy,
+        boy: ondalik(f.boy, 'Boy (cm)', 50, 250),
+        hedefKilo: ondalik(f.hedefKilo, 'Hedef Kilo (kg)', 20, 300),
+        hedef: f.hedef || undefined,
+        alerjiler: String(f.alerjiler).trim() || undefined,
+        hastaliklar: String(f.hastaliklar).trim() || undefined,
+        ilaclar: String(f.ilaclar).trim() || undefined,
+      };
+      if (d) {
+        Object.assign(d, v);
+        sonuc = d;
+      } else sonuc = yeniDanisanKaydi({ ...onDolgu, ...v, ad, telefon: tel });
+      await degisti(sonuc, true);
+    },
+  });
+  if (!ok) return null;
+  if (!d && sonuc && !onDolgu) location.hash = `#danisan/${(sonuc as Danisan).id}`;
+  else ciz();
+  return sonuc;
+}
+
+// ================================================================ PDF sürükle-bırak
+
+function pdfBirakmaAlani(aciklama: string, isle: (dosya: File) => Promise<void>): HTMLElement {
+  const sec = h('input', { type: 'file', accept: 'application/pdf,.pdf', hidden: true });
+  const alan_ = h(
+    'div',
+    { class: 'birakma', tabindex: '0', role: 'button', 'aria-label': 'Vücut analizi PDF\'i seçin veya sürükleyin' },
+    h('strong', null, 'Vücut analizi PDF\'ini buraya sürükleyin'),
+    h('span', null, aciklama),
+    h('span', { class: 'btn btn-outline btn-sm' }, 'PDF Seç'),
+    sec,
+  );
+  const calistir = async (dosya?: File | null) => {
+    if (!dosya) return;
+    if (dosya.type && dosya.type !== 'application/pdf' && !/\.pdf$/i.test(dosya.name)) return toast('Yalnızca PDF dosyası bırakın.', 'hata');
+    alan_.classList.add('isleniyor');
+    try {
+      await isle(dosya);
+    } finally {
+      alan_.classList.remove('isleniyor');
+    }
+  };
+  alan_.addEventListener('click', () => sec.click());
+  alan_.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      sec.click();
+    }
+  });
+  sec.addEventListener('change', () => calistir(sec.files?.[0]).finally(() => (sec.value = '')));
+  alan_.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    alan_.classList.add('uzerinde');
+  });
+  alan_.addEventListener('dragleave', () => alan_.classList.remove('uzerinde'));
+  alan_.addEventListener('drop', (e) => {
+    e.preventDefault();
+    alan_.classList.remove('uzerinde');
+    void calistir(e.dataTransfer?.files?.[0]);
+  });
+  return alan_;
+}
+
+// Sayfanın herhangi bir yerine bırakılan PDF de yakalanır (bırakma alanı dışında)
+addEventListener('dragover', (e) => {
+  if (depo && e.dataTransfer?.types.includes('Files')) e.preventDefault();
+});
+addEventListener('drop', (e) => {
+  if (!depo || !e.dataTransfer?.files?.length) return;
+  e.preventDefault();
+  if ((e.target as HTMLElement).closest('.birakma')) return;
+  const dosya = e.dataTransfer.files[0];
+  const [bolum, id] = location.hash.slice(1).split('?')[0].split('/');
+  const d = bolum === 'danisan' ? danisanBul(id) : undefined;
+  if (d) void pdfIleOlcum(d, dosya);
+  else void pdfIleDanisanBul(dosya);
+});
+
+async function pdfOku(dosya: File): Promise<TanitaSonuc | null> {
+  try {
+    const { raporOku } = await import('./pdfoku');
+    const r = await raporOku(dosya);
+    if (!r) toast('Bu PDF bir vücut analizi raporu olarak tanınamadı. Değerleri "Elle Ölçüm Ekle" ile girebilirsiniz.', 'hata');
+    return r;
+  } catch (e) {
+    console.error(e);
+    toast('PDF okunamadı. Dosya bozuk veya şifreli olabilir.', 'hata');
+    return null;
+  }
+}
+
+async function pdfIleDanisanBul(dosya: File) {
+  const r = await pdfOku(dosya);
+  if (!r) return;
+  const ad = r.kisi.ad ? adSadele(r.kisi.ad) : '';
+  const adaylar = ad ? V().danisanlar.filter((d) => adSadele(d.ad) === ad) : [];
+  if (adaylar.length === 1) {
+    location.hash = `#danisan/${adaylar[0].id}/olcumler`;
+    await olcumOnizleme(adaylar[0], r, dosya);
+    return;
+  }
+  const yil = new Date().getFullYear();
+  const yeni = await danisanDuzenle(undefined, {
+    ad: r.kisi.ad ?? '',
+    cinsiyet: r.kisi.cinsiyet,
+    boy: r.kisi.boy,
+    dogumYili: r.kisi.yas ? yil - r.kisi.yas : undefined,
+  });
+  if (yeni) {
+    location.hash = `#danisan/${yeni.id}/olcumler`;
+    await olcumOnizleme(yeni, r, dosya);
+  }
+}
+
+async function pdfIleOlcum(d: Danisan, dosya: File) {
+  const r = await pdfOku(dosya);
+  if (r) await olcumOnizleme(d, r, dosya);
+}
+
+const olcumAnahtari = (o: { tarih: string; saat?: string }) => `${o.tarih} ${o.saat ?? ''}`;
+
+async function olcumOnizleme(d: Danisan, r: TanitaSonuc, dosya: File) {
+  const o = r.olcum;
+  const pdfAdi = r.kisi.ad ?? '';
+  const adUyusmuyor = pdfAdi && adSadele(pdfAdi) !== adSadele(d.ad);
+  const mevcut = new Set(d.olcumler.map(olcumAnahtari));
+  const ayniOlcum = mevcut.has(olcumAnahtari(o));
+  const yeniGecmis = r.gecmis.filter((g) => !mevcut.has(olcumAnahtari(g)) && olcumAnahtari(g) !== olcumAnahtari(o));
+  const takipAcik = d.takip && (d.takip.durum === 'eslesti' || d.takip.durum === 'bekliyor');
+  const deger = (et: string, v: number | undefined, birim: string, b = 1) =>
+    v === undefined ? null : h('div', { class: 'deger-kutu' }, h('span', null, et), h('strong', null, `${sayi(v, b)}${birim ? ` ${birim}` : ''}`));
+  const icerik = h(
+    'div',
+    { class: 'form-grid' },
+    h('p', null, `${r.cihaz} · ${tarih(o.tarih, true)}${o.saat ? ` ${o.saat}` : ''}${pdfAdi ? ` · PDF'teki ad: ${pdfAdi}` : ''}`),
+    adUyusmuyor
+      ? h(
+          'div',
+          { class: 'bilgi-kutu uyari' },
+          h('p', null, h('strong', null, 'Dikkat: '), `PDF "${pdfAdi}" adına, bu dosya ise "${d.ad}" adına. Yanlış danışana eklenen sonuçlar o kişinin telefonunda görünür.`),
+          h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'adOnay' }), h('span', null, 'Bu PDF bu danışana ait, eminim.')),
+        )
+      : null,
+    ayniOlcum ? h('div', { class: 'bilgi-kutu' }, h('p', null, 'Bu tarih ve saatteki ölçüm zaten ekli. Kaydederseniz yenisiyle değiştirilir.')) : null,
+    h(
+      'div',
+      { class: 'deger-izgara' },
+      deger('Kilo', o.kilo, 'kg'),
+      deger('Yağ Oranı', o.yagOrani, '%'),
+      deger('Yağ Kütlesi', o.yagKg, 'kg'),
+      deger('Kas Kütlesi', o.kasKg, 'kg'),
+      deger('Yağsız Kütle', o.yagsizKg, 'kg'),
+      deger('Vücut Suyu', o.suOrani, '%'),
+      deger('İç Yağlanma', o.icYag, '', 0),
+      deger('Bazal Metabolizma', o.bmh, 'kcal', 0),
+      deger('Metabolik Yaş', o.metabolikYas, '', 0),
+      deger('Bel', o.bel, 'cm', 0),
+      deger('BKİ', o.bmi, ''),
+    ),
+    o.segment ? h('p', { class: 'hint' }, 'Kol, bacak ve gövde (segmental) değerleri de okundu; vücut haritasında görünecek.') : null,
+    yeniGecmis.length
+      ? h(
+          'label',
+          { class: 'onay-satiri' },
+          h('input', { type: 'checkbox', name: 'gecmis', checked: d.olcumler.length === 0 }),
+          h('span', null, `Cihazdaki önceki ${yeniGecmis.length} ölçüm de eklensin (${tarih(yeniGecmis[0].tarih)} – ${tarih(yeniGecmis.at(-1)!.tarih)}; kilo, yağ, yağsız kütle, su)`),
+        )
+      : null,
+    takipAcik
+      ? h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'pdfGonder', checked: true }), h('span', null, 'PDF raporunu danışanın Takibim sayfasına da ekle (çıktı almanıza gerek kalmaz)'))
+      : takibimAcik
+        ? h('p', { class: 'hint' }, 'Bu danışanın Takibim\'i açık değil. Sonuçları telefonunda görmesi için "Takibim" sekmesinden QR oluşturun.')
+        : null,
+  );
+  await pencere({
+    baslik: 'Vücut Analizi Sonucu',
+    kaydet: 'Kaydet',
+    genis: true,
+    icerik,
+    onKaydet: async (form) => {
+      const f = formNesnesi(form);
+      if (adUyusmuyor && !f.adOnay) throw new Uyari('Ad uyuşmuyor. Emin değilseniz Vazgeç\'e basın.', 'adOnay');
+      const yeni: Olcum = { ...o, id: kimlik(), kaynak: 'pdf' };
+      d.olcumler = d.olcumler.filter((x) => olcumAnahtari(x) !== olcumAnahtari(o));
+      if (f.gecmis) for (const g of yeniGecmis) d.olcumler.push({ ...g, id: kimlik(), kaynak: 'gecmis' });
+      // Profil boşsa PDF'ten doldur
+      if (!d.cinsiyet && r.kisi.cinsiyet) d.cinsiyet = r.kisi.cinsiyet;
+      if (!d.boy && r.kisi.boy) d.boy = r.kisi.boy;
+      if (!d.dogumYili && r.kisi.yas) d.dogumYili = Number(o.tarih.slice(0, 4)) - r.kisi.yas;
+      if (takipAcik && f.pdfGonder) {
+        if (dosya.size > sinirlar.belgeBayt) throw new Uyari('PDF 10 MB\'tan büyük; Takibim\'e eklenemiyor.');
+        const belge: TakipBelge = { id: kimlik(), baslik: `Vücut Analizi ${tarih(o.tarih)}`, ad: dosya.name || 'vucut-analizi.pdf', tur: 'application/pdf', boyut: dosya.size, tarih: Date.now() };
+        await belgeYukle(depo!, d, belge.id, dosya);
+        d.belgeler.push(belge);
+        yeni.belgeId = belge.id;
+      }
+      d.olcumler.push(yeni);
+      await degisti(d);
+    },
+  });
+  ciz();
+}
+
+async function elleOlcum(d: Danisan) {
+  await pencere({
+    baslik: 'Elle Ölçüm Ekle',
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h(
+        'div',
+        { class: 'form-grid iki' },
+        alan('Tarih', input('tarih', bugun(), { type: 'date' })),
+        alan('Kilo (kg)', sayiAlani('kilo')),
+        alan('Yağ Oranı (%)', sayiAlani('yagOrani')),
+        alan('Yağ Kütlesi (kg)', sayiAlani('yagKg')),
+        alan('Kas Kütlesi (kg)', sayiAlani('kasKg')),
+        alan('Bel Çevresi (cm)', sayiAlani('bel')),
+        alan('Kalça Çevresi (cm)', sayiAlani('kalca')),
+        alan('İç Yağlanma', sayiAlani('icYag')),
+      ),
+      h('p', { class: 'hint' }, 'Online danışanın evde ölçüp bildirdiği değerleri de buradan girebilirsiniz. Boş bıraktığınız alanlar kaydedilmez.'),
+    ),
+    onKaydet: async (form) => {
+      const f = formNesnesi(form);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f.tarih) || f.tarih > bugun()) throw new Uyari('Geçerli bir tarih seçin.', 'Tarih');
+      const o: Olcum = {
+        id: kimlik(),
+        tarih: f.tarih,
+        kaynak: 'elle',
+        kilo: ondalik(f.kilo, 'Kilo (kg)', 20, 350),
+        yagOrani: ondalik(f.yagOrani, 'Yağ Oranı (%)', 2, 75),
+        yagKg: ondalik(f.yagKg, 'Yağ Kütlesi (kg)', 0.5, 250),
+        kasKg: ondalik(f.kasKg, 'Kas Kütlesi (kg)', 5, 150),
+        bel: ondalik(f.bel, 'Bel Çevresi (cm)', 40, 250),
+        kalca: ondalik(f.kalca, 'Kalça Çevresi (cm)', 40, 250),
+        icYag: ondalik(f.icYag, 'İç Yağlanma', 1, 60),
+      };
+      for (const k of Object.keys(o) as (keyof Olcum)[]) if (o[k] === undefined) delete o[k];
+      if (Object.keys(o).length <= 3) throw new Uyari('En az bir ölçüm değeri girin.', 'Kilo (kg)');
+      if (o.kilo && o.yagOrani && !o.yagKg) o.yagKg = Math.round(o.kilo * o.yagOrani) / 100;
+      d.olcumler.push(o);
+      await degisti(d);
+    },
+  });
+  ciz();
+}
+
+// ================================================================ Danışan dosyası
+
+const SEKMELER: [string, string][] = [
+  ['olcumler', 'Ölçümler'],
+  ['takibim', 'Takibim'],
+  ['paket', 'Paket'],
+  ['randevular', 'Randevular'],
+  ['belgeler', 'Belgeler'],
+  ['mesajlar', 'Mesajlar'],
+  ['bilgiler', 'Bilgiler ve Notlar'],
+];
+
+// Takibim kapalıyken gizlenen sekmeler (hepsi danışanın telefonuna veri gönderir)
+const TAKIBIM_SEKMELERI = ['takibim', 'belgeler', 'mesajlar'];
+
+function danisanDosyasi(id: string, sekme: string): Node[] {
+  const d = danisanBul(id);
+  if (!takibimAcik && TAKIBIM_SEKMELERI.includes(sekme)) sekme = 'olcumler';
+  if (!d) return [bolumBasligi('Danışan bulunamadı'), h('a', { href: '#danisanlar' }, '← Danışanlar')];
+  const ust = h(
+    'div',
+    { class: 'dosya-ust' },
+    h('a', { class: 'geri-baglanti', href: '#danisanlar' }, '← Danışanlar'),
+    bolumBasligi(
+      d.ad,
+      h('span', null, telefonGoster(d.telefon), d.eposta ? ` · ${d.eposta}` : '', d.dogumYili ? ` · ${new Date().getFullYear() - d.dogumYili} yaş` : '', d.boy ? ` · ${sayi(d.boy, 0)} cm` : ''),
+      takibimAcik ? takipEtiketi(d) : null,
+      waDugme(d.telefon, sablon('genel', { ad: ilkAd(d.ad) }), 'WhatsApp\'tan Yaz'),
+    ),
+    d.alerjiler ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, h('strong', null, 'Alerji / intolerans: '), d.alerjiler)) : null,
+    h(
+      'nav',
+      { class: 'sekme-cubugu', 'aria-label': 'Danışan dosyası' },
+      SEKMELER.filter(([k]) => takibimAcik || !TAKIBIM_SEKMELERI.includes(k)).map(([k, ad]) =>
+        h('a', { href: `#danisan/${d.id}/${k}`, 'aria-current': k === sekme ? 'page' : null }, ad),
+      ),
+    ),
+  );
+  const govde: Node[] = (() => {
+    switch (sekme) {
+      case 'takibim':
+        return takibimSekmesi(d);
+      case 'paket':
+        return paketSekmesi(d);
+      case 'randevular':
+        return randevuSekmesi(d);
+      case 'belgeler':
+        return belgeSekmesi(d);
+      case 'mesajlar':
+        return mesajSekmesi(d);
+      case 'bilgiler':
+        return bilgiSekmesi(d);
+      default:
+        return olcumSekmesi(d);
+    }
+  })();
+  return [ust, ...govde];
+}
+
+function olcumSekmesi(d: Danisan): Node[] {
+  return [
+    h(
+      'div',
+      { class: 'olcum-ekle' },
+      pdfBirakmaAlani(
+        takibimAcik
+          ? 'Değerler otomatik doldurulur; kaydettiğinizde danışanın Takibim sayfası da güncellenir.'
+          : 'Değerler otomatik doldurulur. PDF yalnızca bu bilgisayarda okunur, hiçbir yere yüklenmez.',
+        (dosya) => pdfIleOlcum(d, dosya),
+      ),
+      dugme('Elle Ölçüm Ekle', () => elleOlcum(d), 'btn btn-outline btn-sm'),
+    ),
+    ...(d.olcumler.length ? gelisimGorunumu(d.olcumler, { hedefKilo: d.hedefKilo }) : []),
+    kart(
+      'Tüm Ölçümler',
+      olcumTablosu(d.olcumler, (o) =>
+        dugme(
+          'Sil',
+          async () => {
+            const ok = await pencere({
+              baslik: 'Ölçümü Sil',
+              tehlikeli: true,
+              kaydet: 'Sil',
+              icerik: h('p', null, `${tarih(o.tarih)} tarihli ölçüm silinsin mi?${takibimAcik ? ' Danışanın Takibim sayfasından da kalkar.' : ''}`),
+            });
+            if (!ok) return;
+            d.olcumler = d.olcumler.filter((x) => x !== o);
+            await degisti(d);
+            ciz();
+          },
+          'btn btn-outline btn-xs',
+        ),
+      ),
+    ),
+  ];
+}
+
+function qrSvg(metin_: string): SVGElement {
+  const qr = qrcode(0, 'M');
+  qr.addData(metin_);
+  qr.make();
+  const svg = new DOMParser().parseFromString(qr.createSvgTag({ cellSize: 6, margin: 3, scalable: true }), 'image/svg+xml').documentElement;
+  const el = document.importNode(svg, true) as unknown as SVGElement;
+  el.setAttribute('role', 'img');
+  el.setAttribute('aria-label', 'Takibim QR kodu');
+  return el;
+}
+
+async function qrGoster(d: Danisan) {
+  const t = takipAnahtari(d);
+  if (!t) return;
+  await pencere({
+    baslik: `${d.ad} · Takibim QR Kodu`,
+    kaydet: 'Kapat',
+    vazgecYok: true,
+    genis: true,
+    icerik: h(
+      'div',
+      { class: 'qr-alani' },
+      h('div', { class: 'qr' }, qrSvg(qrAdresi(t))),
+      h(
+        'ol',
+        { class: 'adim-liste' },
+        h('li', null, 'Danışan telefonunun kamerasını QR koda tutsun.'),
+        h('li', null, 'Açılan Takibim sayfasında onay kutularını işaretleyip "Takibimi Aç"a bassın.'),
+        h('li', null, 'Bundan sonra siteye girip menüdeki "Takibim" ile kendi sonuçlarına ulaşır. Yeni PDF eklediğinizde telefonunda kendiliğinden güncellenir.'),
+      ),
+      h('p', { class: 'hint' }, `QR kodu yalnızca bir telefonda kullanılabilir ve ${sinirlar.qrGecerlilikGun} gün içinde okutulmazsa geçersiz olur. QR kodunu başkalarının görebileceği yerde açık bırakmayın.`),
+    ),
+  });
+  void durumlariGuncelle(depo!).then(() => cizSessiz()).catch(() => undefined);
+}
+
+async function linkGonder(d: Danisan) {
+  const t = takipAnahtari(d);
+  if (!t) return;
+  const kod = altiHane();
+  const adres = await linkAdresi(t, kod);
+  const mesaj = sablon('takibim', { ad: ilkAd(d.ad), baglanti: adres });
+  await pencere({
+    baslik: 'Bağlantı Linki Gönder',
+    kaydet: 'Kapat',
+    vazgecYok: true,
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h('p', null, 'Bağlantıyı WhatsApp\'tan gönderin. Danışan bağlantıyı açtığında aşağıdaki kodu girmesi gerekir; kodu WhatsApp\'tan değil, telefon görüşmesinde sözlü olarak söyleyin.'),
+      h('div', { class: 'kod-kutu', 'aria-label': 'Açılış kodu' }, kod),
+      h('a', { class: 'btn btn-wa', href: whatsapp(d.telefon, mesaj), target: '_blank', rel: 'noopener' }, 'WhatsApp ile Bağlantıyı Gönder'),
+      dugme('Bağlantıyı Kopyala', async () => {
+        try {
+          await navigator.clipboard.writeText(adres);
+          toast('Bağlantı kopyalandı.');
+        } catch {
+          toast('Kopyalanamadı.', 'hata');
+        }
+      }),
+      h('p', { class: 'hint' }, 'Bağlantı ve QR aynı kaydı açar; hangisi önce kullanılırsa o telefona tanımlanır.'),
+    ),
+  });
+}
+
+async function takipOlustur(d: Danisan, yenile = false, goster: 'qr' | 'link' = 'qr') {
+  if (!V().sunucu) {
+    toast('Önce paneli sunucuya bağlayın.', 'hata');
+    return sunucuBagla();
+  }
+  if (yenile) {
+    const ok = await pencere({
+      baslik: 'Yeni QR Oluştur',
+      kaydet: 'Yeni QR Oluştur',
+      tehlikeli: true,
+      icerik: h('p', null, 'Yeni QR oluşturulunca danışanın şu anki telefonu Takibim\'e erişemez; danışan yeni QR\'ı okutmalıdır. Telefonu değiştiyse veya kaybolduysa kullanın. Gönderilen belgeler yeni kayda taşınır.'),
+    });
+    if (!ok) return;
+  }
+  try {
+    await takipBaslat(depo!, d);
+    ciz();
+    if (goster === 'link') await linkGonder(d);
+    else await qrGoster(d);
+  } catch (e) {
+    toast(e instanceof ApiError ? e.message : 'Takibim oluşturulamadı.', 'hata');
+  }
+}
+
+function takibimSekmesi(d: Danisan): Node[] {
+  const t = d.takip;
+  const dugmeler: Node[] = [];
+  let durumMetni: Node;
+  if (!t || t.durum === 'yok' || t.durum === 'kapatildi') {
+    durumMetni = h(
+      'div',
+      null,
+      t?.durum === 'kapatildi'
+        ? h('p', null, h('strong', null, 'Danışan Takibim\'i kapattı ve açık rızasını geri çekti. '), 'Sunucudaki şifreli verileri silindi. Danışan yeniden isterse yeni QR oluşturabilirsiniz.')
+        : t?.durum === 'yok'
+          ? h('p', null, h('strong', null, 'QR kodunun süresi doldu. '), 'Danışan QR kodunu okutmadı; yenisini oluşturun.')
+          : h('p', null, 'Takibim, danışanın ölçümlerini, vücut haritasını, paketini, randevularını ve gönderdiğiniz belgeleri kendi telefonunda görmesini sağlar. Yeni PDF eklediğinizde telefonu kendiliğinden güncellenir.'),
+    );
+    dugmeler.push(dugme('QR Oluştur', () => takipOlustur(d), 'btn btn-primary'), dugme('Bağlantı Linki Gönder', () => takipOlustur(d, false, 'link')));
+  } else if (t.durum === 'bekliyor') {
+    durumMetni = h(
+      'p',
+      null,
+      h('strong', null, 'QR kodu henüz okutulmadı. '),
+      `Oluşturma: ${tarihSaat(t.olusturma)}. QR ${sinirlar.qrGecerlilikGun} gün geçerlidir.`,
+    );
+    dugmeler.push(
+      dugme('QR\'ı Göster', () => qrGoster(d), 'btn btn-primary'),
+      dugme('Bağlantı Linki Gönder', () => linkGonder(d)),
+      dugme('Durumu Yenile', async (e) => {
+        await mesgul(e.currentTarget as HTMLButtonElement, () => durumlariGuncelle(depo!));
+        ciz();
+      }),
+    );
+  } else {
+    durumMetni = h(
+      'dl',
+      { class: 'sabit-bilgi' },
+      h('dt', null, 'Durum'),
+      h('dd', null, 'Telefon eşleşti; danışan Takibim\'i kullanıyor.'),
+      h('dt', null, 'Eşleşme'),
+      h('dd', null, t.eslesti ? tarihSaat(t.eslesti) : '—'),
+      h('dt', null, 'Son bakış'),
+      h('dd', null, t.sonBakis ? tarihSaat(t.sonBakis) : '—'),
+      h('dt', null, 'Son güncelleme'),
+      h('dd', null, t.sonGonderim ? tarihSaat(t.sonGonderim) : '—', t.bekleyenGonderim ? ' (bekleyen güncelleme var)' : ''),
+      h('dt', null, 'Açık rıza'),
+      h('dd', null, t.riza ? `Verildi (metin sürümü ${t.riza})${t.riza !== takibimRizaSurumu ? ' — eski sürüm; danışan bir sonraki açılışta güncel metni onaylar' : ''}` : '—'),
+    );
+    dugmeler.push(
+      dugme('Şimdi Güncelle', async (e) => {
+        const r = await mesgul(e.currentTarget as HTMLButtonElement, () => takipGonder(depo!, d));
+        toast(r === 'tamam' ? 'Takibim güncellendi.' : 'Güncellenemedi.', r === 'tamam' ? 'tamam' : 'hata');
+        ciz();
+      }),
+      waDugme(d.telefon, sablon('yeniSonuc', { ad: ilkAd(d.ad), takibim: `${site.url}/takibim/` }), 'Yeni Sonuç Mesajı') as Node,
+      dugme('Yeni QR (Telefon Değişti)', () => takipOlustur(d, true)),
+    );
+  }
+  if (t && t.durum !== 'kapatildi')
+    dugmeler.push(
+      dugme(
+        'Takibi Durdur',
+        async () => {
+          const ok = await pencere({
+            baslik: 'Takibi Durdur',
+            tehlikeli: true,
+            kaydet: 'Durdur',
+            icerik: h('p', null, 'Danışanın telefonu Takibim\'e artık erişemez ve sunucudaki şifreli veriler silinir. Bu paneldeki kayıtlar silinmez.'),
+          });
+          if (!ok) return;
+          await api('DELETE', `/kutu/${t.kutu}`, undefined, panelBasligi(depo!)).catch(() => undefined);
+          d.takip = null;
+          d.belgeler = [];
+          await depo!.kaydet();
+          ciz();
+        },
+        'btn btn-tehlike btn-sm',
+      ),
+    );
+  return [
+    kart(
+      'Takibim',
+      durumMetni,
+      h('div', { class: 'eylemler genis-eylem' }, ...dugmeler),
+      h(
+        'p',
+        { class: 'hint' },
+        'Gizlilik: Takibim verileri bu bilgisayarda danışana özel bir anahtarla şifrelenir; anahtar yalnızca bu panelde ve danışanın telefonunda bulunur. Alerji, hastalık, ilaç bilgileri ve özel notlarınız gönderilmez.',
+      ),
+    ),
+  ];
+}
+
+function paketSekmesi(d: Danisan): Node[] {
+  const p = d.paket;
+  const tanimlar = V().paketler.filter((x) => x.aktif);
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
+    tanimlar.length ? alan('Hazır Paket', secim('tanim', [['', 'Seçin (isteğe bağlı)'], ...tanimlar.map((x) => [x.id, x.ad] as [string, string])])) : null,
+    h(
+      'div',
+      { class: 'form-grid iki' },
+      alan('Paket Adı', input('ad', p?.ad ?? '', { maxlength: 80 })),
+      alan('Başlangıç', input('baslangic', p?.baslangic ?? bugun(), { type: 'date' })),
+      alan('Bitiş', input('bitis', p?.bitis ?? '', { type: 'date' })),
+      alan('Toplam Görüşme', input('toplamGorusme', p?.toplamGorusme ?? '', { inputmode: 'numeric' })),
+      alan('Kalan Görüşme', input('kalanGorusme', p?.kalanGorusme ?? '', { inputmode: 'numeric' })),
+    ),
+    alan(takibimAcik ? 'Danışanın göreceği not' : 'Not', metinAlani('not', p?.not ?? '', { rows: 2, maxlength: 300 })),
+    h('div', { class: 'eylemler' }, h('button', { type: 'submit', class: 'btn btn-primary btn-sm' }, 'Paketi Kaydet'), p ? dugme('Paketi Kaldır', async () => {
+      d.paket = null;
+      await degisti(d);
+      ciz();
+    }, 'btn btn-outline btn-sm') : null),
+  );
+  form.querySelector<HTMLSelectElement>('select[name=tanim]')?.addEventListener('change', (e) => {
+    const t = tanimlar.find((x) => x.id === (e.target as HTMLSelectElement).value);
+    if (!t) return;
+    const el = (n: string) => form.querySelector<HTMLInputElement>(`[name=${n}]`)!;
+    el('ad').value = t.ad;
+    if (t.gorusme) {
+      el('toplamGorusme').value = String(t.gorusme);
+      el('kalanGorusme').value = String(t.gorusme);
+    }
+    if (t.gun) el('bitis').value = new Date(Date.parse(`${el('baslangic').value || bugun()}T00:00:00Z`) + t.gun * 86_400_000).toISOString().slice(0, 10);
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const f = formNesnesi(form);
+      const ad = String(f.ad).trim();
+      if (!ad) throw new Uyari('Paket adı yazın.', 'Paket Adı');
+      const tam = (v: string, et: string) => {
+        if (!String(v).trim()) return undefined;
+        const n = Number(v);
+        if (!Number.isInteger(n) || n < 0 || n > 200) throw new Uyari(`${et} 0–200 arasında bir sayı olmalıdır.`, et);
+        return n;
+      };
+      if (f.bitis && f.baslangic && f.bitis < f.baslangic) throw new Uyari('Bitiş tarihi başlangıçtan önce olamaz.', 'Bitiş');
+      d.paket = {
+        ad,
+        baslangic: f.baslangic || undefined,
+        bitis: f.bitis || undefined,
+        toplamGorusme: tam(f.toplamGorusme, 'Toplam Görüşme'),
+        kalanGorusme: tam(f.kalanGorusme, 'Kalan Görüşme'),
+        not: String(f.not).trim() || undefined,
+      };
+      await degisti(d);
+      ciz();
+    } catch (err) {
+      hataGoster(form, err);
+    }
+  });
+  return [
+    kart(
+      'Paket',
+      p
+        ? h(
+            'div',
+            { class: 'eylemler genis-eylem' },
+            p.kalanGorusme !== undefined
+              ? dugme(`Görüşme Yapıldı (kalan ${p.kalanGorusme} → ${Math.max(0, p.kalanGorusme - 1)})`, async () => {
+                  p.kalanGorusme = Math.max(0, (p.kalanGorusme ?? 1) - 1);
+                  await degisti(d);
+                  ciz();
+                })
+              : null,
+            waDugme(d.telefon, sablon('odeme', { ad: ilkAd(d.ad), adSoyad: d.ad, paket: p.ad }), 'Ödeme Bilgisi Gönder'),
+            p.bitis ? waDugme(d.telefon, sablon('paketBitiyor', { ad: ilkAd(d.ad), paket: p.ad, bitis: tarih(p.bitis) }), 'Bitiş Hatırlat') : null,
+          )
+        : null,
+      form,
+    ),
+  ];
+}
+
+function randevuSekmesi(d: Danisan): Node[] {
+  const liste = V().randevular.filter((r) => r.danisanId === d.id).sort(randevuSirala).reverse();
+  return [
+    kart(
+      'Randevular',
+      h('div', { class: 'eylemler' }, dugme('Yeni Randevu', () => randevuDuzenle(undefined, d.id), 'btn btn-primary btn-sm')),
+      liste.length ? h('ul', { class: 'liste' }, liste.map((r) => randevuSatiri(r, true))) : bos('Randevu yok.'),
+    ),
+  ];
+}
+
+function belgeSekmesi(d: Danisan): Node[] {
+  const acik = d.takip && (d.takip.durum === 'eslesti' || d.takip.durum === 'bekliyor');
+  const dosyaAlani = h('input', { class: 'input', type: 'file', name: 'dosya', accept: Object.keys(sinirlar.belgeTurleri).join(',') });
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
+    h('div', { class: 'form-grid iki' }, alan('Başlık', input('baslik', '', { maxlength: 80, placeholder: 'Örn. Beslenme Planı – 1. Hafta' })), alan('Dosya (PDF, JPG, PNG, WEBP · en fazla 10 MB)', dosyaAlani)),
+    h('button', { type: 'submit', class: 'btn btn-primary btn-sm' }, 'Danışana Gönder'),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]');
+    await mesgul(btn, async () => {
+      try {
+        const dosya = dosyaAlani.files?.[0];
+        const baslik = String(formNesnesi(form).baslik).trim();
+        if (!baslik) throw new Uyari('Başlık yazın.', 'Başlık');
+        if (!dosya) throw new Uyari('Dosya seçin.', 'Dosya (PDF, JPG, PNG, WEBP · en fazla 10 MB)');
+        if (!sinirlar.belgeTurleri[dosya.type]) throw new Uyari('Yalnızca PDF, JPG, PNG veya WEBP gönderilebilir.');
+        if (dosya.size > sinirlar.belgeBayt) throw new Uyari('Dosya en fazla 10 MB olabilir.');
+        const b: TakipBelge = { id: kimlik(), baslik, ad: dosya.name, tur: dosya.type, boyut: dosya.size, tarih: Date.now() };
+        await belgeYukle(depo!, d, b.id, dosya);
+        d.belgeler.push(b);
+        await degisti(d);
+        ciz();
+      } catch (err) {
+        hataGoster(form, err);
+      }
+    });
+  });
+  const liste = [...d.belgeler].sort((a, b) => b.tarih - a.tarih);
+  return [
+    kart(
+      'Belgeler',
+      acik
+        ? form
+        : h('div', { class: 'bilgi-kutu' }, h('p', null, 'Belge göndermek için önce danışanın Takibim\'ini açın (Takibim sekmesi → QR Oluştur).')),
+      liste.length
+        ? h(
+            'ul',
+            { class: 'liste' },
+            liste.map((b) =>
+              h(
+                'li',
+                null,
+                h('div', { class: 'ana' }, h('strong', null, b.baslik), h('span', null, ` ${sinirlar.belgeTurleri[b.tur] ?? ''} · ${boyut(b.boyut)} · ${tarihSaat(b.tarih)}`)),
+                h(
+                  'div',
+                  { class: 'eylemler' },
+                  dugme('Aç', async (e) => {
+                    await mesgul(e.currentTarget as HTMLButtonElement, async () => {
+                      try {
+                        indir(new Blob([(await belgeIndir(depo!, d, b.id)) as Uint8Array<ArrayBuffer>], { type: b.tur }), b.ad);
+                      } catch {
+                        toast('Belge indirilemedi.', 'hata');
+                      }
+                    });
+                  }, 'btn btn-outline btn-xs'),
+                  dugme('Sil', async () => {
+                    const ok = await pencere({ baslik: 'Belgeyi Sil', tehlikeli: true, kaydet: 'Sil', icerik: h('p', null, `"${b.baslik}" danışanın Takibim sayfasından kaldırılsın mı?`) });
+                    if (!ok) return;
+                    await belgeSil(depo!, d, b.id);
+                    d.belgeler = d.belgeler.filter((x) => x !== b);
+                    for (const o of d.olcumler) if (o.belgeId === b.id) delete o.belgeId;
+                    await degisti(d);
+                    ciz();
+                  }, 'btn btn-outline btn-xs'),
                 ),
               ),
             ),
           )
-        : h('p', { class: 'bos' }, 'Henüz ölçüm yok.'),
+        : bos('Gönderilmiş belge yok.'),
     ),
-  ].filter(Boolean) as Node[];
+  ];
 }
 
-function abonelikFormu(paketler: any[] | null, mevcut?: any) {
-  return h(
-    'div',
-    { class: 'form-grid' },
-    paketler
-      ? alan('Paket', h('select', { class: 'select', name: 'paketId', 'data-alan': 'Paket' }, paketler.map((p) => h('option', { value: p.id }, `${p.ad}${p.aktif ? '' : ' (pasif)'}`))))
-      : null,
-    h(
-      'div',
-      { class: 'form-grid iki' },
-      alan('Durum', h('select', { class: 'select', name: 'durum', 'data-alan': 'Durum' }, Object.entries(paketDurumlari).map(([k, ad]) => h('option', { value: k, selected: (mevcut?.durum ?? 'aktif') === k ? true : null }, ad)))),
-      alan('Tutar (TL)', h('input', { class: 'input', name: 'fiyat', inputmode: 'decimal', value: mevcut?.fiyat ?? '', 'data-alan': 'Tutar' })),
-      alan('Başlangıç', h('input', { class: 'input', type: 'date', name: 'baslangic', value: mevcut?.baslangic ?? bugun(), 'data-alan': 'Başlangıç' })),
-      alan('Bitiş', h('input', { class: 'input', type: 'date', name: 'bitis', value: mevcut?.bitis ?? '', 'data-alan': 'Bitiş' })),
-    ),
-    alan('Ödeme Notu (danışan görür)', h('input', { class: 'input', name: 'odemeNotu', maxlength: 300, value: mevcut?.odemeNotu ?? '', placeholder: 'Örn. Ödeme alındı (havale, 3 Ekim)', 'data-alan': 'Ödeme notu' })),
+function mesajSekmesi(d: Danisan): Node[] {
+  const acik = d.takip && (d.takip.durum === 'eslesti' || d.takip.durum === 'bekliyor');
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
+    alan('Mesaj', metinAlani('metin', '', { rows: 4, maxlength: 1500, placeholder: 'Danışanın Takibim sayfasında görünecek mesaj' })),
+    h('button', { type: 'submit', class: 'btn btn-primary btn-sm' }, 'Takibim\'e Gönder'),
   );
-}
-
-function paketSekme(v: any): Node[] {
-  const d = v.danisan;
-  const tanimla = async () => {
-    if (!v.paketler.length) return toast('Önce Paketler bölümünden paket tanımlayın.', 'hata');
-    const ok = await pencere({
-      baslik: 'Paket Tanımla',
-      icerik: abonelikFormu(v.paketler),
-      onKaydet: async (form) => {
-        await api('POST', `/yonetim/danisan/${d.id}/abonelik`, formNesnesi(form));
-      },
-    });
-    if (ok) yenileDetay();
-  };
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const m = String(formNesnesi(form).metin).trim();
+      if (!m) throw new Uyari('Mesaj yazın.', 'Mesaj');
+      d.mesajlar.push({ id: kimlik(), tarih: Date.now(), metin: m });
+      await degisti(d);
+      ciz();
+    } catch (err) {
+      hataGoster(form, err);
+    }
+  });
+  const liste = [...d.mesajlar].sort((a, b) => b.tarih - a.tarih);
   return [
-    h('div', { class: 'eylemler', style: 'margin-bottom:14px' }, h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: tanimla }, 'Paket Tanımla')),
     kart(
-      'Paketler ve Talepler',
-      v.abonelikler.length
+      'Mesajlar',
+      h('p', { class: 'hint' }, 'Mesajlar danışanın Takibim sayfasında görünür. Acil ve kişisel konular için WhatsApp\'ı kullanın.'),
+      acik ? form : h('div', { class: 'bilgi-kutu' }, h('p', null, 'Mesaj göndermek için önce danışanın Takibim\'ini açın.')),
+      liste.length
         ? h(
             'ul',
             { class: 'liste' },
-            v.abonelikler.map((a: any) =>
+            liste.map((m) =>
+              h(
+                'li',
+                null,
+                h('div', { class: 'ana' }, h('strong', null, m.duyuru ? 'Duyuru' : 'Mesaj', ` · ${tarihSaat(m.tarih)}`), h('p', { class: 'cok-satir' }, m.metin)),
+                h('div', { class: 'eylemler' }, dugme('Sil', async () => {
+                  d.mesajlar = d.mesajlar.filter((x) => x !== m);
+                  await degisti(d);
+                  ciz();
+                }, 'btn btn-outline btn-xs')),
+              ),
+            ),
+          )
+        : bos('Mesaj yok.'),
+    ),
+  ];
+}
+
+function bilgiSekmesi(d: Danisan): Node[] {
+  const satir = (dt: string, dd?: string | number) => [h('dt', null, dt), h('dd', null, dd === undefined || dd === '' ? '—' : String(dd))];
+  const notForm = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    alan('Yeni not (yalnızca siz görürsünüz)', metinAlani('metin', '', { rows: 3, maxlength: 3000 })),
+    h('button', { type: 'submit', class: 'btn btn-primary btn-sm' }, 'Notu Ekle'),
+  );
+  notForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const m = String(formNesnesi(notForm).metin).trim();
+    if (!m) return;
+    d.notlar.push({ id: kimlik(), tarih: Date.now(), metin: m });
+    await degisti(d, true);
+    ciz();
+  });
+  return [
+    kart(
+      'Kişisel ve Sağlık Bilgileri',
+      h(
+        'dl',
+        { class: 'sabit-bilgi' },
+        ...satir('Ad Soyad', d.ad),
+        ...satir('Telefon', telefonGoster(d.telefon)),
+        ...satir('E-posta', d.eposta),
+        ...satir('Cinsiyet', d.cinsiyet === 'K' ? 'Kadın' : d.cinsiyet === 'E' ? 'Erkek' : ''),
+        ...satir('Doğum Yılı', d.dogumYili),
+        ...satir('Boy', d.boy ? `${sayi(d.boy, 0)} cm` : ''),
+        ...satir('Hedef', [d.hedef, d.hedefKilo ? `${sayi(d.hedefKilo)} kg` : ''].filter(Boolean).join(' · ')),
+        ...satir('Alerji / İntolerans', d.alerjiler),
+        ...satir('Hastalıklar', d.hastaliklar),
+        ...satir('İlaç / Takviye', d.ilaclar),
+        ...satir('Kayıt', tarihSaat(d.olusturma)),
+      ),
+      h('div', { class: 'eylemler' }, dugme('Bilgileri Düzenle', () => danisanDuzenle(d), 'btn btn-primary btn-sm')),
+    ),
+    kart(
+      'Özel Notlarım',
+      notForm,
+      d.notlar.length
+        ? h(
+            'ul',
+            { class: 'liste' },
+            [...d.notlar].sort((a, b) => b.tarih - a.tarih).map((n) =>
+              h(
+                'li',
+                null,
+                h('div', { class: 'ana' }, h('strong', null, tarihSaat(n.tarih)), h('p', { class: 'cok-satir' }, n.metin)),
+                h('div', { class: 'eylemler' }, dugme('Sil', async () => {
+                  d.notlar = d.notlar.filter((x) => x !== n);
+                  await degisti(d, true);
+                  ciz();
+                }, 'btn btn-outline btn-xs')),
+              ),
+            ),
+          )
+        : null,
+    ),
+    kart(
+      'Danışanı Sil',
+      h('p', null, 'Danışanın tüm kayıtları (ölçümler, notlar, randevular) bu panelden silinir; Takibim kaydı ve belgeleri sunucudan kaldırılır. Bu işlem geri alınamaz.'),
+      dugme('Danışanı Sil', async () => {
+        const ok = await pencere({
+          baslik: 'Danışanı Sil',
+          tehlikeli: true,
+          kaydet: 'Kalıcı Olarak Sil',
+          icerik: h('div', { class: 'form-grid' }, h('p', null, `${d.ad} ve tüm kayıtları silinecek.`), alan('Onay için SİL yazın', input('onay', '', { autocomplete: 'off' }))),
+          onKaydet: async (form) => {
+            if (String(formNesnesi(form).onay).trim().toLocaleUpperCase('tr') !== 'SİL') throw new Uyari('Onay için SİL yazın.', 'Onay için SİL yazın');
+            if (d.takip) await api('DELETE', `/kutu/${d.takip.kutu}`, undefined, panelBasligi(depo!)).catch(() => undefined);
+            V().danisanlar = V().danisanlar.filter((x) => x !== d);
+            V().randevular = V().randevular.filter((r) => r.danisanId !== d.id);
+            await depo!.simdiKaydet();
+          },
+        });
+        if (ok) {
+          toast('Danışan silindi.');
+          location.hash = '#danisanlar';
+        }
+      }, 'btn btn-tehlike btn-sm'),
+    ),
+  ];
+}
+
+// ================================================================ Duyuru
+
+function duyuru(): Node[] {
+  const alicilar = V().danisanlar.filter((d) => d.takip && (d.takip.durum === 'eslesti' || d.takip.durum === 'bekliyor'));
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
+    alan('Duyuru metni', metinAlani('metin', '', { rows: 5, maxlength: 1500, placeholder: 'Örn. 29 Ekim\'de klinik kapalıdır.' })),
+    h('button', { type: 'submit', class: 'btn btn-primary btn-sm', disabled: alicilar.length ? null : true }, `Takibim'i Olan Tüm Danışanlara Gönder (${alicilar.length})`),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]');
+    await mesgul(btn, async () => {
+      try {
+        const m = String(formNesnesi(form).metin).trim();
+        if (!m) throw new Uyari('Duyuru metnini yazın.', 'Duyuru metni');
+        let basarili = 0;
+        for (const d of alicilar) {
+          d.mesajlar.push({ id: kimlik(), tarih: Date.now(), metin: m, duyuru: true });
+          if ((await takipGonder(depo!, d)) === 'tamam') basarili++;
+        }
+        await depo!.simdiKaydet();
+        toast(`Duyuru ${basarili}/${alicilar.length} danışanın Takibim sayfasına gönderildi.`, basarili === alicilar.length ? 'tamam' : 'hata');
+        ciz();
+      } catch (err) {
+        hataGoster(form, err);
+      }
+    });
+  });
+  const tum = [...V().danisanlar].sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+  const waMetni = h('textarea', { class: 'textarea', rows: 3, placeholder: 'WhatsApp için mesaj (boş bırakılırsa "Merhaba {ad}," ile başlar)' });
+  const waListe = h('ul', { class: 'liste' });
+  const listeCiz = () =>
+    waListe.replaceChildren(
+      ...tum.map((d) =>
+        h(
+          'li',
+          null,
+          h('div', { class: 'ana' }, h('strong', null, d.ad), h('span', null, ` ${telefonGoster(d.telefon)}`)),
+          h('div', { class: 'eylemler' }, waDugme(d.telefon, `Merhaba ${ilkAd(d.ad)}, ${waMetni.value}`.trim())),
+        ),
+      ),
+    );
+  waMetni.addEventListener('input', listeCiz);
+  listeCiz();
+  return [
+    bolumBasligi('Duyuru', takibimAcik ? 'Tek tuşla tüm danışanların Takibim sayfasına duyuru gönderin.' : 'Danışanlarınıza WhatsApp ile duyuru gönderin.'),
+    takibimAcik ? kart('Takibim Duyurusu', form) : null,
+    kart('WhatsApp ile Tek Tek', h('p', { class: 'hint' }, 'Mesajı bir kez yazın; WhatsApp toplu mesaja izin vermediği için her danışanın yanındaki düğme, mesajı o kişiye hazır olarak açar.'), waMetni, tum.length ? waListe : bos('Danışan yok.')),
+  ].filter(Boolean) as Node[];
+}
+
+// ================================================================ Paketler
+
+function paketler(): Node[] {
+  const duzenle = async (p?: PaketTanimi) => {
+    await pencere({
+      baslik: p ? 'Paketi Düzenle' : 'Yeni Paket',
+      icerik: h(
+        'div',
+        { class: 'form-grid' },
+        alan('Paket Adı', input('ad', p?.ad ?? '', { maxlength: 80 })),
+        h(
+          'div',
+          { class: 'form-grid uc' },
+          alan('Görüşme Sayısı', input('gorusme', p?.gorusme ?? '', { inputmode: 'numeric' })),
+          alan('Süre (gün)', input('gun', p?.gun ?? '', { inputmode: 'numeric' })),
+          alan('Ücret (TL)', input('fiyat', p?.fiyat ?? '', { inputmode: 'decimal' }), 'Yalnızca sizin için'),
+        ),
+        h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'aktif', checked: p ? p.aktif : true }), h('span', null, 'Kullanımda')),
+      ),
+      onKaydet: async (form) => {
+        const f = formNesnesi(form);
+        const ad = String(f.ad).trim();
+        if (!ad) throw new Uyari('Paket adı yazın.', 'Paket Adı');
+        const tam = (v: string, et: string, max: number) => {
+          if (!String(v).trim()) return undefined;
+          const n = Number(v);
+          if (!Number.isInteger(n) || n < 1 || n > max) throw new Uyari(`${et} 1–${max} arasında olmalıdır.`, et);
+          return n;
+        };
+        const v: PaketTanimi = {
+          id: p?.id ?? kimlik(),
+          ad,
+          gorusme: tam(f.gorusme, 'Görüşme Sayısı', 200),
+          gun: tam(f.gun, 'Süre (gün)', 730),
+          fiyat: ondalik(f.fiyat, 'Ücret (TL)', 0, 1_000_000),
+          aktif: Boolean(f.aktif),
+        };
+        if (p) Object.assign(p, v);
+        else V().paketler.push(v);
+        await depo!.kaydet();
+      },
+    });
+    ciz();
+  };
+  return [
+    bolumBasligi('Paketler', 'Danışan dosyasında paket seçerken kullanılan hazır tanımlar.', dugme('Yeni Paket', () => duzenle(), 'btn btn-primary btn-sm')),
+    kart(
+      null,
+      V().paketler.length
+        ? h(
+            'ul',
+            { class: 'liste' },
+            V().paketler.map((p) =>
               h(
                 'li',
                 null,
                 h(
                   'div',
                   { class: 'ana' },
-                  h('strong', null, a.paketAdi),
-                  h('span', null, a.baslangic ? `${tarih(a.baslangic)}${a.bitis ? ` – ${tarih(a.bitis)}` : ''}` : `Talep: ${tarihSaat(a.tarih)}`, a.fiyat !== null ? ` · ${para(a.fiyat)}` : ''),
-                  a.not ? h('p', null, `Danışanın notu: ${a.not}`) : null,
-                  a.odemeNotu ? h('p', null, `Ödeme notu: ${a.odemeNotu}`) : null,
+                  h('strong', null, p.ad),
+                  h('span', null, ` ${[p.gorusme ? `${p.gorusme} görüşme` : '', p.gun ? `${p.gun} gün` : '', p.fiyat !== undefined ? `${sayi(p.fiyat, 2)} TL` : ''].filter(Boolean).join(' · ')}`),
                 ),
-                h(
-                  'div',
-                  { class: 'eylemler' },
-                  durumEtiketi(a.durum, paketDurumlari),
-                  a.durum === 'talep' || a.durum === 'odeme' ? waDugme(d.telefon, wa.odeme(d.ad, a.paketAdi), 'Ödeme Bilgisi Gönder') : null,
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      class: 'btn btn-outline btn-xs',
-                      onclick: async () => {
-                        const ok = await pencere({
-                          baslik: a.paketAdi,
-                          icerik: abonelikFormu(null, a),
-                          onKaydet: async (form) => {
-                            await api('PUT', `/yonetim/abonelik/${a.id}`, formNesnesi(form));
-                          },
-                        });
-                        if (ok) yenileDetay();
-                      },
-                    },
-                    'Düzenle',
-                  ),
-                ),
+                h('div', { class: 'eylemler' }, p.aktif ? null : etiket('Kullanımda değil', 'pasif'), dugme('Düzenle', () => duzenle(p), 'btn btn-outline btn-xs')),
               ),
             ),
           )
-        : h('p', { class: 'bos' }, 'Paket kaydı yok.'),
+        : bos('Henüz paket tanımı yok.'),
     ),
   ];
 }
 
-function randevuSekme(v: any): Node[] {
-  const d = v.danisan;
-  const ekle = async () => {
-    const ok = await pencere({
-      baslik: 'Randevu Ekle',
+// ================================================================ Ayarlar
+
+async function sunucuBagla() {
+  let durum: { randevuKutusu: boolean; kurulumKodu: boolean };
+  try {
+    durum = await api('GET', '/durum');
+  } catch (e) {
+    return toast(e instanceof ApiError ? e.message : 'Sunucuya ulaşılamadı.', 'hata');
+  }
+  if (!durum.kurulumKodu) {
+    const kod = b64url(rastgele(18));
+    await pencere({
+      baslik: 'Kurulum Kodu Gerekli',
+      kaydet: 'Kodu Ekledim, Devam Et',
+      genis: true,
+      icerik: h(
+        'div',
+        { class: 'form-grid' },
+        h('p', null, 'Paneli sunucuya yalnızca sizin bağlayabilmeniz için Cloudflare\'e bir kez gizli bir kurulum kodu eklenir (ücretsizdir):'),
+        h(
+          'ol',
+          { class: 'adim-liste' },
+          h('li', null, 'dash.cloudflare.com → Workers & Pages → diyetisyeneylemdizman → Settings → Variables and Secrets → Add.'),
+          h('li', null, 'Type: Secret · Variable name: KURULUM_KODU · Value: aşağıdaki kod → Deploy.'),
+          h('li', null, 'Kodu ayrıca güvenli bir yere not edin; yeni bir bilgisayarda paneli bağlarken yine gerekir.'),
+        ),
+        h('div', { class: 'kod-kutu kucuk' }, kod),
+        dugme('Kodu Kopyala', async () => {
+          await navigator.clipboard.writeText(kod).then(() => toast('Kopyalandı.')).catch(() => toast('Kopyalanamadı; elle seçip kopyalayın.', 'hata'));
+        }),
+      ),
+    });
+    return;
+  }
+  const yenidenBaglama = durum.randevuKutusu;
+  await pencere({
+    baslik: 'Sunucuya Bağlan',
+    kaydet: 'Bağlan',
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h('p', null, 'Cloudflare\'e eklediğiniz KURULUM_KODU değerini girin. Bu bilgisayarda randevu talepleri için bir anahtar çifti oluşturulur; özel anahtar bilgisayarınızdan çıkmaz.'),
+      yenidenBaglama
+        ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, 'Sunucu daha önce bir panele bağlanmış. Yeniden bağlarsanız önceki bağlantı (ör. başka bilgisayardaki panel) talep alamaz ve henüz alınmamış talepler açılamayabilir. Başka bilgisayara taşımak için "Yedek İndir / Yedekten Yükle" kullanmanız önerilir.'))
+        : null,
+      alan('Kurulum kodu', input('kod', '', { autocomplete: 'off', spellcheck: 'false' })),
+    ),
+    onKaydet: async (form) => {
+      const kod = String(formNesnesi(form).kod).trim();
+      if (!kod) throw new Uyari('Kurulum kodunu girin.', 'Kurulum kodu');
+      const { acik, ozel } = await ecdhAnahtarCifti();
+      const jeton = b64url(rastgele(32));
+      await api('POST', '/kurulum', { kod, jeton, anahtar: acik });
+      V().sunucu = { jeton, ozel, acik, baglandi: Date.now() };
+      sunucuUyarisi = '';
+      await depo!.simdiKaydet();
+      toast('Panel sunucuya bağlandı. Sitedeki randevu talepleri artık buraya gelecek.');
+    },
+  });
+  ciz();
+}
+
+async function yedekIndir() {
+  const blob = await depo!.yedek();
+  indir(blob, `diyetisyen-paneli-yedek-${bugun()}.json`);
+  toast('Yedek indirildi. Dosyayı USB belleğe veya ikinci bir diske kopyalayın.');
+  ciz();
+}
+
+const pushDestekli = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+async function swKaydi() {
+  return navigator.serviceWorker.register('/yonetim/sw.js', { scope: '/yonetim/' });
+}
+
+const vapidBaytlari = (b64: string) => {
+  const s = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (b64.length % 4)) % 4));
+  return Uint8Array.from(s, (c) => c.charCodeAt(0));
+};
+
+async function buBilgisayardaBildirim() {
+  if (!pushDestekli()) return toast('Bu tarayıcı bildirimleri desteklemiyor.', 'hata');
+  if ((await Notification.requestPermission()) !== 'granted') return toast('Bildirim izni verilmedi. Tarayıcı ayarlarından izin verebilirsiniz.', 'hata');
+  try {
+    const { anahtar } = await api<{ anahtar: string }>('GET', '/bildirim/anahtar');
+    const reg = await swKaydi();
+    await navigator.serviceWorker.ready;
+    const abone =
+      (await reg.pushManager.getSubscription()) ??
+      (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidBaytlari(anahtar) as Uint8Array<ArrayBuffer> }));
+    await api('POST', '/bildirim/abone', { endpoint: abone.endpoint, ad: 'Bilgisayar' }, panelBasligi(depo!));
+    toast('Bu bilgisayarda bildirimler açıldı.');
+  } catch (e) {
+    toast(e instanceof ApiError ? e.message : 'Bildirim açılamadı.', 'hata');
+  }
+  ciz();
+}
+
+async function telefonaBildirim() {
+  try {
+    const { kod } = await api<{ kod: string }>('POST', '/bildirim/telefon-kodu', undefined, panelBasligi(depo!));
+    await pencere({
+      baslik: 'Telefona Bildirim Ekle',
+      kaydet: 'Kapat',
+      vazgecYok: true,
       icerik: h(
         'div',
         { class: 'form-grid' },
         h(
-          'div',
-          { class: 'form-grid iki' },
-          alan('Tarih', h('input', { class: 'input', type: 'date', name: 'tarih', value: bugun(), 'data-alan': 'Tarih' })),
-          alan('Saat', h('input', { class: 'input', type: 'time', name: 'saat', value: '10:00', 'data-alan': 'Saat' })),
+          'ol',
+          { class: 'adim-liste' },
+          h('li', null, 'Telefonunuzda şu adresi açın: ', h('strong', null, `${site.url.replace('https://', '')}/yonetim/bildirim/`)),
+          h('li', null, 'iPhone\'da: Safari\'de Paylaş → "Ana Ekrana Ekle" deyin ve sayfayı ana ekrandaki simgeden açın.'),
+          h('li', null, 'Aşağıdaki kodu girip "Bildirimleri Aç"a basın ve izin verin.'),
         ),
-        alan('Görüşme Türü', h('select', { class: 'select', name: 'tur', 'data-alan': 'Görüşme türü' }, h('option', { value: 'yuz-yuze' }, 'Yüz yüze'), h('option', { value: 'online' }, 'Online'))),
-        alan('Not (danışan görür)', h('textarea', { class: 'textarea', name: 'not', maxlength: 500, 'data-alan': 'Not' })),
+        h('div', { class: 'kod-kutu' }, kod),
+        h('p', { class: 'hint' }, 'Kod 10 dakika geçerlidir. Bildirimde kişisel bilgi bulunmaz; yalnızca "Yeni randevu talebi" yazar.'),
       ),
-      onKaydet: async (form) => {
-        await api('POST', `/yonetim/danisan/${d.id}/randevu`, formNesnesi(form));
-      },
     });
-    if (ok) {
-      toast('Randevu eklendi (onaylı).');
-      yenileDetay();
-    }
-  };
-  const liste = v.randevular.map((r: any) => ({ ...r, ad: d.ad, telefon: d.telefon, danisanId: d.id }));
-  return [
-    h('div', { class: 'eylemler', style: 'margin-bottom:14px' }, h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: ekle }, 'Randevu Ekle')),
-    kart('Randevular', liste.length ? h('ul', { class: 'liste' }, liste.map((r: any) => randevuSatiri(r, false))) : h('p', { class: 'bos' }, 'Randevu yok.')),
-  ];
+    ciz();
+  } catch (e) {
+    toast(e instanceof ApiError ? e.message : 'Kod alınamadı.', 'hata');
+  }
 }
 
-function belgeSekme(v: any): Node[] {
-  const d = v.danisan;
-  const form = h(
-    'form',
-    { class: 'form-grid', novalidate: true },
-    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
-    h(
-      'div',
-      { class: 'form-grid iki' },
-      alan('Belge Adı', h('input', { class: 'input', name: 'baslik', maxlength: 120, placeholder: 'Örn. Beslenme Planı – 1. Hafta', 'data-alan': 'Belge adı' })),
-      alan('Dosya (PDF, JPG, PNG, WEBP · en fazla 10 MB)', h('input', { class: 'input', type: 'file', name: 'dosya', accept: Object.keys(belgeSiniri.turler).join(',') })),
-    ),
-    h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'gorunur', value: 'true', checked: true }), h('span', null, 'Danışan bu belgeyi panelinde görebilsin')),
-    h('div', null, h('button', { type: 'submit', class: 'btn btn-primary btn-sm' }, 'Yükle')),
-  );
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    formTemizle(form);
-    const fd = new FormData(form);
-    if (!fd.get('gorunur')) fd.set('gorunur', 'false');
-    const dosya = fd.get('dosya') as File | null;
-    if (!dosya || !dosya.size) return formHatasi(form, new ApiError(400, 'Bir dosya seçin.'));
-    if (dosya.size > belgeSiniri.enFazlaBayt) return formHatasi(form, new ApiError(400, 'Dosya en fazla 10 MB olabilir.'));
-    mesgul(form.querySelector('button[type=submit]'), async () => {
-      try {
-        await api('POST', `/yonetim/danisan/${d.id}/belge`, fd);
-        toast('Belge yüklendi.');
-        yenileDetay();
-      } catch (err) {
-        formHatasi(form, err);
-      }
-    });
-  });
-  return [
-    kart('Belge Yükle', form),
-    kart(
-      'Belgeler',
-      v.belgeler.length
-        ? h(
-            'ul',
-            { class: 'liste' },
-            v.belgeler.map((b: any) =>
-              h(
-                'li',
-                null,
-                h('div', { class: 'ana' }, h('strong', null, b.baslik), h('span', null, `${tarihSaat(b.tarih)} · ${b.tur} · ${boyut(b.boyut)} · ${b.yukleyen === 'danisan' ? 'Danışan yükledi' : 'Siz yüklediniz'} · ${b.gorunur ? 'Danışana açık' : 'Danışana gizli'}`)),
-                h(
-                  'div',
-                  { class: 'eylemler' },
-                  h('a', { class: 'btn btn-outline btn-xs', href: `/api/portal/yonetim/belge/${b.id}`, target: '_blank', rel: 'noopener' }, 'Aç'),
+function ayarlar(): Node[] {
+  const sunucu = V().sunucu;
+  const cihazlar = h('div', null, bos('Yükleniyor…'));
+  if (takibimAcik && sunucu)
+    void api<{ aboneler: { ad: string; olusturma: number; endpoint: string }[] }>('GET', '/bildirim/aboneler', undefined, panelBasligi(depo!))
+      .then(({ aboneler }) =>
+        cihazlar.replaceChildren(
+          aboneler.length
+            ? h(
+                'ul',
+                { class: 'liste' },
+                aboneler.map((a) =>
                   h(
-                    'button',
-                    {
-                      type: 'button',
-                      class: 'metin-dugme',
-                      onclick: async () => {
-                        await api('PUT', `/yonetim/belge/${b.id}`, { baslik: b.baslik, gorunur: !b.gorunur }).catch((e) => toast(e.message, 'hata'));
-                        yenileDetay();
-                      },
-                    },
-                    b.gorunur ? 'Danışandan Gizle' : 'Danışana Göster',
-                  ),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      class: 'metin-dugme',
-                      onclick: async () => {
-                        const ok = await pencere({
-                          baslik: 'Belgeyi Sil',
-                          icerik: h('p', null, `“${b.baslik}” kalıcı olarak silinsin mi?`),
-                          kaydet: 'Sil',
-                          tehlikeli: true,
-                          onKaydet: async () => {
-                            await api('DELETE', `/yonetim/belge/${b.id}`);
-                          },
-                        });
-                        if (ok) yenileDetay();
-                      },
-                    },
-                    'Sil',
+                    'li',
+                    null,
+                    h('div', { class: 'ana' }, h('strong', null, a.ad), h('span', null, ` · eklenme ${tarihSaat(a.olusturma)}`)),
+                    h('div', { class: 'eylemler' }, dugme('Kaldır', async () => {
+                      await api('DELETE', '/bildirim/abone', { endpoint: a.endpoint });
+                      ciz();
+                    }, 'btn btn-outline btn-xs')),
                   ),
                 ),
-              ),
-            ),
-          )
-        : h('p', { class: 'bos' }, 'Belge yok.'),
-    ),
-  ];
-}
-
-function mesajSekme(v: any): Node[] {
-  const d = v.danisan;
-  const form = h(
-    'form',
-    { class: 'form-grid', novalidate: true },
-    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
-    alan('Başlık', h('input', { class: 'input', name: 'baslik', maxlength: 120, 'data-alan': 'Başlık' })),
-    alan('Mesaj', h('textarea', { class: 'textarea', name: 'metin', maxlength: 3000, 'data-alan': 'Mesaj' })),
-    h('div', { class: 'eylemler' }, h('button', { type: 'submit', class: 'btn btn-primary btn-sm' }, 'Panelde Gönder')),
-  );
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    formTemizle(form);
-    mesgul(form.querySelector('button[type=submit]'), async () => {
-      try {
-        const veri = formNesnesi(form);
-        await api('POST', `/yonetim/danisan/${d.id}/mesaj`, veri);
-        toast('Mesaj danışanın paneline gönderildi.');
-        yenileDetay();
-      } catch (err) {
-        formHatasi(form, err);
-      }
-    });
-  });
-  return [
-    kart('Yeni Mesaj', h('p', { class: 'hint' }, 'Mesaj danışanın panelinde görünür. Danışanı ayrıca WhatsApp’tan bilgilendirebilirsiniz.'), form),
-    kart(
-      'Gönderilen Mesajlar',
-      v.mesajlar.length
-        ? h(
-            'ul',
-            { class: 'liste' },
-            v.mesajlar.map((m: any) =>
-              h('li', { class: 'mesaj' }, h('div', { class: 'ana' }, h('strong', null, m.baslik), h('span', null, `${tarihSaat(m.tarih)} · ${m.tur === 'hatirlatma' ? 'Otomatik hatırlatma' : 'Mesaj'} · ${m.okundu ? 'Okundu' : 'Okunmadı'}`), h('p', null, m.metin))),
-            ),
-          )
-        : h('p', { class: 'bos' }, 'Mesaj yok. (Tüm danışanlara giden duyurular Duyuru bölümündedir.)'),
-    ),
-  ];
-}
-
-function notSekme(v: any): Node[] {
-  const d = v.danisan;
-  const alanEl = h('textarea', { class: 'textarea', name: 'not', maxlength: 8000, style: 'min-height:280px', 'data-alan': 'Not' }, v.not ?? '');
-  const form = h(
-    'form',
-    { class: 'form-grid', novalidate: true },
-    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
-    h('p', { class: 'hint' }, `Bu notları yalnızca siz görürsünüz; şifrelenerek saklanır.${v.notTarihi ? ` Son güncelleme: ${tarihSaat(v.notTarihi)}` : ''}`),
-    alanEl,
-    h('div', null, h('button', { type: 'submit', class: 'btn btn-primary btn-sm' }, 'Kaydet')),
-  );
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    formTemizle(form);
-    mesgul(form.querySelector('button'), async () => {
-      try {
-        await api('PUT', `/yonetim/danisan/${d.id}/not`, { not: alanEl.value });
-        toast('Not kaydedildi.');
-        detayOnbellek = null;
-      } catch (err) {
-        formHatasi(form, err);
-      }
-    });
-  });
-  return [kart('Diyetisyen Notları', form)];
-}
-
-async function kayitSekme(v: any): Promise<Node[]> {
-  const r = await api<any>('GET', `/yonetim/kayitlar?danisan=${v.danisan.id}`);
-  return [kart('Bu Danışanla İlgili Erişim Kayıtları', kayitTablosu(r.kayitlar))];
-}
-
-function kayitTablosu(kayitlar: any[]) {
-  if (!kayitlar.length) return h('p', { class: 'bos' }, 'Kayıt yok.');
-  return h(
-    'div',
-    { class: 'tablo-kap' },
-    h(
-      'table',
-      { class: 'tablo' },
-      h('thead', null, h('tr', null, h('th', null, 'Tarih'), h('th', null, 'İşlem'), h('th', null, 'Yapan'), h('th', null, 'İlgili Danışan'), h('th', null, 'IP'))),
-      h(
-        'tbody',
-        null,
-        kayitlar.map((k) =>
-          h(
-            'tr',
-            null,
-            h('td', null, tarihSaat(k.tarih)),
-            h('td', null, k.islem),
-            h('td', null, `${k.kim}${k.rol === 'yonetici' ? ' (diyetisyen)' : ''}`),
-            h('td', null, k.hedefId && k.hedef !== '(silinmiş hesap)' ? h('a', { href: `#danisan/${k.hedefId}/genel` }, k.hedef) : k.hedef),
-            h('td', null, k.ip),
-          ),
+              )
+            : bos('Bildirim alan cihaz yok.'),
         ),
-      ),
-    ),
-  );
-}
+      )
+      .catch(() => cihazlar.replaceChildren(bos('Cihaz listesi alınamadı.')));
 
-// ============================================================== Randevular
-
-async function randevularBolumu(): Promise<Node[]> {
-  const params = new URLSearchParams(location.hash.split('?')[1] ?? '');
-  const bas = params.get('bas') || bugun();
-  const bit = params.get('bit') || new Date(Date.parse(`${bas}T00:00:00Z`) + 30 * 86_400_000).toISOString().slice(0, 10);
-  const r = await api<any>('GET', `/yonetim/randevular?bas=${bas}&bit=${bit}`);
-  const basEl = h('input', { class: 'input', type: 'date', value: r.bas, 'aria-label': 'Başlangıç tarihi' });
-  const bitEl = h('input', { class: 'input', type: 'date', value: r.bit, 'aria-label': 'Bitiş tarihi' });
-  const uygula = () => (location.hash = `randevular?bas=${basEl.value}&bit=${bitEl.value}`);
-  basEl.addEventListener('change', uygula);
-  bitEl.addEventListener('change', uygula);
-  const gunler = new Map<string, any[]>();
-  for (const x of r.randevular) (gunler.get(x.tarih) ?? gunler.set(x.tarih, []).get(x.tarih)!).push(x);
-  return [
-    baslik('Randevular', 'Randevu talepleri ve onaylı randevular.', h('div', { class: 'eylemler' }, basEl, bitEl)),
-    gunler.size
-      ? h('div', null, [...gunler.entries()].map(([g, list]) => kart(tarih(g, true), h('ul', { class: 'liste' }, list.map((x) => randevuSatiri({ ...x, tarih: x.tarih }, true))))))
-      : kart(null, h('p', { class: 'bos' }, 'Bu tarihlerde randevu yok.')),
-  ];
-}
-
-// ============================================================== Paketler
-
-function paketFormu(p?: any) {
-  return h(
+  const sablonlar = h(
     'div',
     { class: 'form-grid' },
-    alan('Paket Adı', h('input', { class: 'input', name: 'ad', maxlength: 100, value: p?.ad ?? '', 'data-alan': 'Paket adı' })),
+    Object.entries(SABLONLAR)
+      .filter(([k]) => takibimAcik || !['takibim', 'yeniSonuc'].includes(k))
+      .map(([k, s]) => {
+      const ta = metinAlani(`s-${k}`, V().sablonlar[k] ?? s.metin, { rows: 4 });
+      ta.addEventListener('change', async () => {
+        const v = (ta as HTMLTextAreaElement).value;
+        if (v.trim() && v !== s.metin) V().sablonlar[k] = v;
+        else delete V().sablonlar[k];
+        await depo!.kaydet();
+        toast('Şablon kaydedildi.');
+      });
+      return alan(s.ad, ta);
+    }),
     h(
-      'div',
-      { class: 'form-grid uc' },
-      alan('Süre', h('input', { class: 'input', name: 'sure', maxlength: 60, value: p?.sure ?? '', placeholder: 'Örn. 1 ay', 'data-alan': 'Süre' })),
-      alan('Fiyat (TL)', h('input', { class: 'input', name: 'fiyat', inputmode: 'decimal', value: p?.fiyat ?? '', 'data-alan': 'Fiyat' })),
-      alan('Sıra', h('input', { class: 'input', name: 'sira', inputmode: 'numeric', value: p?.sira ?? 0 })),
+      'p',
+      { class: 'hint' },
+      `Kullanılabilen alanlar: {ad} (ilk ad), {adSoyad}, {tarih}, {gun}, {saat}, {adres}, {konum}, {paket}, {bitis}${takibimAcik ? ', {baglanti}, {takibim}' : ''}. Ödeme şablonundaki IBAN bilgisini kendi hesabınızla değiştirin.`,
     ),
-    alan('Açıklama', h('textarea', { class: 'textarea', name: 'ozet', maxlength: 600, 'data-alan': 'Açıklama' }, p?.ozet ?? '')),
-    alan('Paket İçeriği (her satıra bir madde)', h('textarea', { class: 'textarea', name: 'icerikMetni' }, (p?.icerik ?? []).join('\n'))),
-    h(
-      'label',
-      { class: 'onay-satiri' },
-      h('input', { type: 'checkbox', name: 'fiyatGoster', checked: p ? p.fiyatGoster : true }),
-      h('span', null, 'Fiyatı danışanlara göster', h('small', null, 'Sağlık Hizmetlerinde Tanıtım ve Bilgilendirme Faaliyetleri Hakkında Yönetmelik md. 5(1)(m) nedeniyle hukukçu görüşü alınması önerilir.')),
-    ),
-    h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'aktif', checked: p ? p.aktif : true }), h('span', null, 'Danışanlar bu paketi seçebilsin (aktif)')),
+    dugme('Varsayılan Şablonlara Dön', async () => {
+      V().sablonlar = {};
+      await depo!.kaydet();
+      ciz();
+    }),
   );
-}
 
-function paketVerisi(form: HTMLFormElement) {
-  const d = formNesnesi(form);
-  d.icerik = String(d.icerikMetni ?? '')
-    .split('\n')
-    .map((s: string) => s.trim())
-    .filter(Boolean);
-  delete d.icerikMetni;
-  return d;
-}
-
-async function paketlerBolumu(): Promise<Node[]> {
-  const { paketler } = await api<any>('GET', '/yonetim/paketler');
-  const yeni = async () => {
-    const ok = await pencere({
-      baslik: 'Yeni Paket',
-      icerik: paketFormu(),
-      onKaydet: async (form) => {
-        await api('POST', '/yonetim/paketler', paketVerisi(form));
-      },
-    });
-    if (ok) yenile();
-  };
   return [
-    baslik('Paketler', 'Danışanların panelde seçebileceği paketler.', h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: yeni }, 'Yeni Paket')),
-    paketler.length
-      ? h(
-          'div',
-          { class: 'izgara' },
-          paketler.map((p: any) =>
-            kart(
-              null,
-              h('h2', null, p.ad),
-              h('p', null, h('span', { class: `durum ${p.aktif ? 'aktif' : 'pasif'}` }, p.aktif ? 'Aktif' : 'Pasif'), ' ', p.sure ? h('span', { class: 'chip' }, p.sure) : null),
-              p.ozet ? h('p', null, p.ozet) : null,
-              p.icerik.length ? h('ul', null, p.icerik.map((i: string) => h('li', null, i))) : null,
-              p.fiyat !== null ? h('p', null, h('strong', null, para(p.fiyat)), p.fiyatGoster ? ' · danışanlara görünür' : ' · danışanlara gizli') : null,
-              h(
-                'div',
-                { class: 'eylemler' },
-                h(
-                  'button',
-                  {
-                    type: 'button',
-                    class: 'btn btn-outline btn-xs',
-                    onclick: async () => {
-                      const ok = await pencere({
-                        baslik: p.ad,
-                        icerik: paketFormu(p),
-                        onKaydet: async (form) => {
-                          await api('PUT', `/yonetim/paketler/${p.id}`, paketVerisi(form));
-                        },
-                      });
-                      if (ok) yenile();
-                    },
-                  },
-                  'Düzenle',
-                ),
-                h(
-                  'button',
-                  {
-                    type: 'button',
-                    class: 'metin-dugme',
-                    onclick: async () => {
-                      const ok = await pencere({
-                        baslik: 'Paketi Sil',
-                        icerik: h('p', null, `“${p.ad}” silinsin mi? Bu pakete bağlı kayıt varsa paket silinmez, pasif yapılır.`),
-                        kaydet: 'Sil',
-                        tehlikeli: true,
-                        onKaydet: async () => {
-                          await api('DELETE', `/yonetim/paketler/${p.id}`);
-                        },
-                      });
-                      if (ok) yenile();
-                    },
-                  },
-                  'Sil',
-                ),
-              ),
-            ),
-          ),
-        )
-      : kart(null, h('p', { class: 'bos' }, 'Henüz paket yok. “Yeni Paket” ile ekleyebilirsiniz.')),
-  ];
-}
-
-// ============================================================== Duyuru ve toplu mesaj
-
-async function duyuruBolumu(): Promise<Node[]> {
-  const { danisanlar } = await api<any>('GET', '/yonetim/danisanlar');
-  const aktifler = danisanlar.filter((d: any) => d.durum === 'aktif');
-  const baslikEl = h('input', { class: 'input', name: 'baslik', maxlength: 120, 'data-alan': 'Başlık' });
-  const metinEl = h('textarea', { class: 'textarea', name: 'metin', maxlength: 3000, 'data-alan': 'Mesaj' });
-  const waListe = h('ul', { class: 'liste' });
-  const waDoldur = () => {
-    const metin = `${baslikEl.value ? `${baslikEl.value}\n` : ''}${metinEl.value}`.trim();
-    waListe.replaceChildren(
-      ...aktifler.map((d: any) =>
-        h(
-          'li',
-          null,
-          h('div', { class: 'ana' }, h('strong', null, d.ad), h('span', null, telefonGoster(d.telefon))),
-          h(
-            'a',
-            {
-              class: 'btn btn-wa btn-xs',
-              href: whatsapp(d.telefon, `Merhaba ${ilkAd(d.ad)},\n${metin}${imza}`),
-              target: '_blank',
-              rel: 'noopener',
-              onclick: (e: Event) => (e.currentTarget as HTMLElement).closest('li')?.classList.add('gonderildi'),
-            },
-            'WhatsApp’ta Aç',
-          ),
-        ),
-      ),
-    );
-  };
-  baslikEl.addEventListener('input', waDoldur);
-  metinEl.addEventListener('input', waDoldur);
-  waDoldur();
-  const form = h(
-    'form',
-    { class: 'form-grid', novalidate: true },
-    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
-    alan('Başlık', baslikEl),
-    alan('Mesaj', metinEl),
-    h('div', { class: 'eylemler' }, h('button', { type: 'submit', class: 'btn btn-primary' }, `Tüm Danışanlara Panelde Gönder (${aktifler.length})`)),
-  );
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    formTemizle(form);
-    mesgul(form.querySelector('button[type=submit]'), async () => {
-      try {
-        const r = await api<{ alici: number }>('POST', '/yonetim/toplu-mesaj', formNesnesi(form));
-        toast(`Duyuru ${r.alici} danışanın paneline gönderildi.`);
-      } catch (err) {
-        formHatasi(form, err);
-      }
-    });
-  });
-  return [
-    baslik('Duyuru ve Mesaj', 'Tek tuşla tüm danışanların paneline duyuru gönderin; isterseniz WhatsApp’tan da tek tek iletin.'),
-    kart(
-      'Duyuru',
-      h('p', { class: 'bilgi-kutu' }, 'Duyuruya kişisel sağlık bilgisi yazmayın. Tanıtım amaçlı toplu mesajlar yalnızca izin veren kişilere gönderilebilir (Tanıtım Yönetmeliği md. 5(1)(k)).'),
-      form,
+    bolumBasligi('Ayarlar'),
+    takibimAcik ? null : kart('Veriler Nerede?', h('p', null, 'Tüm danışan kayıtları yalnızca bu bilgisayarda, panel parolasıyla şifreli olarak saklanır; internete gönderilmez. Bu yüzden düzenli yedek almanız önemlidir; yedek dosyasını USB bellek veya harici diskte saklayın.')),
+    !takibimAcik ? null : kart(
+      'Sunucu Bağlantısı',
+      sunucu
+        ? h('p', null, h('strong', null, 'Bağlı. '), `Bağlantı tarihi: ${tarihSaat(sunucu.baglandi)}. Sitedeki randevu talepleri bu panele gelir; Takibim etkin.`)
+        : h('p', null, 'Bağlı değil. Randevu talepleri WhatsApp\'a gitmeye devam eder; Takibim kullanılamaz.'),
+      sunucuUyarisi ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, sunucuUyarisi)) : null,
+      h('div', { class: 'eylemler' }, dugme(sunucu ? 'Yeniden Bağlan' : 'Sunucuya Bağlan', () => sunucuBagla(), sunucu ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm')),
     ),
-    kart('WhatsApp ile Tek Tek Gönder', h('p', { class: 'hint' }, 'Yukarıya yazdığınız mesaj her danışanın adıyla hazırlanır; düğmeye basınca WhatsApp açılır, göndermeniz yeterlidir.'), aktifler.length ? waListe : h('p', { class: 'bos' }, 'Aktif danışan yok.')),
-  ];
-}
-
-// ============================================================== Kayıtlar
-
-async function kayitlarBolumu(): Promise<Node[]> {
-  const sayfa = Number(new URLSearchParams(location.hash.split('?')[1] ?? '').get('sayfa') ?? 0) || 0;
-  const r = await api<any>('GET', `/yonetim/kayitlar?sayfa=${sayfa}`);
-  return [
-    baslik('Erişim Kayıtları', 'Giriş, görüntüleme, ekleme ve silme işlemlerinin kaydı (KVKK güvenlik önlemi). Kayıtlar 2 yıl saklanır.'),
+    !takibimAcik ? null : kart(
+      'Bildirimler',
+      h('p', null, 'Siteden yeni randevu talebi geldiğinde bildirim alırsınız. Bildirimde kişisel bilgi yer almaz.'),
+      sunucu
+        ? h(
+            'div',
+            { class: 'eylemler genis-eylem' },
+            pushDestekli() ? dugme('Bu Bilgisayarda Bildirimleri Aç', () => buBilgisayardaBildirim(), 'btn btn-primary btn-sm') : null,
+            dugme('Telefona Bildirim Ekle', () => telefonaBildirim()),
+            dugme('Deneme Bildirimi Gönder', async (e) => {
+              const r = await mesgul(e.currentTarget as HTMLButtonElement, () =>
+                api<{ gonderilen: number }>('POST', '/bildirim/dene', undefined, panelBasligi(depo!)).catch(() => ({ gonderilen: -1 })),
+              );
+              toast(r && r.gonderilen > 0 ? `Deneme bildirimi ${r.gonderilen} cihaza gönderildi.` : 'Bildirim gönderilemedi veya kayıtlı cihaz yok.', r && r.gonderilen > 0 ? 'tamam' : 'hata');
+            }),
+          )
+        : bos('Önce sunucuya bağlanın.'),
+      sunucu ? cihazlar : null,
+    ),
+    kart('Mesaj Şablonları', sablonlar),
     kart(
-      null,
-      kayitTablosu(r.kayitlar),
+      'Yedek',
+      h('p', null, V().sonYedek ? `Son yedek: ${tarihSaat(V().sonYedek!)}.` : 'Henüz yedek alınmadı.', ' Yedek dosyası panel parolanızla şifrelidir; açmak için yedeği aldığınız sıradaki parola gerekir.'),
+      h('div', { class: 'eylemler' }, dugme('Yedek İndir', () => yedekIndir(), 'btn btn-primary btn-sm'), dugme('Yedekten Yükle', () => yedektenYukle())),
+    ),
+    kart(
+      'Güvenlik',
+      h('p', null, `Panel ${sinirlar.panelKilitDakika} dakika işlem yapılmazsa kendini kilitler.`),
       h(
         'div',
-        { class: 'eylemler', style: 'margin-top:12px' },
-        sayfa > 0 ? h('a', { class: 'btn btn-outline btn-xs', href: `#kayitlar?sayfa=${sayfa - 1}` }, 'Daha Yeni') : null,
-        r.kayitlar.length === 100 ? h('a', { class: 'btn btn-outline btn-xs', href: `#kayitlar?sayfa=${sayfa + 1}` }, 'Daha Eski') : null,
+        { class: 'eylemler' },
+        dugme('Parolayı Değiştir', () =>
+          pencere({
+            baslik: 'Parolayı Değiştir',
+            icerik: h(
+              'div',
+              { class: 'form-grid' },
+              alan('Yeni parola', h('input', { class: 'input', type: 'password', name: 'parola', autocomplete: 'new-password' })),
+              alan('Yeni parola (tekrar)', h('input', { class: 'input', type: 'password', name: 'tekrar', autocomplete: 'new-password' })),
+              h('p', { class: 'hint' }, 'Eski yedek dosyaları eski parolayla açılır. Parolayı değiştirdikten sonra yeni bir yedek alın.'),
+            ),
+            onKaydet: async (form) => {
+              const f = formNesnesi(form);
+              try {
+                parolaKurallari(f.parola);
+              } catch (e) {
+                throw new Uyari((e as Error).message, 'Yeni parola');
+              }
+              if (f.parola !== f.tekrar) throw new Uyari('Parolalar aynı değil.', 'Yeni parola (tekrar)');
+              await depo!.parolaDegistir(f.parola);
+              toast('Parola değiştirildi. Yeni bir yedek alın.');
+            },
+          }),
+        ),
+        dugme('Bu Bilgisayardaki Panel Verilerini Sil', () => parolaUnuttum(), 'btn btn-tehlike btn-sm'),
       ),
     ),
-  ];
+  ].filter(Boolean) as Node[];
 }
 
-// ============================================================== Hesap
+// ================================================================ Başlangıç
 
-function hesapBolumu(): Node[] {
-  const form = h(
-    'form',
-    { class: 'form-grid', novalidate: true },
-    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
-    h(
-      'div',
-      { class: 'form-grid iki' },
-      alan('Mevcut Şifre', h('input', { class: 'input', type: 'password', name: 'eski', autocomplete: 'current-password', 'data-alan': 'Mevcut şifre' })),
-      alan('Yeni Şifre', h('input', { class: 'input', type: 'password', name: 'yeni', autocomplete: 'new-password', 'data-alan': 'Şifre' }), 'En az 12 karakter; en az bir harf ve bir rakam.'),
-    ),
-    h('div', null, h('button', { type: 'submit', class: 'btn btn-sage btn-sm' }, 'Şifreyi Değiştir')),
-  );
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    formTemizle(form);
-    mesgul(form.querySelector('button'), async () => {
-      try {
-        await api('POST', '/yonetim/sifre-degistir', formNesnesi(form));
-        toast('Şifreniz değiştirildi.');
-        form.reset();
-      } catch (err) {
-        formHatasi(form, err);
+async function baslat() {
+  if (!('indexedDB' in window) || !crypto?.subtle) {
+    ortaKart(h('h1', null, 'Tarayıcı desteklenmiyor'), h('p', null, 'Paneli güncel bir Chrome, Edge, Firefox veya Safari ile açın.'));
+    return;
+  }
+  const devam = async () => {
+    if (await Depo.var()) kilitEkrani();
+    else kurulumEkrani();
+  };
+  // Panel aynı anda tek sekmede açık olabilir (iki sekme birbirinin kaydını ezmesin)
+  if ('locks' in navigator) {
+    void navigator.locks.request('diyetisyen-paneli', { ifAvailable: true }, async (kilit) => {
+      if (!kilit) {
+        ortaKart(h('h1', null, 'Panel başka bir sekmede açık'), h('p', null, 'Kayıtların karışmaması için panel aynı anda yalnızca bir sekmede açılabilir. Diğer sekmeyi kapatıp bu sayfayı yenileyin.'));
+        return;
       }
+      await devam();
+      await new Promise(() => undefined); // sekme kapanana kadar kilidi tut
     });
-  });
-  return [
-    baslik('Hesabım', `${yonetici.ad} · ${yonetici.eposta}`),
-    kart('Şifre', form),
-    kart(
-      'İki Adımlı Doğrulama',
-      h('p', null, 'Girişte telefonunuzdaki doğrulama uygulamasının kodu istenir. Telefonunuzu değiştirirseniz kurulum koduyla doğrulamayı sıfırlayabilirsiniz.'),
-      h('a', { class: 'btn btn-outline btn-sm', href: '/yonetim/kurulum/#sifirla' }, 'Doğrulamayı Sıfırla'),
-    ),
-    kart(
-      'KVKK Metinleri',
-      h('ul', null, Object.values(yonetici.belgeler).map((b) => h('li', null, h('a', { href: b.yol, target: '_blank', rel: 'noopener' }, b.baslik)))),
-    ),
-  ];
+  } else await devam();
 }
 
-basla();
+addEventListener('beforeunload', () => {
+  void depo?.simdiKaydet();
+});
+
+void baslat();

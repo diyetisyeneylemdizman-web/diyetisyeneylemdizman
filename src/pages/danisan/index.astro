@@ -1,13 +1,7 @@
 ---
-import PortalLayout from '../../layouts/PortalLayout.astro';
+// Eski danışan paneli adresi: Takibim açıksa Takibim'e, kapalıysa ana sayfaya yönlendirilir
+import Yonlendir from '../../layouts/Yonlendir.astro';
+import { takibimAcik } from '../../data/portal';
 ---
 
-<PortalLayout title="Danışan Paneli" alan="danisan">
-  <div data-uygulama>
-    <p class="yukleniyor">Yükleniyor…</p>
-  </div>
-</PortalLayout>
-
-<script>
-  import '../../scripts/portal/danisan';
-</script>
+<Yonlendir hedef={takibimAcik ? '/takibim/' : '/'} />

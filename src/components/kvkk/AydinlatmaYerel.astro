@@ -1,0 +1,190 @@
+---
+// KVKK aydınlatma metninin içeriği — şu anki düzen (src/data/portal.ts → takibimAcik = false):
+// randevu talepleri WhatsApp ile gelir, danışan kayıtları yalnızca diyetisyenin bilgisayarında şifreli durur,
+// internet sitesinin sunucusuna danışan verisi gönderilmez. Takibim kapalıdır.
+import { site, fullAddress } from '../../data/site';
+import { sinirlar } from '../../data/portal';
+---
+
+<p>
+  Bu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) uyarınca;
+  <strong>{site.url.replace('https://', '')}</strong> internet sitesini ziyaret eden, randevu talebi ileten ve beslenme
+  danışmanlığı hizmeti alan kişileri, kişisel verilerinin işlenmesi hakkında bilgilendirmek amacıyla hazırlanmıştır.
+</p>
+
+<h2>1. Veri sorumlusu</h2>
+<p>
+  Veri sorumlusu: <strong>Eylem Dizman</strong> ({site.clinicName})<br />
+  Adres: {fullAddress}<br />
+  E-posta: <a href={`mailto:${site.email}`}>{site.email}</a> · Telefon: {site.phoneDisplay}
+</p>
+
+<h2>2. İşlenen kişisel veriler ve toplanma yöntemleri</h2>
+<h3>2.1. İnternet sitesi</h3>
+<ul>
+  <li id="randevu">
+    <strong>Randevu formu:</strong> ad soyad, telefon numarası, görüşme türü, ilgilendiğiniz konu, tercih ettiğiniz gün
+    ve saat, isteğe bağlı olarak yazdığınız not ve (eklemeyi seçerseniz) vücut kitle indeksi sonucunuz. Form bilgileri
+    sitemizin sunucusuna <strong>gönderilmez ve kaydedilmez</strong>; cihazınızda hazır bir WhatsApp mesajına
+    dönüştürülür ve mesajı siz gönderdiğinizde tarafımıza ulaşır.
+  </li>
+  <li>
+    <strong>Vücut kitle indeksi hesaplayıcı:</strong> Girdiğiniz cinsiyet, boy, kilo, yaş, bel çevresi ve gebelik
+    bilgileri yalnızca cihazınızda hesaplama için kullanılır; hiçbir yere gönderilmez ve kaydedilmez. VKİ sonucunuzu
+    randevu talebinize eklemeyi seçerseniz bu bilgi, gönderdiğiniz WhatsApp mesajıyla tarafımıza ulaşır.
+  </li>
+  <li id="asistan">
+    <strong>Site asistanı:</strong> Asistana yazdığınız sorular ve seçtiğiniz konular yalnızca cihazınızda
+    (tarayıcınızda) hazır cevaplarla eşleştirilir; hiçbir sunucuya veya üçüncü kişiye gönderilmez ve kaydedilmez.
+    Sohbet geçmişi yalnızca tarayıcınızda, sekmeyi kapatana kadar (en fazla 3 saat) tutulur. Asistan yapay zekâ
+    kullanmaz, kişisel sağlık değerlendirmesi yapmaz; genel bilgi verir.
+  </li>
+  <li><strong>Doğrudan iletişim:</strong> telefon, WhatsApp veya e-posta yoluyla paylaştığınız bilgiler.</li>
+  <li>
+    <strong>Teknik veriler:</strong> sitenin barındırıldığı altyapı sağlayıcısı tarafından güvenlik ve sitenin size
+    ulaştırılması amacıyla işlenebilen IP adresi, tarayıcı bilgisi ve erişim kayıtları.
+  </li>
+</ul>
+
+<h3 id="danisan-kayitlari">2.2. Danışan kayıtları</h3>
+<p>Beslenme danışmanlığı hizmeti (klinikte veya online) kapsamında aşağıdaki veriler işlenir:</p>
+<ul>
+  <li><strong>Kimlik ve iletişim bilgileri:</strong> ad soyad, doğum yılı, cinsiyet, telefon numarası, isteğe bağlı e-posta adresi.</li>
+  <li>
+    <strong>Sağlık verileri (özel nitelikli kişisel veri):</strong> boy, kilo, hedef kilo; klinikteki vücut analizi
+    cihazının ölçtüğü değerler (yağ oranı ve kütlesi, kas ve yağsız kütle, vücut suyu, iç yağlanma, bazal metabolizma,
+    kol, bacak ve gövde için ayrı ayrı segmental değerler ve cihazın önceki ölçüm geçmişi); bel ve kalça çevresi;
+    tanı konmuş hastalıklar, kullanılan ilaç ve takviyeler, besin alerjileri ve intoleransları; diyetisyenin
+    danışmanlık notları.
+  </li>
+  <li><strong>Müşteri işlem bilgileri:</strong> randevu ve paket bilgileri, ödeme notları.</li>
+</ul>
+<p>
+  Bu bilgiler görüşmelerde sizin tarafınızdan iletilir, klinikteki ölçüm cihazıyla elde edilir veya WhatsApp üzerinden
+  gönderdiğiniz randevu talebinden diyetisyen tarafından aktarılır. Kayıtlar diyetisyen panelinde,
+  <strong>yalnızca diyetisyenin kendi bilgisayarında ve parolayla şifrelenmiş olarak</strong> tutulur; internet
+  sitesinin sunucusuna veya herhangi bir bulut hizmetine gönderilmez. Vücut analizi cihazının raporu (PDF) da
+  diyetisyenin bilgisayarında okunur ve hiçbir yere yüklenmez. Bilgisayarın arızalanmasına karşı alınan yedekler de
+  aynı parolayla şifrelidir ve diyetisyenin kendi cihazlarında saklanır. Sitede ve panelde banka veya kredi kartı
+  bilgisi alınmaz.
+</p>
+
+<h2>3. Kişisel verilerin işlenme amaçları</h2>
+<ul>
+  <li>Randevu taleplerinizin alınması, planlanması, randevunun onaylanması ve hatırlatılması,</li>
+  <li>Soru ve taleplerinizin yanıtlanması,</li>
+  <li>Beslenme danışmanlığı hizmetinin sunulması; kişiye özel beslenme planının hazırlanması ve sürecin takibi,</li>
+  <li>Paket ve ödeme süreçlerinin yürütülmesi,</li>
+  <li>Bilgi güvenliğinin sağlanması,</li>
+  <li>Hukuki yükümlülüklerin yerine getirilmesi ve olası uyuşmazlıklarda hakların korunması.</li>
+</ul>
+
+<h2>4. Hukuki sebepler</h2>
+<p>Kişisel verileriniz KVKK’nın 5. maddesinin 2. fıkrasında yer alan;</p>
+<ul>
+  <li>“bir sözleşmenin kurulması veya ifasıyla doğrudan ilgili olması” (randevu talebi ve danışmanlık hizmeti),</li>
+  <li>“veri sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi için zorunlu olması”,</li>
+  <li>“bir hakkın tesisi, kullanılması veya korunması için veri işlemenin zorunlu olması” ve</li>
+  <li>
+    “ilgili kişinin temel hak ve özgürlüklerine zarar vermemek kaydıyla, veri sorumlusunun meşru menfaatleri için veri
+    işlenmesinin zorunlu olması” (bilgi güvenliği)
+  </li>
+</ul>
+<p>hukuki sebeplerine dayanılarak işlenir.</p>
+<p>
+  Sağlık verileriniz KVKK’nın 6. maddesi kapsamında; beslenme danışmanlığı hizmeti kapsamında (randevu talebinde
+  belirttiğiniz konu ve VKİ sonucu dahil), sır saklama yükümlülüğü altındaki sağlık meslek mensubu tarafından tedavi ve
+  bakım hizmetlerinin planlanması ve yürütülmesi amacıyla işlenir. Randevu talebinizde ayrıntılı sağlık bilgisi
+  paylaşmamanızı öneririz; bu bilgiler görüşmede ele alınır.
+</p>
+
+<h2>5. Kişisel verilerin aktarılması</h2>
+<ul>
+  <li>
+    <strong>Danışan kayıtları</strong> (sağlık verileri dahil) üçüncü kişilere ve yurt dışına aktarılmaz; yalnızca
+    diyetisyenin bilgisayarında bulunur.
+  </li>
+  <li>
+    <strong>Barındırma hizmeti:</strong> İnternet sitesi Cloudflare, Inc. (ABD) altyapısında barındırılır. Siteyi ziyaret
+    ettiğinizde IP adresi ve tarayıcı bilgisi gibi teknik veriler, bu altyapı sağlayıcısı tarafından güvenlik ve sitenin
+    size ulaştırılması amacıyla işlenebilir. Randevu formu bilgileri ve danışan kayıtları bu altyapıya gönderilmez.
+  </li>
+  <li>
+    <strong>WhatsApp:</strong> Randevu talebi, randevu onayı ve hatırlatma gibi mesajlar WhatsApp üzerinden iletilir.
+    WhatsApp üzerinden ilettiğiniz ve size iletilen mesajlar, WhatsApp hizmet sağlayıcısının kendi gizlilik politikası
+    kapsamında işlenir ve yurt dışında bulunan sunucularda barındırılabilir. WhatsApp mesajlarında ayrıntılı sağlık
+    bilgisi paylaşılmaz.
+  </li>
+  <li>
+    <strong>Google Haritalar:</strong> Ana sayfadaki ve İletişim sayfasındaki harita, yalnızca “Haritayı Göster”
+    butonuna bastığınızda Google tarafından yüklenir.
+  </li>
+  <li>
+    <strong>Yurt içi:</strong> Talep hâlinde yetkili kamu kurum ve kuruluşlarına ve hukuken yetkili kişilere; ödeme ve
+    fatura işlemleri için gerekli olduğu ölçüde mali müşavire.
+  </li>
+</ul>
+<p>Kişisel verileriniz reklam veya pazarlama amacıyla üçüncü kişilerle paylaşılmaz.</p>
+
+<h2>6. Saklama süreleri</h2>
+<ul>
+  <li>Randevu formu, VKİ hesaplayıcı ve site asistanı bilgileri sitede saklanmaz.</li>
+  <li>
+    Danışan kayıtları, danışmanlık ilişkisi süresince ve sonrasında ilgili mevzuatın öngördüğü saklama süreleri ile
+    olası uyuşmazlıklardaki zamanaşımı süreleri boyunca saklanır; süre sonunda silinir veya anonim hâle getirilir.
+  </li>
+  <li>Ödeme ve fatura kayıtları, vergi ve ticaret mevzuatındaki süreler boyunca saklanır.</li>
+</ul>
+
+<h2>7. Alınan güvenlik önlemleri</h2>
+<ul>
+  <li>Sitenin tüm bağlantıları şifreli (HTTPS) olarak kurulur.</li>
+  <li>
+    Danışan kayıtları diyetisyenin bilgisayarında parolayla şifrelenir (AES-256); parola hiçbir yere kaydedilmez ve
+    kayıtlara yalnızca diyetisyen erişir.
+  </li>
+  <li>
+    Diyetisyen paneli {sinirlar.panelKilitDakika} dakika işlem yapılmadığında kendini kilitler; yeniden açmak için
+    parola gerekir.
+  </li>
+  <li>Yedek dosyaları da şifrelidir; parola olmadan açılamaz.</li>
+</ul>
+
+<h2>8. Çerezler ve cihazda saklama</h2>
+<p>
+  Sitemizde reklam veya ziyaretçi takibi amaçlı çerez kullanılmamaktadır. Diyetisyen paneli, kayıtları yalnızca
+  diyetisyenin bilgisayarındaki tarayıcı depolama alanında şifreli olarak tutar. Google Haritalar gibi üçüncü taraf
+  içerikleri yalnızca sizin talebinizle yüklendiğinde, ilgili hizmet sağlayıcı çerez kullanabilir.
+</p>
+<p>
+  Blog &amp; Reels bölümündeki video önizlemeleri Instagram hesabımızdan alınarak sitemiz üzerinden gösterilir; bu
+  bölüm için Instagram’a ziyaretçi bilgisi gönderilmez. Bir videoya tıkladığınızda Instagram’a yönlendirilirsiniz;
+  orada Instagram’ın kendi gizlilik koşulları geçerlidir.
+</p>
+
+<h2>9. KVKK kapsamındaki haklarınız</h2>
+<p>KVKK’nın 11. maddesi uyarınca, veri sorumlusuna başvurarak aşağıdaki haklarınızı kullanabilirsiniz:</p>
+<ul>
+  <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li>
+  <li>İşlenmişse buna ilişkin bilgi talep etme,</li>
+  <li>İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme,</li>
+  <li>Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme,</li>
+  <li>Eksik veya yanlış işlenmişse düzeltilmesini isteme,</li>
+  <li>KVKK’nın 7. maddesindeki şartlar çerçevesinde silinmesini veya yok edilmesini isteme,</li>
+  <li>Düzeltme, silme ve yok etme işlemlerinin, verilerin aktarıldığı üçüncü kişilere bildirilmesini isteme,</li>
+  <li>İşlenen verilerin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme,</li>
+  <li>Kanuna aykırı işlenmesi sebebiyle zarara uğramanız hâlinde zararın giderilmesini talep etme.</li>
+</ul>
+<h2>10. Başvuru</h2>
+<p>
+  Haklarınıza ilişkin taleplerinizi, Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebliğ’e uygun olarak;{' '}
+  {fullAddress} adresine yazılı olarak, kayıtlı elektronik posta (KEP) adresi, güvenli elektronik imza veya mobil imza
+  ile ya da daha önce bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden
+  <a href={`mailto:${site.email}`}>{site.email}</a> adresine iletebilirsiniz. Başvurularınız, talebin niteliğine göre en
+  kısa sürede ve en geç otuz gün içinde ücretsiz olarak sonuçlandırılır; işlemin ayrıca bir maliyet gerektirmesi
+  hâlinde Kişisel Verileri Koruma Kurulunca belirlenen tarifedeki ücret alınabilir.
+</p>
+<p>
+  Başvurunuzun reddedilmesi, verilen cevabı yetersiz bulmanız veya süresinde cevap verilmemesi hâlinde, KVKK’nın 14.
+  maddesi uyarınca Kişisel Verileri Koruma Kuruluna şikâyette bulunabilirsiniz.
+</p>

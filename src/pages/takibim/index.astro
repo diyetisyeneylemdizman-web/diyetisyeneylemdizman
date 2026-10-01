@@ -1,0 +1,24 @@
+---
+// Takibim: danışanın ölçümleri, vücut haritası, paketi ve randevuları (diyetisyenin QR kodu ile açılır).
+// Takibim kapalıyken (src/data/portal.ts → takibimAcik) bu adres ana sayfaya yönlenir.
+import PortalLayout from '../../layouts/PortalLayout.astro';
+import Yonlendir from '../../layouts/Yonlendir.astro';
+import { takibimAcik } from '../../data/portal';
+---
+
+{
+  takibimAcik ? (
+    <PortalLayout title="Takibim" alan="danisan" manifest="/takibim/manifest.webmanifest">
+      <div data-uygulama>
+        <p class="yukleniyor">Yükleniyor…</p>
+      </div>
+      <noscript>
+        <p>Takibim için tarayıcınızda JavaScript açık olmalıdır.</p>
+      </noscript>
+    </PortalLayout>
+  ) : (
+    <Yonlendir hedef="/" />
+  )
+}
+
+{takibimAcik && <script src="../../scripts/portal/danisan.ts" />}

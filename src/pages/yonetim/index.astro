@@ -1,4 +1,5 @@
 ---
+// Diyetisyen paneli: kayıtlar yalnızca bu bilgisayarda, tarayıcıda şifreli olarak tutulur
 import PortalLayout from '../../layouts/PortalLayout.astro';
 ---
 
@@ -6,6 +7,7 @@ import PortalLayout from '../../layouts/PortalLayout.astro';
   <div data-uygulama>
     <p class="yukleniyor">Yükleniyor…</p>
   </div>
+  <noscript><p>Panel için tarayıcınızda JavaScript açık olmalıdır.</p></noscript>
 </PortalLayout>
 
 <script>

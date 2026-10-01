@@ -1,69 +1,333 @@
-// Danışan paneli (tek sayfa, bölümler adres çubuğundaki #bolum ile açılır)
+// Takibim — danışanın telefonundaki takip sayfası.
+//
+// - Diyetisyenin gösterdiği QR kod (veya gönderdiği bağlantı) bu telefonu danışanın kaydına bağlar.
+// - QR'daki anahtar yalnızca bu telefonda saklanır; sunucudaki veriler bu anahtarla şifrelidir, sunucu okuyamaz.
+// - Diyetisyen yeni ölçüm eklediğinde bu sayfa açılınca kendiliğinden güncellenir; yeniden QR okutmak gerekmez.
+// - Evde girilen ölçümler yalnızca bu telefonda kalır.
 
-import {
-  $,
-  alan,
-  api,
-  ApiError,
-  boyut,
-  bugun,
-  durumBandi,
-  formHatasi,
-  formNesnesi,
-  formTemizle,
-  gunFarki,
-  h,
-  mesgul,
-  para,
-  pencere,
-  sayi,
-  sure,
-  tarih,
-  tarihSaat,
-  toast,
-  turAdi,
-  whatsapp,
-} from './lib';
-import { cizgiGrafik, type Nokta } from './chart';
-import {
-  aktiviteSecenekleri,
-  belgeSiniri,
-  danisanOlcumAlanlari,
-  gebelikSecenekleri,
-  hastalikSecenekleri,
-  hedefSecenekleri,
-  olcumAlanlari,
-  paketDurumlari,
-  randevuDurumlari,
-  sehirler,
-} from '../../data/portal';
+import { portalBelgeleri, takibimRizaSurumu } from '../../data/portal';
+import { site } from '../../data/site';
+import { degisimKartlari, grafikler, olcumTablosu } from './gelisim';
+import { $, alan, api, ApiError, boyut, bugun, formNesnesi, h, indir, mesgul, pencere, tarih, tarihSaat, toast, turAdi, Uyari } from './lib';
+import { aesAnahtari, b64, b64url, coz, jsonCoz, parcaCoz, parcaTuru, parolaAnahtari, rastgele, sifrele, unb64, kimlik } from './sifre';
+import type { Olcum, TakipVerisi } from './tipler';
+import { vucutHaritasi } from './vucut';
 
-type Olcum = { id: string; tarih: string; kaynak: string; degerler: Record<string, number> };
-type Panel = {
-  mod: string;
-  kullanici: { ad: string; eposta: string; telefon: string; durum: string; kayit: number };
-  profil: any;
-  olcumler: Olcum[];
-  paketler: { id: string; ad: string; ozet: string; icerik: string[]; sure: string; fiyat: number | null }[];
-  aboneliklerim: { id: string; paketAdi: string; durum: string; baslangic: string; bitis: string; fiyat: number | null; odemeNotu: string; tarih: number }[];
-  randevular: { id: string; tarih: string; saat: string; tur: string; durum: string; not: string }[];
-  belgeler: { id: string; baslik: string; dosyaAdi: string; tur: string; boyut: number; yukleyen: string; tarih: number }[];
-  mesajlar: { id: string; baslik: string; metin: string; tur: string; tarih: number; okundu: boolean }[];
-  takvim: { ileriGun: number; bugun: string };
-  whatsapp: string;
-};
-type Ben = {
-  mod: string;
-  kullanici: { ad: string; durum: string };
-  onayGerekli: string[];
-  belgeler: Record<string, { baslik: string; yol: string }>;
-};
+interface Kayit {
+  v: 1;
+  kutu: string;
+  anahtar: string;
+  cihaz: string;
+  riza: string;
+  onbellek?: TakipVerisi;
+  alindi?: number;
+  evdeki: Olcum[];
+  okunan: string[];
+  kapali?: boolean;
+}
 
-const app = $('[data-uygulama]');
-let ben: Ben;
-let veri: Panel;
+interface Saklanan {
+  v: 1;
+  acik?: Kayit;
+  kilit?: { tuz: string; veri: string };
+}
 
-const BOLUMLER: [string, string][] = [
+const ANAHTAR = 'takibim';
+const PIN_TURU = 150_000;
+const kok = $('[data-uygulama]');
+let kayit: Kayit | null = null;
+let pinAnahtari: CryptoKey | null = null;
+let pinTuzu: string | null = null;
+let cevrimdisi = false;
+
+// ================================================================ Saklama (yalnızca bu telefon)
+
+function okuSaklanan(): Saklanan | null {
+  try {
+    const s = localStorage.getItem(ANAHTAR);
+    return s ? (JSON.parse(s) as Saklanan) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function kaydet() {
+  if (!kayit) return;
+  const veri: Saklanan = { v: 1 };
+  if (pinAnahtari && pinTuzu) {
+    const sifreli = await sifrele(pinAnahtari, new TextEncoder().encode(JSON.stringify(kayit)), 'takibim');
+    veri.kilit = { tuz: pinTuzu, veri: b64(sifreli) };
+  } else veri.acik = kayit;
+  try {
+    localStorage.setItem(ANAHTAR, JSON.stringify(veri));
+  } catch {
+    toast('Bilgiler bu telefona kaydedilemedi (gizli sekme veya dolu depolama).', 'hata');
+  }
+}
+
+function yerelSil() {
+  try {
+    localStorage.removeItem(ANAHTAR);
+  } catch {
+    /* yok */
+  }
+  kayit = null;
+  pinAnahtari = null;
+  pinTuzu = null;
+}
+
+const cihazBasligi = () => ({ 'X-Cihaz': kayit!.cihaz });
+
+// ================================================================ Sunucudan güncelleme
+
+async function guncelle(): Promise<boolean> {
+  if (!kayit || kayit.kapali) return false;
+  try {
+    const r = await api<{ veri: string | null; guncellendi: number }>('GET', `/takip/${kayit.kutu}`, undefined, cihazBasligi());
+    cevrimdisi = false;
+    if (r.veri) {
+      kayit.onbellek = await jsonCoz<TakipVerisi>(await aesAnahtari(unb64(kayit.anahtar)), r.veri, kayit.kutu);
+      kayit.alindi = Date.now();
+      await kaydet();
+    }
+    return true;
+  } catch (e) {
+    if (e instanceof ApiError && [403, 404, 410].includes(e.status)) {
+      kayit.kapali = true;
+      await kaydet();
+    } else cevrimdisi = true;
+    return false;
+  }
+}
+
+// ================================================================ Ekranlar: tanıtım, eşleşme, PIN
+
+function ortaKart(...icerik: (Node | null)[]) {
+  kok.replaceChildren(h('div', { class: 'auth' }, h('div', { class: 'auth-kart' }, ...icerik)));
+}
+
+function tanitimEkrani() {
+  const iosAnaEkran = (navigator as unknown as { standalone?: boolean }).standalone === true;
+  ortaKart(
+    h('h1', null, 'Takibim'),
+    h(
+      'p',
+      null,
+      'Takibim, klinikteki ölçümlerinizi, vücut haritanızı, paketinizi ve randevularınızı telefonunuzdan izlemenizi sağlar.',
+    ),
+    h(
+      'ol',
+      { class: 'adim-liste' },
+      h('li', null, 'Görüşmenizde diyetisyeninizden Takibim QR kodunu isteyin.'),
+      h('li', null, 'Telefonunuzun kamerasıyla QR kodu okutun.'),
+      h('li', null, 'Sonraki girişlerinizde sitedeki "Takibim" düğmesine dokunmanız yeterli.'),
+    ),
+    iosAnaEkran
+      ? h('div', { class: 'bilgi-kutu' }, h('p', null, 'Ana ekrandaki simgeden açılan sayfa, Safari\'deki kaydı göremez. Takibim\'i Safari\'den açın.'))
+      : null,
+    h('p', { class: 'form-alt' }, h('a', { href: '/randevu-olustur/' }, 'Randevu talebi oluşturun'), ' · ', h('a', { href: '/' }, 'Ana sayfa')),
+  );
+}
+
+function onayKutulari() {
+  return [
+    h(
+      'label',
+      { class: 'onay-satiri' },
+      h('input', { type: 'checkbox', name: 'aydinlatma', required: true }),
+      h(
+        'span',
+        null,
+        h('a', { href: portalBelgeleri.aydinlatma.yol, target: '_blank', rel: 'noopener' }, 'KVKK Aydınlatma Metni'),
+        '’ni okudum, ',
+        h('a', { href: portalBelgeleri.kosullar.yol, target: '_blank', rel: 'noopener' }, 'Takibim Kullanım Koşulları'),
+        '’nı kabul ediyorum.',
+      ),
+    ),
+    h(
+      'label',
+      { class: 'onay-satiri' },
+      h('input', { type: 'checkbox', name: 'riza', required: true }),
+      h(
+        'span',
+        null,
+        'Sağlık verilerimin ',
+        h('a', { href: portalBelgeleri.acikRiza.yol, target: '_blank', rel: 'noopener' }, 'Açık Rıza Metni'),
+        '’nde açıklandığı şekilde Takibim kapsamında işlenmesine açık rıza veriyorum.',
+      ),
+    ),
+  ];
+}
+
+function onaylariDenetle(f: Record<string, unknown>) {
+  if (!f.aydinlatma) throw new Uyari('Devam etmek için aydınlatma metni ve kullanım koşulları kutusunu işaretleyin.');
+  if (!f.riza) throw new Uyari('Takibim\'i kullanmak için açık rıza kutusunu işaretleyin. Rıza vermezseniz takibiniz klinikte devam eder.');
+}
+
+function hataYaz(form: HTMLElement, err: unknown) {
+  const kutu = form.querySelector<HTMLElement>('[data-form-hata]')!;
+  kutu.textContent = err instanceof ApiError || err instanceof Uyari ? err.message : 'Beklenmeyen bir hata oluştu. Tekrar deneyin.';
+  if (!(err instanceof ApiError || err instanceof Uyari)) console.error(err);
+  kutu.hidden = false;
+}
+
+function eslesmeEkrani(parca: string, tur: 'qr' | 'link') {
+  const eski = okuSaklanan();
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
+    tur === 'link'
+      ? alan(
+          'Açılış kodu',
+          h('input', { class: 'input kod-girisi', name: 'kod', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6, pattern: '[0-9]{6}' }),
+          'Diyetisyeninizin size söylediği 6 haneli kod',
+        )
+      : null,
+    ...onayKutulari(),
+    eski ? h('div', { class: 'bilgi-kutu' }, h('p', null, 'Bu telefonda kayıtlı bir Takibim var. Devam ederseniz yenisiyle değiştirilir.')) : null,
+    h('button', { type: 'submit', class: 'btn btn-primary' }, 'Takibimi Aç'),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]');
+    await mesgul(btn, async () => {
+      try {
+        const f = formNesnesi(form);
+        if (tur === 'link' && !/^\d{6}$/.test(String(f.kod).trim())) throw new Uyari('6 haneli açılış kodunu girin.');
+        onaylariDenetle(f);
+        let t;
+        try {
+          t = await parcaCoz(parca, String(f.kod ?? '').trim());
+        } catch {
+          throw new Uyari(tur === 'link' ? 'Açılış kodu hatalı.' : 'QR kodu okunamadı. Diyetisyeninizden yeni QR isteyin.');
+        }
+        // Aynı kayıt bu telefonda zaten varsa aynı cihaz anahtarı kullanılır (yeniden okutma)
+        const onceki = eski?.acik?.kutu === t.kutu ? eski.acik : null;
+        const cihaz = onceki?.cihaz ?? b64url(rastgele(32));
+        await api('POST', `/takip/${t.kutu}/eslestir`, { jeton: t.jeton, cihaz, riza: takibimRizaSurumu });
+        yerelSil();
+        kayit = { v: 1, kutu: t.kutu, anahtar: t.anahtar, cihaz, riza: takibimRizaSurumu, evdeki: onceki?.evdeki ?? [], okunan: [] };
+        await kaydet();
+        await guncelle();
+        if (!kayit.onbellek) throw new Uyari('Bilgileriniz alınamadı. İnternet bağlantınızı kontrol edip sayfayı yenileyin.');
+        location.hash = '#ozet';
+        uygulama();
+        toast('Takibiniz bu telefonda açıldı.');
+      } catch (err) {
+        hataYaz(form, err);
+      }
+    });
+  });
+  ortaKart(
+    h('h1', null, 'Takibim’e Hoş Geldiniz'),
+    h(
+      'p',
+      null,
+      `${site.name}’ın klinikteki ölçümleriniz, paketiniz, randevularınız ve size gönderdiği belgeler bu telefonda görüntülenecek.`,
+    ),
+    h(
+      'div',
+      { class: 'bilgi-kutu' },
+      h('p', null, h('strong', null, 'Uçtan uca şifreli: '), 'Bilgilerinizi yalnızca bu telefon ve diyetisyeninizin bilgisayarı okuyabilir. Bu QR kodu yalnızca bir telefonda kullanılabilir.'),
+    ),
+    form,
+  );
+}
+
+function pinEkrani(s: Saklanan) {
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
+    alan('PIN', h('input', { class: 'input kod-girisi', type: 'password', name: 'pin', inputmode: 'numeric', autocomplete: 'off', maxlength: 6 })),
+    h('button', { type: 'submit', class: 'btn btn-primary' }, 'Aç'),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]');
+    await mesgul(btn, async () => {
+      try {
+        const pin = String(formNesnesi(form).pin).trim();
+        const anahtar = await parolaAnahtari(pin, unb64(s.kilit!.tuz), PIN_TURU);
+        let acik: Kayit;
+        try {
+          acik = JSON.parse(new TextDecoder().decode(await coz(anahtar, unb64(s.kilit!.veri), 'takibim')));
+        } catch {
+          throw new Uyari('PIN hatalı.');
+        }
+        kayit = acik;
+        pinAnahtari = anahtar;
+        pinTuzu = s.kilit!.tuz;
+        uygulama();
+        void guncelle().then(() => ciz());
+      } catch (err) {
+        hataYaz(form, err);
+      }
+    });
+  });
+  ortaKart(
+    h('h1', null, 'Takibim'),
+    h('p', null, 'Devam etmek için PIN\'inizi girin.'),
+    form,
+    h(
+      'p',
+      { class: 'form-alt' },
+      h('button', {
+        type: 'button',
+        class: 'metin-dugme',
+        onclick: async () => {
+          const ok = await pencere({
+            baslik: 'PIN\'imi Unuttum',
+            tehlikeli: true,
+            kaydet: 'Bu Telefondaki Bilgileri Sil',
+            icerik: h('p', null, 'PIN olmadan bilgiler açılamaz. Bu telefondaki Takibim bilgilerini silebilir, ardından diyetisyeninizden yeni bir QR kodu isteyebilirsiniz. Klinikteki kayıtlarınız silinmez.'),
+          });
+          if (ok) {
+            yerelSil();
+            tanitimEkrani();
+          }
+        },
+      }, 'PIN\'imi unuttum'),
+    ),
+  );
+  setTimeout(() => form.querySelector('input')?.focus(), 50);
+}
+
+function rizaYenileEkrani() {
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
+    ...onayKutulari(),
+    h('button', { type: 'submit', class: 'btn btn-primary' }, 'Onayla ve Devam Et'),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]');
+    await mesgul(btn, async () => {
+      try {
+        onaylariDenetle(formNesnesi(form));
+        await api('POST', `/takip/${kayit!.kutu}/eslestir`, { cihaz: kayit!.cihaz, riza: takibimRizaSurumu });
+        kayit!.riza = takibimRizaSurumu;
+        await kaydet();
+        uygulama();
+      } catch (err) {
+        hataYaz(form, err);
+      }
+    });
+  });
+  ortaKart(
+    h('h1', null, 'Metinler Güncellendi'),
+    h('p', null, 'Takibim\'e ilişkin aydınlatma metni, açık rıza metni veya kullanım koşulları güncellendi. Devam etmek için güncel metinleri onaylayın.'),
+    form,
+    h('p', { class: 'form-alt' }, 'Onay vermek istemiyorsanız ', h('a', { href: '#ayarlar' }, 'Ayarlar'), ' bölümünden takibinizi kapatabilirsiniz.'),
+  );
+}
+
+// ================================================================ Uygulama
+
+const MENU: [string, string][] = [
   ['ozet', 'Özet'],
   ['gelisim', 'Gelişimim'],
   ['olcumler', 'Ölçümlerim'],
@@ -71,923 +335,492 @@ const BOLUMLER: [string, string][] = [
   ['randevular', 'Randevularım'],
   ['belgeler', 'Belgelerim'],
   ['mesajlar', 'Mesajlar'],
-  ['profil', 'Profilim'],
-  ['hesap', 'Hesap ve Gizlilik'],
+  ['ayarlar', 'Ayarlar'],
 ];
 
-const alanTanim = Object.fromEntries(olcumAlanlari.map((f) => [f.key, f]));
-
-/** Ölçüm değeri; yağ kütlesi yoksa kilo × yağ oranından hesaplanır */
-function deger(m: Olcum, key: string): number | null {
-  const d = m.degerler;
-  if (d[key] !== undefined) return d[key];
-  if (key === 'yagKg' && d.kilo && d.yagOrani) return Math.round(d.kilo * d.yagOrani) / 100;
-  return null;
-}
-
-function seri(key: string): Nokta[] {
-  const out: Nokta[] = [];
-  for (const m of veri.olcumler) {
-    const v = deger(m, key);
-    if (v !== null) out.push({ x: m.tarih, y: v });
-  }
-  // Aynı güne ait birden fazla ölçümde son girilen kullanılır
-  const gun = new Map(out.map((p) => [p.x, p]));
-  return [...gun.values()].sort((a, b) => a.x.localeCompare(b.x));
-}
-
-function degisimMetni(key: string) {
-  const s = seri(key);
-  if (s.length < 2) return null;
-  const fark = Math.round((s[s.length - 1].y - s[0].y) * 10) / 10;
-  const gun = gunFarki(s[0].x, s[s.length - 1].x);
-  return { fark, gun, ilk: s[0], son: s[s.length - 1] };
-}
-
-async function cikis() {
-  await api('POST', '/cikis').catch(() => {});
-  location.replace('/danisan/giris/');
-}
-
-function ustEylemler() {
-  const kutu = document.querySelector('[data-ust-eylemler]');
-  kutu?.replaceChildren(h('button', { type: 'button', class: 'btn btn-outline btn-sm', onclick: cikis }, 'Çıkış Yap'));
-}
-
-async function basla() {
-  durumBandi();
-  try {
-    ben = await api<Ben>('GET', '/ben');
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 401) return location.replace('/danisan/giris/');
-    app.replaceChildren(h('p', { class: 'form-hata' }, (e as Error).message));
-    return;
-  }
-  ustEylemler();
-  if (ben.onayGerekli.length) return onayEkrani();
-  await yenile();
-  window.addEventListener('hashchange', ciz);
-}
-
-async function yenile() {
-  try {
-    veri = await api<Panel>('GET', '/panel');
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 401) return location.replace('/danisan/giris/');
-    if (e instanceof ApiError && e.status === 428) return location.reload();
-    app.replaceChildren(h('p', { class: 'form-hata' }, (e as Error).message));
-    return;
+let olaylar = false;
+function uygulama() {
+  if (!olaylar) {
+    olaylar = true;
+    addEventListener('hashchange', () => kayit && ciz());
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && kayit && (!kayit.alindi || Date.now() - kayit.alindi > 60_000)) void guncelle().then(() => cizSessiz());
+    });
+    setInterval(() => {
+      if (!document.hidden && kayit) void guncelle().then(() => cizSessiz());
+    }, 5 * 60_000);
   }
   ciz();
 }
 
-function okunmamis() {
-  return veri.mesajlar.filter((m) => !m.okundu).length;
+function cizSessiz() {
+  if (document.querySelector('dialog[open]')) return;
+  const aktif = document.activeElement;
+  if (aktif && kok.contains(aktif) && /INPUT|TEXTAREA|SELECT/.test(aktif.tagName)) return;
+  ciz();
 }
 
+const veri = () => kayit!.onbellek!;
+const okunmamis = () => (kayit?.onbellek?.mesajlar ?? []).filter((m) => !kayit!.okunan.includes(m.id)).length;
+
 function ciz() {
-  const bolum = BOLUMLER.some(([k]) => k === location.hash.slice(1)) ? location.hash.slice(1) : 'ozet';
+  if (!kayit) return;
+  if (!kayit.onbellek) {
+    ortaKart(h('h1', null, 'Takibim'), h('p', null, 'Bilgileriniz alınamadı. İnternet bağlantınızı kontrol edip sayfayı yenileyin.'));
+    return;
+  }
+  const bolum = location.hash.slice(1) || 'ozet';
+  if (kayit.riza !== takibimRizaSurumu && bolum !== 'ayarlar' && !kayit.kapali) return rizaYenileEkrani();
+  const n = okunmamis();
   const menu = h(
     'nav',
-    { class: 'panel-menu', 'aria-label': 'Panel bölümleri' },
-    BOLUMLER.map(([k, ad]) =>
-      h(
-        'a',
-        { href: `#${k}`, 'aria-current': k === bolum ? 'page' : null },
-        ad,
-        k === 'mesajlar' && okunmamis() ? h('span', { class: 'rozet', 'aria-label': `${okunmamis()} okunmamış` }, okunmamis()) : null,
-      ),
+    { class: 'panel-menu', 'aria-label': 'Takibim menüsü' },
+    MENU.map(([k, ad]) =>
+      h('a', { href: `#${k}`, 'aria-current': bolum === k ? 'page' : null }, ad, k === 'mesajlar' && n ? h('span', { class: 'rozet', 'aria-label': `${n} okunmamış` }, String(n)) : null),
     ),
   );
   const icerik = h('div', { class: 'panel-icerik' });
-  if (veri.kullanici.durum === 'silme_talebi')
+  kok.replaceChildren(h('div', { class: 'panel' }, menu, icerik));
+  if (kayit.kapali)
     icerik.append(
       h(
-        'p',
+        'div',
         { class: 'bilgi-kutu uyari' },
-        'Hesabınız için silme talebiniz alındı. Talebiniz işleme alınana kadar panel kullanılabilir; talebinizi Hesap ve Gizlilik bölümünden geri alabilirsiniz.',
+        h('p', null, h('strong', null, 'Takibiniz sonlandırılmış veya yeni bir QR oluşturulmuş. '), 'Aşağıda bu telefonda kayıtlı son bilgileriniz görünüyor. Takibe devam etmek için diyetisyeninizden yeni QR kodu isteyin.'),
       ),
     );
-  const bolumler: Record<string, () => Node[]> = {
-    ozet: ozetBolumu,
-    gelisim: gelisimBolumu,
-    olcumler: olcumBolumu,
-    paketim: paketBolumu,
-    randevular: randevuBolumu,
-    belgeler: belgeBolumu,
-    mesajlar: mesajBolumu,
-    profil: profilBolumu,
-    hesap: hesapBolumu,
-  };
-  icerik.append(...bolumler[bolum]());
-  app.replaceChildren(h('div', { class: 'panel' }, menu, icerik));
-  if (bolum === 'mesajlar') okunduIsaretle();
+  else if (cevrimdisi) icerik.append(h('div', { class: 'bilgi-kutu' }, h('p', null, 'İnternete bağlanılamadı; bu telefonda kayıtlı son bilgiler gösteriliyor.')));
+  const sayfalar: Record<string, () => Node[]> = { ozet, gelisim, olcumler, paketim, randevular, belgeler, mesajlar, ayarlar };
+  icerik.append(...(sayfalar[bolum] ?? ozet)());
 }
 
-const baslik = (b: string, alt?: string, ...eylem: Node[]) =>
-  h('div', { class: 'bolum-baslik' }, h('div', null, h('h1', null, b), alt ? h('p', null, alt) : null), eylem.length ? h('div', { class: 'eylemler' }, eylem) : null);
+const kart = (baslik: string | null, ...icerik: (Node | null | false | undefined)[]) =>
+  h('section', { class: 'kart' }, baslik ? h('h2', null, baslik) : null, ...icerik);
+const baslik = (b: string, alt?: string | null) => h('div', { class: 'bolum-baslik' }, h('div', null, h('h1', null, b), alt ? h('p', null, alt) : null));
+const bos = (m: string) => h('p', { class: 'bos' }, m);
+const tumOlcumler = () => [...veri().olcumler, ...kayit!.evdeki];
 
-const durumEtiketi = (durum: string, sozluk: Record<string, string>) => h('span', { class: `durum ${durum}` }, sozluk[durum] ?? durum);
-
-// ============================================================== Özet
-
-function ozetBolumu(): Node[] {
-  const ad = veri.kullanici.ad.split(' ')[0];
-  const aktif = veri.aboneliklerim.find((a) => a.durum === 'aktif');
-  const bekleyen = veri.aboneliklerim.find((a) => a.durum === 'talep' || a.durum === 'odeme');
-  const bugunTarih = bugun();
-  const sonraki = [...veri.randevular]
-    .filter((r) => (r.durum === 'talep' || r.durum === 'onaylandi') && r.tarih >= bugunTarih)
+function sonrakiRandevu() {
+  const bu = bugun();
+  return veri()
+    .randevular.filter((r) => r.durum === 'onaylandi' && r.tarih >= bu)
     .sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))[0];
+}
 
-  const paketKart = h(
-    'div',
-    { class: 'kart gosterge' },
-    h('span', { class: 'etiket' }, 'Paketim'),
-    aktif
-      ? [
-          h('span', { class: 'deger', style: 'font-size:1.25rem' }, aktif.paketAdi),
-          h(
-            'span',
-            { class: 'alt' },
-            aktif.bitis ? `Bitiş: ${tarih(aktif.bitis)} (${Math.max(0, gunFarki(bugunTarih, aktif.bitis))} gün kaldı)` : 'Aktif',
-          ),
-        ]
-      : bekleyen
-        ? [h('span', { class: 'deger', style: 'font-size:1.25rem' }, bekleyen.paketAdi), durumEtiketi(bekleyen.durum, paketDurumlari)]
-        : [h('span', { class: 'alt' }, 'Henüz aktif bir paketiniz yok.'), h('a', { href: '#paketim', class: 'metin-dugme' }, 'Paketleri İncele')],
-  );
-  const randevuKart = h(
-    'div',
-    { class: 'kart gosterge' },
-    h('span', { class: 'etiket' }, 'Sonraki Randevum'),
-    sonraki
-      ? [
-          h('span', { class: 'deger', style: 'font-size:1.25rem' }, `${tarih(sonraki.tarih)} · ${sonraki.saat}`),
-          h('span', { class: 'alt' }, turAdi(sonraki.tur), ' · ', durumEtiketi(sonraki.durum, randevuDurumlari)),
-        ]
-      : [h('span', { class: 'alt' }, 'Planlanmış randevunuz yok.'), h('a', { href: '#randevular', class: 'metin-dugme' }, 'Randevu Talebi Oluştur')],
-  );
-  const mesajKart = h(
-    'div',
-    { class: 'kart gosterge' },
-    h('span', { class: 'etiket' }, 'Mesajlar'),
-    h('span', { class: 'deger' }, String(okunmamis())),
-    h('span', { class: 'alt' }, okunmamis() ? h('a', { href: '#mesajlar', class: 'metin-dugme' }, 'Okunmamış mesajları gör') : 'Okunmamış mesaj yok'),
-  );
-
+function ozet(): Node[] {
+  const v = veri();
+  const r = sonrakiRandevu();
+  const p = v.paket;
   return [
-    baslik(`Merhaba ${ad}`, 'Sürecinizin özeti'),
-    h('div', { class: 'izgara' }, paketKart, randevuKart, mesajKart),
-    h('div', { class: 'izgara' }, ...ozetGostergeleri()),
+    baslik(`Merhaba ${v.danisan.ad.split(' ')[0]}`, kayit!.alindi ? `Son güncelleme: ${tarihSaat(kayit!.alindi)}` : null),
     h(
       'div',
-      { class: 'kart' },
-      h('h2', null, 'Kilo Gelişimi'),
-      cizgiGrafik({ baslik: 'Kilo', birim: 'kg', noktalar: seri('kilo'), hedef: veri.profil?.hedefKilo }),
-      h('p', { class: 'form-alt' }, h('a', { href: '#gelisim' }, 'Tüm gelişim grafikleri')),
-    ),
-  ];
-}
-
-function ozetGostergeleri(): Node[] {
-  const out: Node[] = [];
-  for (const [key, ad] of [
-    ['kilo', 'Kilo'],
-    ['yagKg', 'Yağ Kütlesi'],
-    ['kasKg', 'Kas Kütlesi'],
-  ] as const) {
-    const s = seri(key);
-    if (!s.length) continue;
-    const d = degisimMetni(key);
-    out.push(
+      { class: 'izgara' },
       h(
-        'div',
-        { class: 'kart gosterge' },
-        h('span', { class: 'etiket' }, ad),
-        h('span', { class: 'deger' }, `${sayi(s[s.length - 1].y)} kg`),
-        d
-          ? h(
-              'span',
-              { class: 'alt' },
-              h('span', { class: `degisim ${d.fark < 0 ? 'asagi iyi' : d.fark > 0 ? 'yukari iyi' : ''}` }, `${d.fark > 0 ? '+' : ''}${sayi(d.fark)} kg`),
-              ` · ${d.gun ? sure(d.gun) : 'aynı gün'} (${tarih(d.ilk.x)} → ${tarih(d.son.x)})`,
-            )
-          : h('span', { class: 'alt' }, `Son ölçüm: ${tarih(s[s.length - 1].x)}`),
-      ),
-    );
-  }
-  const hedef = veri.profil?.hedefKilo;
-  const kilo = seri('kilo');
-  if (hedef && kilo.length) {
-    const kalan = Math.round((kilo[kilo.length - 1].y - hedef) * 10) / 10;
-    out.push(
-      h(
-        'div',
-        { class: 'kart gosterge' },
-        h('span', { class: 'etiket' }, 'Hedef Kiloya Kalan'),
-        h('span', { class: 'deger' }, `${sayi(Math.abs(kalan))} kg`),
-        h('span', { class: 'alt' }, `Hedef: ${sayi(hedef)} kg`),
-      ),
-    );
-  }
-  if (!out.length) out.push(h('div', { class: 'kart' }, h('p', { class: 'bos' }, 'Ölçümleriniz eklendikçe değişimleriniz burada görünür.')));
-  return out;
-}
-
-// ============================================================== Gelişim
-
-function gelisimBolumu(): Node[] {
-  const grafikler: Node[] = [];
-  for (const key of ['kilo', 'yagKg', 'kasKg', 'yagOrani', 'bel', 'kalca']) {
-    const s = seri(key);
-    if (!s.length) continue;
-    const f = alanTanim[key];
-    grafikler.push(
-      h('div', { class: 'kart' }, cizgiGrafik({ baslik: f.label, birim: f.unit, noktalar: s, hedef: key === 'kilo' ? veri.profil?.hedefKilo : null })),
-    );
-  }
-  return [
-    baslik('Gelişimim', 'Ölçümlerinizin zaman içindeki değişimi. Grafiğin üzerine gelerek ya da ok tuşlarıyla tarihleri inceleyebilirsiniz.'),
-    h('div', { class: 'izgara' }, ...ozetGostergeleri()),
-    grafikler.length
-      ? h('div', { class: 'izgara', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))' }, ...grafikler)
-      : h('div', { class: 'kart' }, h('p', { class: 'bos' }, 'Henüz ölçüm yok.')),
-    h(
-      'p',
-      { class: 'bilgi-kutu' },
-      'Yağ ve kas ölçümleri klinikteki vücut analizinden sonra diyetisyeniniz tarafından eklenir. Değerler kişiden kişiye değişir; yorumlamak için diyetisyeninize danışın.',
-    ),
-  ];
-}
-
-// ============================================================== Ölçümler
-
-function olcumBolumu(): Node[] {
-  const kullanilan = olcumAlanlari.filter((f) => veri.olcumler.some((m) => deger(m, f.key) !== null));
-  const satirlar = [...veri.olcumler].reverse();
-  const tablo = h(
-    'div',
-    { class: 'tablo-kap' },
-    h(
-      'table',
-      { class: 'tablo' },
-      h(
-        'thead',
-        null,
-        h('tr', null, h('th', null, 'Tarih'), kullanilan.map((f) => h('th', { class: 'sayi' }, `${f.label}${f.unit ? ` (${f.unit})` : ''}`)), h('th', null, 'Kaynak'), h('th', null, '')),
+        'a',
+        { class: 'kart gosterge tiklanir', href: '#paketim' },
+        h('span', { class: 'etiket' }, 'Paketim'),
+        h('span', { class: 'deger kucuk' }, p ? p.ad : 'Paket yok'),
+        p?.bitis ? h('span', { class: 'alt' }, `Bitiş: ${tarih(p.bitis)}${p.kalanGorusme !== undefined ? ` · ${p.kalanGorusme} görüşme kaldı` : ''}`) : null,
       ),
       h(
-        'tbody',
-        null,
-        satirlar.map((m) =>
-          h(
-            'tr',
-            null,
-            h('td', null, tarih(m.tarih)),
-            kullanilan.map((f) => h('td', { class: 'sayi' }, sayi(deger(m, f.key)))),
-            h('td', null, m.kaynak === 'klinik' ? 'Klinik ölçümü' : m.kaynak === 'kayit' ? 'Kayıt bilgisi' : 'Kendi girişim'),
-            h(
-              'td',
-              null,
-              m.kaynak === 'danisan'
-                ? h(
-                    'button',
-                    {
-                      type: 'button',
-                      class: 'metin-dugme',
-                      onclick: async () => {
-                        const ok = await pencere({
-                          baslik: 'Ölçümü Sil',
-                          icerik: h('p', null, `${tarih(m.tarih)} tarihli ölçüm silinsin mi?`),
-                          kaydet: 'Sil',
-                          tehlikeli: true,
-                          onKaydet: async () => {
-                            await api('DELETE', `/olcum/${m.id}`);
-                          },
-                        });
-                        if (ok) {
-                          toast('Ölçüm silindi.');
-                          yenile();
-                        }
-                      },
-                    },
-                    'Sil',
-                  )
-                : null,
-            ),
-          ),
-        ),
+        'a',
+        { class: 'kart gosterge tiklanir', href: '#randevular' },
+        h('span', { class: 'etiket' }, 'Sonraki Randevum'),
+        h('span', { class: 'deger kucuk' }, r ? `${tarih(r.tarih)} · ${r.saat}` : 'Planlı randevu yok'),
+        r ? h('span', { class: 'alt' }, turAdi(r.tur)) : null,
       ),
-    ),
-  );
-  return [
-    baslik(
-      'Ölçümlerim',
-      'Klinik ölçümleri diyetisyeniniz ekler. Evde tartıldığınızda kilo, bel ve kalça ölçünüzü kendiniz ekleyebilirsiniz.',
-      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: olcumEkle }, 'Ölçüm Ekle'),
-    ),
-    h('div', { class: 'kart' }, veri.olcumler.length ? tablo : h('p', { class: 'bos' }, 'Henüz ölçüm yok.')),
-  ];
-}
-
-async function olcumEkle() {
-  const tarihInput = h('input', { class: 'input', type: 'date', name: 'tarih', value: bugun(), max: bugun(), required: true, 'data-alan': 'Tarih' });
-  const alanlar = danisanOlcumAlanlari.map((k) => {
-    const f = alanTanim[k];
-    return alan(`${f.label} (${f.unit})`, h('input', { class: 'input', name: `degerler.${k}`, inputmode: 'decimal', 'data-alan': f.label }));
-  });
-  const ok = await pencere({
-    baslik: 'Ölçüm Ekle',
-    icerik: h('div', { class: 'form-grid' }, alan('Tarih', tarihInput), h('div', { class: 'form-grid uc' }, alanlar)),
-    onKaydet: async (form) => {
-      const d = formNesnesi(form);
-      await api('POST', '/olcum', d);
-    },
-  });
-  if (ok) {
-    toast('Ölçümünüz eklendi.');
-    yenile();
-  }
-}
-
-// ============================================================== Paketler
-
-function paketBolumu(): Node[] {
-  const aboneler = veri.aboneliklerim.length
-    ? h(
-        'ul',
-        { class: 'liste' },
-        veri.aboneliklerim.map((a) =>
-          h(
-            'li',
-            null,
-            h(
-              'div',
-              { class: 'ana' },
-              h('strong', null, a.paketAdi),
-              h(
-                'span',
-                null,
-                a.baslangic ? `${tarih(a.baslangic)}${a.bitis ? ` – ${tarih(a.bitis)}` : ''}` : `Talep: ${tarih(a.tarih)}`,
-                a.fiyat !== null ? ` · ${para(a.fiyat)}` : '',
-              ),
-              a.odemeNotu ? h('p', null, a.odemeNotu) : null,
-            ),
-            durumEtiketi(a.durum, paketDurumlari),
-          ),
-        ),
-      )
-    : h('p', { class: 'bos' }, 'Henüz paket kaydınız yok.');
-  const katalog = veri.paketler.length
-    ? h(
-        'div',
-        { class: 'izgara' },
-        veri.paketler.map((p) =>
-          h(
-            'div',
-            { class: 'kart' },
-            h('h3', { style: 'font-family:var(--font-serif);font-size:1.2rem' }, p.ad),
-            p.sure ? h('p', { class: 'chip' }, p.sure) : null,
-            p.ozet ? h('p', null, p.ozet) : null,
-            p.icerik.length ? h('ul', null, p.icerik.map((i) => h('li', null, i))) : null,
-            p.fiyat !== null ? h('p', { class: 'gosterge' }, h('span', { class: 'deger', style: 'font-size:1.4rem' }, para(p.fiyat))) : null,
-            h('button', { type: 'button', class: 'btn btn-primary btn-sm btn-block', onclick: () => paketSec(p) }, 'Bu Paketi Seç'),
-          ),
-        ),
-      )
-    : h('p', { class: 'bos' }, 'Paketler yakında burada listelenecek. Bilgi almak için diyetisyeninize yazabilirsiniz.');
-  return [
-    baslik('Paketim', 'Sahip olduğunuz paketler ve seçebileceğiniz paketler.'),
-    h('div', { class: 'kart' }, h('h2', null, 'Paketlerim'), aboneler),
-    h('div', { class: 'kart' }, h('h2', null, 'Paketler'), katalog),
-  ];
-}
-
-async function paketSec(p: Panel['paketler'][number]) {
-  const ok = await pencere({
-    baslik: p.ad,
-    kaydet: 'Paket Talebi Gönder',
-    icerik: h(
-      'div',
-      { class: 'form-grid' },
       h(
-        'p',
-        { class: 'bilgi-kutu' },
-        'Talebiniz diyetisyeninize iletilir. Ödeme ve başlangıç bilgileri size ayrıca bildirilir; paketiniz onaydan sonra aktif olur.',
+        'a',
+        { class: 'kart gosterge tiklanir', href: '#mesajlar' },
+        h('span', { class: 'etiket' }, 'Mesajlar'),
+        h('span', { class: 'deger' }, String(okunmamis())),
+        h('span', { class: 'alt' }, 'okunmamış'),
       ),
-      alan('Not (isteğe bağlı)', h('textarea', { class: 'textarea', name: 'not', maxlength: 500, 'data-alan': 'Not' })),
     ),
-    onKaydet: async (form) => {
-      await api('POST', '/paket-talebi', { paketId: p.id, not: formNesnesi(form).not });
-    },
-  });
-  if (ok) {
-    toast('Paket talebiniz alındı.');
-    location.hash = 'paketim';
-    yenile();
-  }
-}
-
-// ============================================================== Randevular
-
-function randevuBolumu(): Node[] {
-  const b = bugun();
-  const gelecek = veri.randevular.filter((r) => r.tarih >= b && r.durum !== 'iptal').sort((x, y) => (x.tarih + x.saat).localeCompare(y.tarih + y.saat));
-  const gecmis = veri.randevular.filter((r) => !gelecek.includes(r));
-  const satir = (r: Panel['randevular'][number], iptalEdilebilir: boolean) =>
-    h(
-      'li',
-      null,
-      h('div', { class: 'ana' }, h('strong', null, `${tarih(r.tarih, true)} · ${r.saat}`), h('span', null, turAdi(r.tur)), r.not ? h('p', null, r.not) : null),
-      h(
-        'div',
-        { class: 'eylemler' },
-        durumEtiketi(r.durum, randevuDurumlari),
-        iptalEdilebilir
-          ? h(
-              'button',
-              {
-                type: 'button',
-                class: 'metin-dugme',
-                onclick: async () => {
-                  const ok = await pencere({
-                    baslik: 'Randevuyu İptal Et',
-                    icerik: h('p', null, `${tarih(r.tarih)} ${r.saat} randevunuz iptal edilsin mi?`),
-                    kaydet: 'İptal Et',
-                    tehlikeli: true,
-                    onKaydet: async () => {
-                      await api('POST', `/randevu/${r.id}/iptal`);
-                    },
-                  });
-                  if (ok) {
-                    toast('Randevunuz iptal edildi.');
-                    yenile();
-                  }
-                },
-              },
-              'İptal Et',
-            )
-          : null,
-      ),
-    );
-  return [
-    baslik(
-      'Randevularım',
-      'Seçtiğiniz gün ve saat bir taleptir; randevunuz onaylandıktan sonra kesinleşir.',
-      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: randevuTalebi }, 'Randevu Talebi Oluştur'),
-    ),
-    h('div', { class: 'kart' }, h('h2', null, 'Yaklaşan'), gelecek.length ? h('ul', { class: 'liste' }, gelecek.map((r) => satir(r, true))) : h('p', { class: 'bos' }, 'Yaklaşan randevunuz yok.')),
-    gecmis.length ? h('div', { class: 'kart' }, h('h2', null, 'Geçmiş ve İptal Edilenler'), h('ul', { class: 'liste' }, gecmis.map((r) => satir(r, false)))) : null,
+    tumOlcumler().length ? h('h2', { class: 'ara-baslik' }, 'Başlangıçtan Bu Yana') : null,
+    tumOlcumler().length ? degisimKartlari(tumOlcumler(), v.danisan.hedefKilo) : null,
+    kart('Vücut Haritam', vucutHaritasi(v.olcumler)),
   ].filter(Boolean) as Node[];
 }
 
-async function randevuTalebi() {
-  const bitis = new Date(Date.parse(`${bugun()}T00:00:00Z`) + veri.takvim.ileriGun * 86_400_000).toISOString().slice(0, 10);
-  const tarihInput = h('input', { class: 'input', type: 'date', name: 'tarih', min: bugun(), max: bitis, required: true, 'data-alan': 'Tarih' });
-  const saat = h('select', { class: 'select', name: 'saat', required: true, 'data-alan': 'Saat', disabled: true }, h('option', { value: '' }, 'Önce tarih seçin'));
-  tarihInput.addEventListener('change', async () => {
-    saat.disabled = true;
-    saat.replaceChildren(h('option', { value: '' }, 'Yükleniyor…'));
-    try {
-      const r = await api<{ saatler: { saat: string; dolu: boolean }[] }>('GET', `/musait?tarih=${tarihInput.value}`);
-      const bos = r.saatler.filter((s) => !s.dolu);
-      saat.replaceChildren(
-        h('option', { value: '' }, bos.length ? 'Saat seçin' : 'Bu gün için uygun saat yok'),
-        ...r.saatler.map((s) => h('option', { value: s.saat, disabled: s.dolu }, s.dolu ? `${s.saat} (dolu)` : s.saat)),
-      );
-      saat.disabled = !bos.length;
-    } catch (e) {
-      saat.replaceChildren(h('option', { value: '' }, (e as Error).message));
-    }
-  });
-  const ok = await pencere({
-    baslik: 'Randevu Talebi Oluştur',
-    kaydet: 'Talebi Gönder',
-    icerik: h(
-      'div',
-      { class: 'form-grid' },
-      h('p', { class: 'bilgi-kutu' }, 'Seçiminiz bir tercihtir; randevunuz onaylandıktan sonra kesinleşir. Pazar günleri ve resmî tatillerde kapalıyız.'),
-      h(
-        'div',
-        { class: 'field' },
-        h('p', { class: 'label' }, 'Görüşme Türü'),
-        h(
-          'div',
-          { class: 'secim-grup', 'data-alan': 'Görüşme türü', tabindex: '-1' },
-          h('label', { class: 'secim' }, h('input', { type: 'radio', name: 'tur', value: 'yuz-yuze', checked: true }), 'Yüz Yüze'),
-          h('label', { class: 'secim' }, h('input', { type: 'radio', name: 'tur', value: 'online' }), 'Online'),
-        ),
-      ),
-      h('div', { class: 'form-grid iki' }, alan('Tarih', tarihInput), alan('Saat', saat)),
-      alan('Not (isteğe bağlı)', h('textarea', { class: 'textarea', name: 'not', maxlength: 500, 'data-alan': 'Not' })),
-    ),
-    onKaydet: async (form) => {
-      await api('POST', '/randevu', formNesnesi(form));
-    },
-  });
-  if (ok) {
-    toast('Randevu talebiniz alındı.');
-    yenile();
-  }
+function gelisim(): Node[] {
+  const v = veri();
+  return [
+    baslik('Gelişimim', 'Ölçümlerinizin zaman içindeki değişimi. Grafiğin üzerine gelerek ya da ok tuşlarıyla tarihleri inceleyebilirsiniz.'),
+    grafikler(v.olcumler, v.danisan.hedefKilo, kayit!.evdeki),
+    h('p', { class: 'bilgi-kutu' }, 'Yağ ve kas ölçümleri klinikteki vücut analizinden sonra diyetisyeniniz tarafından eklenir. Değerler kişiden kişiye değişir; yorumlamak için diyetisyeninize danışın.'),
+  ];
 }
 
-// ============================================================== Belgeler
-
-function belgeBolumu(): Node[] {
-  const liste = veri.belgeler.length
-    ? h(
-        'ul',
-        { class: 'liste' },
-        veri.belgeler.map((b) =>
-          h(
-            'li',
-            null,
-            h(
-              'div',
-              { class: 'ana' },
-              h('strong', null, b.baslik),
-              h('span', null, `${tarih(b.tarih)} · ${b.tur} · ${boyut(b.boyut)} · ${b.yukleyen === 'danisan' ? 'Sizin yüklediğiniz' : 'Diyetisyeniniz ekledi'}`),
-            ),
-            h('a', { class: 'btn btn-outline btn-xs', href: `/api/portal/belge/${b.id}`, target: '_blank', rel: 'noopener' }, 'Aç'),
-          ),
-        ),
-      )
-    : h('p', { class: 'bos' }, 'Henüz belge yok. Beslenme planlarınız ve diyetisyeninizin paylaştığı belgeler burada görünür.');
-
+function olcumler(): Node[] {
   const form = h(
     'form',
     { class: 'form-grid', novalidate: true },
     h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
-    h('div', { class: 'form-grid iki' }, alan('Belge Adı', h('input', { class: 'input', name: 'baslik', maxlength: 120, placeholder: 'Örn. Kan tahlili – Ekim 2026', 'data-alan': 'Belge adı' })), alan('Dosya (PDF, JPG, PNG, WEBP · en fazla 10 MB)', h('input', { class: 'input', type: 'file', name: 'dosya', accept: Object.keys(belgeSiniri.turler).join(','), required: true }))),
-    h('button', { type: 'submit', class: 'btn btn-sage btn-sm' }, 'Yükle'),
-  );
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    formTemizle(form);
-    const fd = new FormData(form);
-    const dosya = fd.get('dosya') as File | null;
-    if (!dosya || !dosya.size) return formHatasi(form, new ApiError(400, 'Bir dosya seçin.'));
-    if (dosya.size > belgeSiniri.enFazlaBayt) return formHatasi(form, new ApiError(400, 'Dosya en fazla 10 MB olabilir.'));
-    mesgul(form.querySelector('button'), async () => {
-      try {
-        await api('POST', '/belge', fd);
-        toast('Belgeniz yüklendi.');
-        yenile();
-      } catch (err) {
-        formHatasi(form, err);
-      }
-    });
-  });
-  return [
-    baslik('Belgelerim', 'Beslenme planlarınız, raporlar ve paylaştığınız tahliller.'),
-    h('div', { class: 'kart' }, liste),
     h(
       'div',
-      { class: 'kart' },
-      h('h2', null, 'Belge Yükle (İsteğe Bağlı)'),
-      h(
-        'p',
-        { class: 'bilgi-kutu' },
-        'Mevcut sağlık raporlarınızı ve yakın tarihli tahlil sonuçlarınızı paylaşmayı tercih ederseniz buradan yükleyebilirsiniz. Belgeler şifrelenerek saklanır ve yalnızca diyetisyeniniz görür. Tıbbi değerlendirme gerektiren durumlarda hekime yönlendirilirsiniz.',
-      ),
+      { class: 'form-grid uc' },
+      alan('Tarih', h('input', { class: 'input', type: 'date', name: 'tarih', value: bugun(), max: bugun() })),
+      alan('Kilo (kg)', h('input', { class: 'input', name: 'kilo', inputmode: 'decimal' })),
+      alan('Bel Çevresi (cm)', h('input', { class: 'input', name: 'bel', inputmode: 'decimal' })),
+    ),
+    h('button', { type: 'submit', class: 'btn btn-primary btn-sm' }, 'Ekle'),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const f = formNesnesi(form);
+      const sayiAl = (v: string, et: string, min: number, max: number) => {
+        const s = String(v).trim().replace(',', '.');
+        if (!s) return undefined;
+        const n = Number(s);
+        if (!Number.isFinite(n) || n < min || n > max) throw new Uyari(`${et} ${min}–${max} arasında olmalıdır.`);
+        return Math.round(n * 10) / 10;
+      };
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f.tarih) || f.tarih > bugun()) throw new Uyari('Geçerli bir tarih seçin.');
+      const kilo = sayiAl(f.kilo, 'Kilo', 20, 350);
+      const bel = sayiAl(f.bel, 'Bel çevresi', 40, 250);
+      if (kilo === undefined && bel === undefined) throw new Uyari('Kilo veya bel çevresi girin.');
+      const o: Olcum = { id: kimlik(), tarih: f.tarih, kaynak: 'ev' };
+      if (kilo !== undefined) o.kilo = kilo;
+      if (bel !== undefined) o.bel = bel;
+      kayit!.evdeki.push(o);
+      await kaydet();
+      toast('Ölçümünüz bu telefona kaydedildi.');
+      ciz();
+    } catch (err) {
+      hataYaz(form, err);
+    }
+  });
+  return [
+    baslik('Ölçümlerim'),
+    kart(
+      'Evde Tartıldım',
+      h('p', { class: 'hint' }, 'Evde girdiğiniz ölçümler yalnızca bu telefonda saklanır ve grafiklerde boş daire ile gösterilir. Diyetisyeninize iletilmez.'),
       form,
     ),
-  ];
-}
-
-// ============================================================== Mesajlar
-
-function mesajBolumu(): Node[] {
-  return [
-    baslik('Mesajlar', 'Diyetisyeninizden gelen mesajlar, duyurular ve hatırlatmalar.'),
-    h(
-      'div',
-      { class: 'kart' },
-      veri.mesajlar.length
-        ? h(
-            'ul',
-            { class: 'liste' },
-            veri.mesajlar.map((m) =>
-              h(
-                'li',
-                { class: `mesaj${m.okundu ? '' : ' okunmadi'}` },
-                h('div', { class: 'ana' }, h('strong', null, m.baslik), h('span', null, `${tarihSaat(m.tarih)} · ${m.tur === 'duyuru' ? 'Duyuru' : m.tur === 'hatirlatma' ? 'Hatırlatma' : 'Mesaj'}`), h('p', null, m.metin)),
-              ),
-            ),
-          )
-        : h('p', { class: 'bos' }, 'Henüz mesaj yok.'),
-      h(
-        'p',
-        { class: 'form-alt' },
-        'Diyetisyeninize yazmak için: ',
-        h('a', { href: whatsapp(veri.whatsapp.replace(/^90/, ''), 'Merhaba, danışan panelinden yazıyorum.'), target: '_blank', rel: 'noopener' }, 'WhatsApp'),
-      ),
-    ),
-  ];
-}
-
-async function okunduIsaretle() {
-  const yeni = veri.mesajlar.filter((m) => !m.okundu);
-  for (const m of yeni) {
-    await api('POST', `/mesaj/${m.id}/okundu`).catch(() => {});
-    m.okundu = true;
-  }
-  if (yeni.length) {
-    const rozet = document.querySelector('.panel-menu .rozet');
-    rozet?.remove();
-  }
-}
-
-// ============================================================== Profil
-
-function secenekler(liste: string[], secili: string, bos = 'Seçin') {
-  return [h('option', { value: '' }, bos), ...liste.map((s) => h('option', { value: s, selected: s === secili ? true : null }, s))];
-}
-
-function profilBolumu(): Node[] {
-  const p = veri.profil;
-  const sg = p.saglik ?? {};
-  const inp = (name: string, value: any, extra: Record<string, any> = {}) => h('input', { class: 'input', name, value: value ?? '', ...extra });
-  const form = h(
-    'form',
-    { novalidate: true, class: 'form-grid' },
-    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
-    h('h2', null, 'Kişisel Bilgiler'),
-    h(
-      'div',
-      { class: 'form-grid iki' },
-      alan('Doğum Tarihi', inp('dogumTarihi', p.dogumTarihi, { type: 'date', max: bugun(), 'data-alan': 'Doğum tarihi' })),
-      alan('Cinsiyet', h('select', { class: 'select', name: 'cinsiyet', 'data-alan': 'Cinsiyet' }, secenekler(['Kadın', 'Erkek'], p.cinsiyet))),
-      alan('Yaşadığınız Şehir', h('select', { class: 'select', name: 'sehir', 'data-alan': 'Yaşadığınız şehir' }, secenekler(sehirler, p.sehir))),
-      alan('Meslek', inp('meslek', p.meslek, { maxlength: 80, 'data-alan': 'Meslek' })),
-    ),
-    h('h2', null, 'Hedef ve Ölçüler'),
-    h(
-      'div',
-      { class: 'form-grid iki' },
-      alan('Boy (cm)', inp('boy', p.boy, { inputmode: 'decimal', 'data-alan': 'Boy' })),
-      alan('Hedef Kilo (kg)', inp('hedefKilo', p.hedefKilo, { inputmode: 'decimal', 'data-alan': 'Hedef kilo' })),
-      alan('Hedefiniz', h('select', { class: 'select', name: 'hedef', 'data-alan': 'Hedefiniz' }, secenekler(hedefSecenekleri, p.hedef))),
-      alan('Günlük Hareket Düzeyi', h('select', { class: 'select', name: 'aktivite', 'data-alan': 'Günlük hareket düzeyi' }, secenekler(aktiviteSecenekleri, p.aktivite))),
-    ),
-    h('h2', null, 'Sağlık Bilgileri'),
-    h(
-      'div',
-      { class: 'field' },
-      h('p', { class: 'label' }, 'Tanı Konmuş Hastalıklarınız'),
-      h(
-        'div',
-        { class: 'secim-grup' },
-        hastalikSecenekleri.map((s) =>
-          h('label', { class: 'secim' }, h('input', { type: 'checkbox', name: 'saglik.hastaliklar[]', value: s, checked: (sg.hastaliklar ?? []).includes(s) }), s),
-        ),
-      ),
-    ),
-    alan('Diğer Hastalıklar', inp('saglik.digerHastalik', sg.digerHastalik, { maxlength: 300, 'data-alan': 'Diğer hastalıklar' })),
-    alan('Kullandığınız İlaç ve Takviyeler', h('textarea', { class: 'textarea', name: 'saglik.ilaclar', maxlength: 600, 'data-alan': 'Kullandığınız ilaç ve takviyeler' }, sg.ilaclar ?? '')),
-    h(
-      'div',
-      { class: 'form-grid iki' },
-      alan('Besin Alerjileri', inp('saglik.alerjiler', sg.alerjiler, { maxlength: 400, 'data-alan': 'Besin alerjileri' })),
-      alan('Besin İntoleransları', inp('saglik.intoleranslar', sg.intoleranslar, { maxlength: 400, 'data-alan': 'Besin intoleransları' })),
-      alan('Gebelik / Emzirme', h('select', { class: 'select', name: 'saglik.gebelik', 'data-alan': 'Gebelik / emzirme' }, gebelikSecenekleri.map((s) => h('option', { value: s, selected: s === (sg.gebelik ?? 'Yok') ? true : null }, s)))),
-      alan('Geçirilmiş Ameliyatlar', inp('saglik.ameliyatlar', sg.ameliyatlar, { maxlength: 400, 'data-alan': 'Geçirilmiş ameliyatlar' })),
-    ),
-    alan('Eklemek İstedikleriniz', h('textarea', { class: 'textarea', name: 'saglik.notlar', maxlength: 1000, 'data-alan': 'Eklemek istedikleriniz' }, sg.notlar ?? '')),
-    h('div', null, h('button', { type: 'submit', class: 'btn btn-primary' }, 'Kaydet')),
-  );
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    formTemizle(form);
-    mesgul(form.querySelector<HTMLButtonElement>('button[type=submit]'), async () => {
-      try {
-        await api('PUT', '/profil', formNesnesi(form));
-        toast('Bilgileriniz güncellendi.');
-        yenile();
-      } catch (err) {
-        formHatasi(form, err);
-      }
-    });
-  });
-  const u = veri.kullanici;
-  return [
-    baslik('Profilim', 'Bilgileriniz değiştiğinde güncel tutmanız, beslenme planınızın doğru hazırlanmasına yardımcı olur.'),
-    h(
-      'div',
-      { class: 'kart' },
-      h('h2', null, 'Hesap Bilgileri'),
-      h('dl', { class: 'sabit-bilgi' }, h('dt', null, 'Ad Soyad'), h('dd', null, u.ad), h('dt', null, 'E-posta'), h('dd', null, u.eposta), h('dt', null, 'Telefon'), h('dd', null, `0${u.telefon}`)),
-      h('p', { class: 'form-alt' }, 'Ad, e-posta veya telefon değişikliği için diyetisyeninizle iletişime geçin.'),
-    ),
-    h('div', { class: 'kart' }, form),
-  ];
-}
-
-// ============================================================== Hesap ve gizlilik
-
-function hesapBolumu(): Node[] {
-  const sifreForm = h(
-    'form',
-    { novalidate: true, class: 'form-grid' },
-    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
-    h(
-      'div',
-      { class: 'form-grid iki' },
-      alan('Mevcut Şifre', h('input', { class: 'input', type: 'password', name: 'eski', autocomplete: 'current-password', 'data-alan': 'Mevcut şifre' })),
-      alan('Yeni Şifre', h('input', { class: 'input', type: 'password', name: 'yeni', autocomplete: 'new-password', 'data-alan': 'Şifre' }), 'En az 8 karakter; en az bir harf ve bir rakam.'),
-    ),
-    h('div', null, h('button', { type: 'submit', class: 'btn btn-sage btn-sm' }, 'Şifreyi Değiştir')),
-  );
-  sifreForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    formTemizle(sifreForm);
-    mesgul(sifreForm.querySelector('button'), async () => {
-      try {
-        await api('POST', '/sifre-degistir', formNesnesi(sifreForm));
-        toast('Şifreniz değiştirildi. Diğer cihazlardaki oturumlar kapatıldı.');
-        sifreForm.reset();
-      } catch (err) {
-        formHatasi(sifreForm, err);
-      }
-    });
-  });
-
-  const silmeTalebiVar = veri.kullanici.durum === 'silme_talebi';
-  const belgeler = ben.belgeler;
-  return [
-    baslik('Hesap ve Gizlilik', 'Şifreniz, verileriniz ve KVKK kapsamındaki haklarınız.'),
-    h('div', { class: 'kart' }, h('h2', null, 'Şifre'), sifreForm),
-    h(
-      'div',
-      { class: 'kart' },
-      h('h2', null, 'Verileriniz ve Haklarınız'),
-      h(
-        'p',
-        null,
-        'Panelde sizinle ilgili tutulan tüm bilgileri indirebilirsiniz. KVKK md. 11 kapsamındaki haklarınız ',
-        h('a', { href: belgeler.aydinlatma.yol, target: '_blank', rel: 'noopener' }, 'Aydınlatma Metni'),
-        '’nde yer alır.',
-      ),
-      h('div', { class: 'eylemler' }, h('a', { class: 'btn btn-outline btn-sm', href: '/api/portal/verilerim', download: true }, 'Verilerimi İndir')),
-      h(
-        'ul',
-        { class: 'form-alt' },
-        Object.values(belgeler).map((b) => h('li', null, h('a', { href: b.yol, target: '_blank', rel: 'noopener' }, b.baslik))),
-      ),
-    ),
-    h(
-      'div',
-      { class: 'kart' },
-      h('h2', null, 'Açık Rızayı Geri Çekme'),
-      h(
-        'p',
-        null,
-        'Sağlık verilerinizin panelde işlenmesine verdiğiniz açık rızayı geri çekebilirsiniz. Bu durumda paneli yeniden onay verene kadar kullanamazsınız; beslenme danışmanlığı panel olmadan sürdürülebilir.',
-      ),
-      h('button', { type: 'button', class: 'btn btn-outline btn-sm', onclick: rizaGeriCek }, 'Açık Rızamı Geri Çek'),
-    ),
-    h(
-      'div',
-      { class: 'kart' },
-      h('h2', null, 'Hesabı Silme'),
-      silmeTalebiVar
-        ? [
-            h('p', null, 'Silme talebiniz alındı. Hesabınız ve paneldeki verileriniz diyetisyeniniz tarafından silinecektir.'),
-            h(
+    kart(
+      'Tüm Ölçümler',
+      olcumTablosu(tumOlcumler(), (o) =>
+        o.kaynak === 'ev'
+          ? h(
               'button',
               {
                 type: 'button',
-                class: 'btn btn-outline btn-sm',
+                class: 'btn btn-outline btn-xs',
                 onclick: async () => {
-                  await api('POST', '/silme-talebi/iptal');
-                  toast('Silme talebiniz geri alındı.');
-                  yenile();
+                  kayit!.evdeki = kayit!.evdeki.filter((x) => x.id !== o.id);
+                  await kaydet();
+                  ciz();
                 },
               },
-              'Talebimi Geri Al',
-            ),
-          ]
-        : [
-            h('p', null, 'Hesabınızın ve paneldeki verilerinizin silinmesini talep edebilirsiniz. Yasal saklama yükümlülüğü bulunan kayıtlar süresi boyunca saklanır.'),
-            h('button', { type: 'button', class: 'btn btn-tehlike btn-sm', onclick: silmeTalebi }, 'Hesabımın Silinmesini İstiyorum'),
-          ],
+              'Sil',
+            )
+          : null,
+      ),
     ),
   ];
 }
 
-async function rizaGeriCek() {
-  const ok = await pencere({
-    baslik: 'Açık Rızamı Geri Çek',
-    kaydet: 'Rızamı Geri Çek',
-    tehlikeli: true,
-    icerik: h(
-      'p',
+function paketim(): Node[] {
+  const p = veri().paket;
+  return [
+    baslik('Paketim'),
+    kart(
       null,
-      'Rızanızı geri çektiğinizde panel kapanır ve sağlık verileriniz panelde işlenmez. Verilerinizin silinmesini ayrıca talep edebilirsiniz. Devam edilsin mi?',
+      p
+        ? h(
+            'dl',
+            { class: 'sabit-bilgi' },
+            h('dt', null, 'Paket'),
+            h('dd', null, p.ad),
+            h('dt', null, 'Başlangıç'),
+            h('dd', null, tarih(p.baslangic)),
+            h('dt', null, 'Bitiş'),
+            h('dd', null, tarih(p.bitis)),
+            p.toplamGorusme !== undefined ? [h('dt', null, 'Görüşme'), h('dd', null, `${p.kalanGorusme ?? '—'} / ${p.toplamGorusme} kaldı`)] : null,
+            p.not ? [h('dt', null, 'Not'), h('dd', null, p.not)] : null,
+          )
+        : bos('Şu anda tanımlı bir paketiniz yok. Paketler hakkında bilgi için diyetisyeninize danışın.'),
     ),
-    onKaydet: async () => {
-      await api('POST', '/riza-geri-cek');
-    },
-  });
-  if (ok) location.reload();
+  ];
 }
 
-async function silmeTalebi() {
-  const ok = await pencere({
-    baslik: 'Hesap Silme Talebi',
-    kaydet: 'Talebi Gönder',
-    tehlikeli: true,
-    icerik: h('p', null, 'Hesabınızın ve paneldeki verilerinizin silinmesi için talep oluşturulsun mu? Talebinizi işlem tamamlanana kadar geri alabilirsiniz.'),
-    onKaydet: async () => {
-      await api('POST', '/silme-talebi');
-    },
-  });
-  if (ok) {
-    toast('Silme talebiniz alındı.');
-    if (veri) yenile();
-    else location.reload();
+function randevular(): Node[] {
+  const bu = bugun();
+  const liste = [...veri().randevular].sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat));
+  const gelecek = liste.filter((r) => r.durum === 'onaylandi' && r.tarih >= bu).reverse();
+  const gecmis = liste.filter((r) => !(r.durum === 'onaylandi' && r.tarih >= bu));
+  const DURUM: Record<string, string> = { onaylandi: 'Onaylandı', tamamlandi: 'Tamamlandı', iptal: 'İptal', gelmedi: 'Katılınmadı' };
+  const satir = (r: (typeof liste)[number]) =>
+    h(
+      'li',
+      null,
+      h('div', { class: 'ana' }, h('strong', null, `${tarih(r.tarih, true)} · ${r.saat}`), h('span', null, ` ${turAdi(r.tur)}`)),
+      h('div', { class: 'eylemler' }, h('span', { class: `durum ${r.durum}` }, DURUM[r.durum] ?? r.durum)),
+    );
+  return [
+    baslik('Randevularım'),
+    kart('Yaklaşan', gelecek.length ? h('ul', { class: 'liste' }, gelecek.map(satir)) : bos('Onaylı yaklaşan randevunuz yok.'), h('p', null, h('a', { class: 'btn btn-primary btn-sm', href: '/randevu-olustur/' }, 'Randevu Talebi Oluştur'))),
+    gecmis.length ? kart('Geçmiş', h('ul', { class: 'liste' }, gecmis.map(satir))) : null,
+    h('p', { class: 'hint' }, 'Randevunuza katılamayacaksanız lütfen diyetisyeninize önceden haber verin.'),
+  ].filter(Boolean) as Node[];
+}
+
+function belgeler(): Node[] {
+  const liste = [...veri().belgeler].sort((a, b) => b.tarih - a.tarih);
+  return [
+    baslik('Belgelerim', 'Diyetisyeninizin size gönderdiği beslenme planları ve vücut analizi raporları.'),
+    kart(
+      null,
+      liste.length
+        ? h(
+            'ul',
+            { class: 'liste' },
+            liste.map((b) =>
+              h(
+                'li',
+                null,
+                h('div', { class: 'ana' }, h('strong', null, b.baslik), h('span', null, ` ${boyut(b.boyut)} · ${tarih(b.tarih)}`)),
+                h(
+                  'div',
+                  { class: 'eylemler' },
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      class: 'btn btn-outline btn-xs',
+                      onclick: async (e: Event) => {
+                        await mesgul(e.currentTarget as HTMLButtonElement, async () => {
+                          try {
+                            const ham = await api<Uint8Array>('GET', `/takip/${kayit!.kutu}/belge/${b.id}`, undefined, cihazBasligi());
+                            const acik = await coz(await aesAnahtari(unb64(kayit!.anahtar)), ham, `${kayit!.kutu}:${b.id}`);
+                            indir(new Blob([acik as Uint8Array<ArrayBuffer>], { type: b.tur }), b.ad);
+                          } catch {
+                            toast('Belge açılamadı. İnternet bağlantınızı kontrol edin.', 'hata');
+                          }
+                        });
+                      },
+                    },
+                    'İndir',
+                  ),
+                ),
+              ),
+            ),
+          )
+        : bos('Henüz belge yok.'),
+    ),
+    h('p', { class: 'hint' }, 'Beslenme planlarınız size özeldir; lütfen başkalarıyla paylaşmayın.'),
+  ];
+}
+
+function mesajlar(): Node[] {
+  const liste = [...veri().mesajlar].sort((a, b) => b.tarih - a.tarih);
+  const yeni = liste.filter((m) => !kayit!.okunan.includes(m.id)).map((m) => m.id);
+  if (yeni.length) {
+    kayit!.okunan.push(...yeni);
+    void kaydet();
+    setTimeout(() => document.querySelector('.panel-menu .rozet')?.remove(), 1200);
   }
+  return [
+    baslik('Mesajlar'),
+    kart(
+      null,
+      liste.length
+        ? h(
+            'ul',
+            { class: 'liste' },
+            liste.map((m) =>
+              h(
+                'li',
+                { class: yeni.includes(m.id) ? 'mesaj okunmadi' : 'mesaj' },
+                h('div', { class: 'ana' }, h('strong', null, m.duyuru ? 'Duyuru' : 'Diyetisyeninizden', ` · ${tarihSaat(m.tarih)}`), h('p', { class: 'cok-satir' }, m.metin)),
+              ),
+            ),
+          )
+        : bos('Mesaj yok.'),
+    ),
+    h('p', { class: 'hint' }, 'Bu bölüm yalnızca diyetisyeninizin mesajlarını gösterir. Yanıt vermek veya soru sormak için WhatsApp\'tan yazabilirsiniz. Acil durumlarda 112\'yi arayın.'),
+  ];
 }
 
-// ============================================================== Onay ekranı (metinler güncellendiğinde / rıza geri çekildiğinde)
-
-function onayEkrani() {
-  const form = h(
-    'form',
-    { novalidate: true, class: 'form-grid' },
-    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
-    ben.onayGerekli.map((t) =>
+function ayarlar(): Node[] {
+  const pinVar = Boolean(pinAnahtari);
+  return [
+    baslik('Ayarlar'),
+    kart(
+      'Bilgilerimi Yenile',
+      h('p', null, kayit!.alindi ? `Son güncelleme: ${tarihSaat(kayit!.alindi)}` : ''),
       h(
-        'label',
-        { class: 'onay-satiri' },
-        h('input', { type: 'checkbox', name: 'turler[]', value: t }),
-        h(
-          'span',
-          null,
-          h('a', { href: ben.belgeler[t].yol, target: '_blank', rel: 'noopener' }, ben.belgeler[t].baslik),
-          t === 'aydinlatma' ? '’ni okudum.' : t === 'acikRiza' ? ' kapsamında açık rıza veriyorum.' : '’ni okudum ve kabul ediyorum.',
-        ),
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-outline btn-sm',
+          onclick: async (e: Event) => {
+            const ok = await mesgul(e.currentTarget as HTMLButtonElement, () => guncelle());
+            toast(ok ? 'Bilgileriniz güncellendi.' : 'Güncellenemedi.', ok ? 'tamam' : 'hata');
+            ciz();
+          },
+        },
+        'Şimdi Yenile',
       ),
     ),
-    h('div', { class: 'eylemler' }, h('button', { type: 'submit', class: 'btn btn-primary' }, 'Onayla ve Devam Et'), h('button', { type: 'button', class: 'btn btn-outline', onclick: cikis }, 'Çıkış Yap')),
-  );
-  const silmeKutusu =
-    ben.kullanici.durum === 'riza_geri_cekildi'
-      ? h(
-          'div',
-          { class: 'form-alt' },
-          h('p', null, 'Panelde kayıtlı verilerinizin silinmesini istiyorsanız talep oluşturabilirsiniz.'),
-          h(
-            'button',
-            {
-              type: 'button',
-              class: 'btn btn-tehlike btn-sm',
-              onclick: async () => {
-                await silmeTalebi();
+    kart(
+      'Ekran Kilidi (PIN)',
+      h('p', null, pinVar ? 'Takibim bu telefonda PIN ile açılıyor.' : 'Telefonunuzu başkaları da kullanıyorsa Takibim\'i 4–6 haneli bir PIN ile kilitleyebilirsiniz.'),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-outline btn-sm',
+          onclick: async () => {
+            if (pinVar) {
+              pinAnahtari = null;
+              pinTuzu = null;
+              await kaydet();
+              toast('PIN kaldırıldı.');
+              return ciz();
+            }
+            await pencere({
+              baslik: 'PIN Belirle',
+              icerik: h(
+                'div',
+                { class: 'form-grid' },
+                alan('PIN (4–6 rakam)', h('input', { class: 'input kod-girisi', type: 'password', name: 'pin', inputmode: 'numeric', maxlength: 6 })),
+                alan('PIN (tekrar)', h('input', { class: 'input kod-girisi', type: 'password', name: 'tekrar', inputmode: 'numeric', maxlength: 6 })),
+                h('p', { class: 'hint' }, 'PIN\'i unutursanız bu telefondaki bilgiler açılamaz; diyetisyeninizden yeni QR istemeniz gerekir.'),
+              ),
+              onKaydet: async (form) => {
+                const f = formNesnesi(form);
+                if (!/^\d{4,6}$/.test(f.pin)) throw new Uyari('PIN 4–6 rakamdan oluşmalıdır.', 'PIN (4–6 rakam)');
+                if (f.pin !== f.tekrar) throw new Uyari('PIN\'ler aynı değil.', 'PIN (tekrar)');
+                const tuz = rastgele(16);
+                pinAnahtari = await parolaAnahtari(f.pin, tuz, PIN_TURU);
+                pinTuzu = b64(tuz);
+                await kaydet();
+                toast('PIN belirlendi.');
               },
-            },
-            'Verilerimin Silinmesini İstiyorum',
-          ),
-        )
-      : ben.kullanici.durum === 'silme_talebi'
-        ? h('p', { class: 'bilgi-kutu' }, 'Silme talebiniz alındı; hesabınız ve verileriniz diyetisyeniniz tarafından silinecektir.')
-        : null;
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    formTemizle(form);
-    const turler = formNesnesi(form).turler ?? [];
-    if (turler.length !== ben.onayGerekli.length) return formHatasi(form, new ApiError(400, 'Devam etmek için tüm metinleri onaylayın.'));
-    mesgul(form.querySelector('button'), async () => {
-      try {
-        await api('POST', '/onay', { turler });
-        location.reload();
-      } catch (err) {
-        formHatasi(form, err);
-      }
-    });
-  });
-  const geriCekildi = ben.kullanici.durum === 'riza_geri_cekildi';
-  app.replaceChildren(
-    h(
-      'div',
-      { class: 'auth genis' },
+            });
+            ciz();
+          },
+        },
+        pinVar ? 'PIN\'i Kaldır' : 'PIN Belirle',
+      ),
+    ),
+    kart(
+      'Kişisel Verilerim',
+      h('p', null, 'Bu telefonda kayıtlı Takibim bilgilerinizi dosya olarak indirebilirsiniz.'),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'btn btn-outline btn-sm',
+          onclick: () =>
+            indir(
+              new Blob([JSON.stringify({ indirme: new Date().toISOString(), takibim: kayit!.onbellek, evdeGirilenOlcumler: kayit!.evdeki }, null, 2)], {
+                type: 'application/json',
+              }),
+              `takibim-verilerim-${bugun()}.json`,
+            ),
+        },
+        'Verilerimi İndir',
+      ),
+      h(
+        'p',
+        { class: 'hint' },
+        'Haklarınız ve başvuru yolları: ',
+        h('a', { href: portalBelgeleri.aydinlatma.yol, target: '_blank', rel: 'noopener' }, 'KVKK Aydınlatma Metni'),
+        ' · ',
+        h('a', { href: portalBelgeleri.acikRiza.yol, target: '_blank', rel: 'noopener' }, 'Açık Rıza Metni'),
+        ' · ',
+        h('a', { href: portalBelgeleri.kosullar.yol, target: '_blank', rel: 'noopener' }, 'Kullanım Koşulları'),
+      ),
+    ),
+    kart(
+      'Takibi Kapat',
+      h(
+        'p',
+        null,
+        'Takibim\'i kapatırsanız açık rızanız geri çekilmiş olur: sunucudaki şifreli bilgileriniz ve belgeleriniz silinir, bu telefondaki bilgiler de kaldırılır. Diyetisyeniniz takibi kapattığınızı görür. Klinikteki danışmanlık kayıtlarınız bundan etkilenmez.',
+      ),
       h(
         'div',
-        { class: 'card auth-kart' },
-        h('h1', null, geriCekildi ? 'Panel Kapalı' : 'Güncellenen Metinler'),
+        { class: 'eylemler' },
         h(
-          'p',
-          null,
-          geriCekildi
-            ? 'Açık rızanızı geri çektiğiniz için panel kapalı. Paneli yeniden kullanmak isterseniz aşağıdaki metni onaylayabilirsiniz. Verilerinizin silinmesini istiyorsanız diyetisyeninize iletebilirsiniz.'
-            : 'Kişisel verilerinizle ilgili metinlerimiz güncellendi. Paneli kullanmaya devam etmek için lütfen okuyup onaylayın.',
+          'button',
+          {
+            type: 'button',
+            class: 'btn btn-tehlike btn-sm',
+            onclick: async () => {
+              const ok = await pencere({
+                baslik: 'Takibimi Kapat',
+                tehlikeli: true,
+                kaydet: 'Takibimi Kapat',
+                icerik: h('p', null, 'Takibiniz kapatılsın ve açık rızanız geri çekilsin mi? Bu işlem geri alınamaz; yeniden kullanmak için diyetisyeninizden yeni QR istemeniz gerekir.'),
+                onKaydet: async () => {
+                  if (!kayit!.kapali) await api('DELETE', `/takip/${kayit!.kutu}`, undefined, cihazBasligi());
+                },
+              });
+              if (!ok) return;
+              yerelSil();
+              ortaKart(h('h1', null, 'Takibiniz Kapatıldı'), h('p', null, 'Bilgileriniz sunucudan ve bu telefondan silindi.'), h('p', null, h('a', { href: '/' }, 'Ana sayfaya dön')));
+            },
+          },
+          'Takibimi Kapat',
         ),
-        form,
-        silmeKutusu,
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'btn btn-outline btn-sm',
+            onclick: async () => {
+              const ok = await pencere({
+                baslik: 'Bu Telefondaki Bilgileri Sil',
+                tehlikeli: true,
+                kaydet: 'Sil',
+                icerik: h('p', null, 'Yalnızca bu telefondaki bilgiler silinir; takibiniz kapanmaz. Tekrar görmek için diyetisyeninizden yeni QR kodu istemeniz gerekir.'),
+              });
+              if (!ok) return;
+              yerelSil();
+              tanitimEkrani();
+            },
+          },
+          'Yalnızca Bu Telefondan Sil',
+        ),
       ),
     ),
-  );
+  ];
 }
 
-basla();
+// ================================================================ Başlangıç
+
+async function baslat() {
+  const parca = location.hash;
+  const tur = parcaTuru(parca);
+  if (tur) {
+    // Anahtar adres çubuğunda kalmasın
+    history.replaceState(null, '', location.pathname);
+    return eslesmeEkrani(parca, tur);
+  }
+  try {
+    localStorage.getItem(ANAHTAR);
+  } catch {
+    return ortaKart(h('h1', null, 'Takibim'), h('p', null, 'Bu tarayıcıda bilgiler kaydedilemiyor (gizli sekme olabilir). Takibim\'i normal bir sekmede açın.'));
+  }
+  const s = okuSaklanan();
+  if (!s || (!s.acik && !s.kilit)) return tanitimEkrani();
+  if (s.kilit) return pinEkrani(s);
+  kayit = s.acik!;
+  if (!location.hash) history.replaceState(null, '', '#ozet');
+  if (kayit.onbellek) uygulama();
+  await guncelle();
+  uygulama();
+}
+
+// Sayfa açıkken yeni bir QR/bağlantı açılırsa (aynı sekmede) yeniden başlat
+addEventListener('hashchange', () => {
+  if (parcaTuru(location.hash)) location.reload();
+});
+
+void baslat();

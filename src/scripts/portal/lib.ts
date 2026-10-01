@@ -1,9 +1,20 @@
-// Danışan ve diyetisyen panelleri için ortak tarayıcı yardımcıları.
+// Diyetisyen paneli ve Takibim için ortak tarayıcı yardımcıları.
 // Tüm dinamik metinler textContent ile eklenir (innerHTML kullanılmaz) — kullanıcı verisi sayfada kod olarak çalışamaz.
 
 export class ApiError extends Error {
   constructor(
     public status: number,
+    message: string,
+    public alan?: string,
+    public kod?: string,
+  ) {
+    super(message);
+  }
+}
+
+/** Kullanıcıya gösterilecek hata (form/pencere içinde) */
+export class Uyari extends Error {
+  constructor(
     message: string,
     public alan?: string,
   ) {
@@ -13,11 +24,15 @@ export class ApiError extends Error {
 
 const BASE = '/api/portal';
 
-export async function api<T = any>(method: string, path: string, body?: unknown): Promise<T> {
-  const init: RequestInit = { method, credentials: 'same-origin', headers: { 'X-Portal-Istek': '1' } };
-  if (body instanceof FormData) init.body = body;
-  else if (body !== undefined) {
-    (init.headers as Record<string, string>)['Content-Type'] = 'application/json';
+/** Sunucuya JSON istek. "basliklar" ile panel anahtarı (Authorization) veya cihaz anahtarı (X-Cihaz) eklenir. */
+export async function api<T = any>(method: string, path: string, body?: unknown, basliklar: Record<string, string> = {}): Promise<T> {
+  const headers: Record<string, string> = { 'X-Portal-Istek': '1', ...basliklar };
+  const init: RequestInit = { method, credentials: 'same-origin', headers, cache: 'no-store' };
+  if (body instanceof Uint8Array) {
+    headers['Content-Type'] = 'application/octet-stream';
+    init.body = body as Uint8Array<ArrayBuffer>;
+  } else if (body !== undefined) {
+    headers['Content-Type'] = 'application/json';
     init.body = JSON.stringify(body);
   }
   let res: Response;
@@ -26,8 +41,9 @@ export async function api<T = any>(method: string, path: string, body?: unknown)
   } catch {
     throw new ApiError(0, 'Bağlantı kurulamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.');
   }
+  if (res.ok && res.headers.get('Content-Type')?.includes('octet-stream')) return new Uint8Array(await res.arrayBuffer()) as T;
   const data = res.headers.get('Content-Type')?.includes('json') ? await res.json().catch(() => ({})) : {};
-  if (!res.ok) throw new ApiError(res.status, (data as any).hata ?? 'İşlem tamamlanamadı.', (data as any).alan);
+  if (!res.ok) throw new ApiError(res.status, (data as any).hata ?? 'İşlem tamamlanamadı.', (data as any).alan, (data as any).kod);
   return data as T;
 }
 
@@ -125,15 +141,42 @@ export function boyut(bayt: number): string {
   return `${sayi(bayt / 1024 / 1024, 1)} MB`;
 }
 
+/** Telefonu uluslararası rakam dizisine çevirir: 0532… / 532… / +90532… → 90532… */
+export function telNormal(v: string): string {
+  let d = (v || '').replace(/\D/g, '');
+  if (d.startsWith('00')) d = d.slice(2);
+  if (d.length === 11 && d.startsWith('0')) d = `9${d}`;
+  if (d.length === 10 && d.startsWith('5')) d = `90${d}`;
+  return d;
+}
+
 export function telefonGoster(p: string): string {
-  return p ? `0${p.slice(0, 3)} ${p.slice(3, 6)} ${p.slice(6, 8)} ${p.slice(8, 10)}` : '';
+  const d = telNormal(p);
+  if (d.length === 12 && d.startsWith('90')) return `0${d.slice(2, 5)} ${d.slice(5, 8)} ${d.slice(8, 10)} ${d.slice(10, 12)}`;
+  return d ? `+${d}` : '';
 }
 
 export function whatsapp(telefon: string, metin: string): string {
-  return `https://wa.me/90${telefon}?text=${encodeURIComponent(metin)}`;
+  return `https://wa.me/${telNormal(telefon)}?text=${encodeURIComponent(metin)}`;
 }
 
+/** Tarayıcıda oluşturulan dosyayı indirir */
+export function indir(veri: Blob, ad: string) {
+  const url = URL.createObjectURL(veri);
+  const a = h('a', { href: url, download: ad, hidden: true });
+  document.body.append(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 60_000);
+}
+
+export const GUN_ADLARI = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+export const gunAdi = (iso: string) => GUN_ADLARI[new Date(`${iso}T00:00:00Z`).getUTCDay()];
+
 export const turAdi = (t: string) => (t === 'online' ? 'Online' : 'Yüz yüze');
+
 
 // ---------------------------------------------------------------- Formlar
 
@@ -171,7 +214,9 @@ export function formNesnesi(form: HTMLFormElement): Record<string, any> {
 /** Sunucudan gelen hatayı formun üstünde gösterir, ilgili alanı işaretler */
 export function formHatasi(form: HTMLElement, err: unknown) {
   const box = form.querySelector<HTMLElement>('[data-form-hata]');
-  const e = err instanceof ApiError ? err : new ApiError(0, 'Beklenmeyen bir hata oluştu.');
+  if (!(err instanceof ApiError) && !(err instanceof Uyari)) console.error(err);
+  const e =
+    err instanceof ApiError ? err : err instanceof Uyari ? new ApiError(0, err.message, err.alan) : new ApiError(0, 'Beklenmeyen bir hata oluştu.');
   for (const el of form.querySelectorAll('[aria-invalid="true"]')) el.removeAttribute('aria-invalid');
   if (e.alan) {
     const input = form.querySelector<HTMLElement>(`[data-alan="${CSS.escape(e.alan)}"]`);
@@ -235,6 +280,8 @@ export function pencere(opts: {
   icerik: Node;
   kaydet?: string;
   tehlikeli?: boolean;
+  genis?: boolean;
+  vazgecYok?: boolean;
   onKaydet?: (form: HTMLFormElement) => Promise<boolean | void>;
 }): Promise<boolean> {
   return new Promise((resolve) => {
@@ -246,11 +293,11 @@ export function pencere(opts: {
       h(
         'div',
         { class: 'pencere-butonlar' },
-        h('button', { type: 'button', class: 'btn btn-outline btn-sm', 'data-kapat': true }, 'Vazgeç'),
+        opts.vazgecYok ? null : h('button', { type: 'button', class: 'btn btn-outline btn-sm', 'data-kapat': true }, 'Vazgeç'),
         h('button', { type: 'submit', class: `btn ${opts.tehlikeli ? 'btn-tehlike' : 'btn-primary'} btn-sm` }, opts.kaydet ?? 'Kaydet'),
       ),
     );
-    const dlg = h('dialog', { class: 'pencere', 'aria-label': opts.baslik }, h('h2', null, opts.baslik), form);
+    const dlg = h('dialog', { class: `pencere${opts.genis ? ' genis' : ''}`, 'aria-label': opts.baslik }, h('h2', null, opts.baslik), form);
     document.body.append(dlg);
     let sonuc = false;
     const kapat = () => {
@@ -262,7 +309,7 @@ export function pencere(opts: {
       e.preventDefault();
       kapat();
     });
-    form.querySelector('[data-kapat]')!.addEventListener('click', kapat);
+    form.querySelector('[data-kapat]')?.addEventListener('click', kapat);
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       formTemizle(form);
@@ -290,16 +337,4 @@ export function alan(label: string, input: HTMLElement, ipucu?: string): HTMLEle
   input.id = id;
   if (!input.dataset.alan) input.dataset.alan = label.replace(/\s*\(.*\)$/, '');
   return h('div', { class: 'field' }, h('label', { for: id }, label), input, ipucu ? h('p', { class: 'hint' }, ipucu) : null);
-}
-
-/** Deneme sürümü bandı ve sistem hazır mı kontrolü */
-export async function durumBandi(): Promise<{ mod: string; hazir: boolean } | null> {
-  try {
-    const d = await api<{ mod: string; hazir: boolean }>('GET', '/durum');
-    const bant = document.querySelector<HTMLElement>('[data-deneme-bandi]');
-    if (bant && d.mod === 'deneme') bant.hidden = false;
-    return d;
-  } catch {
-    return null;
-  }
 }

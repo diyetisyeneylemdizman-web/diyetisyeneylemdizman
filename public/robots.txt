@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /danisan/
 Disallow: /yonetim/
+Disallow: /takibim/
 Disallow: /api/
 
 Sitemap: https://www.diyetisyeneylemdizman.com/sitemap-index.xml

@@ -466,6 +466,7 @@
 
 /* Tablolar */
 .tablo-kap {
+  position: relative; /* ekran okuyucu için gizli metinler kaydırma alanının dışına taşmasın */
   overflow-x: auto;
   margin: 0 -4px;
 }
@@ -652,17 +653,21 @@
 /* Bildirim ve pencere */
 .toast-wrap {
   position: fixed;
-  left: 50%;
+  left: 16px;
+  right: 16px;
   bottom: 22px;
-  transform: translateX(-50%);
+  margin-inline: auto;
   display: grid;
   gap: 8px;
   z-index: 100;
-  width: min(92vw, 440px);
+  max-width: 440px;
+  pointer-events: none;
 }
 .toast {
   padding: 12px 16px;
   border-radius: 14px;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
   background: var(--sage-900);
   color: #fff;
   font-weight: 600;
@@ -792,4 +797,388 @@
   font-weight: 600;
   text-decoration: none;
   margin-bottom: 10px;
+}
+
+/* ================================================================ Diyetisyen paneli ve Takibim (v2) */
+
+.durum.tamamlandi {
+  background: var(--sage-50);
+  color: var(--sage-900);
+}
+.durum.gelmedi {
+  background: var(--terracotta-50);
+  color: var(--terracotta-800);
+}
+.ince {
+  color: var(--ink-3);
+  font-size: 0.85rem;
+}
+.cok-satir {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ayrac {
+  border: 0;
+  border-top: 1px solid var(--beige-soft);
+  margin: 18px 0 10px;
+}
+.ara-baslik {
+  font-size: 1.15rem;
+  margin: 22px 0 10px;
+}
+.gosterge.tiklanir {
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.gosterge.tiklanir:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+.gosterge .deger.kucuk {
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+.liste > li.yeni {
+  background: var(--terracotta-50);
+}
+.liste .ana strong .durum {
+  margin-left: 8px;
+}
+.eylemler.genis-eylem {
+  flex-wrap: wrap;
+  margin: 14px 0 6px;
+}
+.dosya-ust .bolum-baslik {
+  margin-top: 6px;
+}
+.kod-kutu {
+  font-size: 1.9rem;
+  font-weight: 750;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+.kod-kutu.kucuk {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+.kod-girisi {
+  font-size: 1.3rem;
+  letter-spacing: 0.35em;
+  text-align: center;
+}
+.adim-liste {
+  margin: 0;
+  padding-left: 1.3em;
+  display: grid;
+  gap: 6px;
+}
+.mesaj-onizleme {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--sage-50);
+  font: inherit;
+  font-size: 0.92rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pencere.genis {
+  width: min(94vw, 760px);
+}
+.qr-alani {
+  display: grid;
+  gap: 16px;
+}
+.qr-alani .qr svg {
+  width: min(320px, 70vw);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+/* PDF bırakma alanı */
+.olcum-ekle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+.olcum-ekle > .btn {
+  align-self: center;
+}
+.birakma {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 22px 18px;
+  border: 2px dashed var(--sage-300, #b4c3a7);
+  border-radius: var(--radius);
+  background: var(--paper);
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  margin-bottom: 16px;
+}
+.olcum-ekle .birakma {
+  margin-bottom: 0;
+}
+.birakma strong {
+  font-size: 1.05rem;
+}
+.birakma span:not(.btn) {
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  max-width: 52ch;
+}
+.birakma:hover,
+.birakma:focus-visible,
+.birakma.uzerinde {
+  background: var(--sage-50);
+  border-color: var(--sage-700);
+}
+.birakma.isleniyor {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.deger-izgara {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.deger-kutu {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--sage-50);
+}
+.deger-kutu span {
+  font-size: 0.8rem;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.deger-kutu strong {
+  font-size: 1.1rem;
+}
+
+/* Seçici (zaman aralığı, harita görünümü) */
+.secici {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--beige-soft);
+}
+.secici-dugme {
+  border: 0;
+  background: transparent;
+  padding: 0.45em 0.95em;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.secici-dugme[aria-pressed='true'] {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.grafikler > .secici {
+  margin-bottom: 12px;
+}
+.grafik-izgara {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+}
+.grafik-izgara > .kart + .kart {
+  margin-top: 0;
+}
+.lejant-satiri {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+.nokta {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #4a5543;
+}
+.nokta.dolu {
+  background: #4a5543;
+}
+.nokta.bos-nokta {
+  background: var(--paper);
+}
+
+/* Vücut haritası */
+.vucut-ust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.vucut-lejant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+.lejant-cubuk {
+  display: inline-flex;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.lejant-cubuk i {
+  display: block;
+  width: 18px;
+  height: 10px;
+}
+.vucut-izgara {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+.vucut-sutun {
+  display: grid;
+  gap: 12px;
+}
+.vucut-orta {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.vucut-figur {
+  width: 100%;
+  max-width: 190px;
+  height: auto;
+}
+.vucut-figur path {
+  transition: fill 0.25s ease, stroke 0.25s ease;
+}
+.vucut-figur path[data-segment] {
+  cursor: pointer;
+}
+.vucut-figur path.vurgu {
+  filter: drop-shadow(0 0 1px #292c29) drop-shadow(0 0 1px #292c29);
+}
+.vucut-not {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  text-align: center;
+}
+.vucut-kart {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  row-gap: 4px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--paper);
+  border: 1px solid var(--beige-soft);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.vucut-kart.vurgu,
+.vucut-kart:focus-visible {
+  border-color: var(--ink-2);
+  box-shadow: var(--shadow-sm);
+}
+.vucut-kart-renk {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgb(41 44 41 / 0.15);
+}
+.vucut-kart strong {
+  font-size: 0.95rem;
+}
+.vucut-kart > :not(.vucut-kart-renk):not(strong) {
+  grid-column: 1 / -1;
+}
+.vucut-kart dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+  font-size: 0.88rem;
+}
+.vucut-kart dt {
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.vucut-kart dd {
+  margin: 0;
+  color: var(--ink);
+}
+.vucut-deger {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.fark {
+  font-weight: 700;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.fark::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin: 0 4px 1px 2px;
+}
+.fark.iyi::before {
+  background: #2e6da4;
+}
+.fark.kotu::before {
+  background: #b4553b;
+}
+.vucut-kart:not(:has(.vucut-kart-renk)) {
+  grid-template-columns: 1fr;
+}
+.tablo-ac {
+  margin-top: 10px;
+}
+.tablo-ac summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 700px) {
+  .olcum-ekle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vucut-izgara {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .vucut-orta {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+  .vucut-figur {
+    max-width: 170px;
+  }
+}
+.tumunu-goster {
+  margin-top: 12px;
 }

@@ -1,12 +1,17 @@
 ---
-// Randevu talebi: 3 adımda (görüşme → takvimden tarih ve saat → bilgiler) hazırlanır ve WhatsApp mesajı olarak gönderilir.
-// Bilgiler sunucuya gönderilmez ve kaydedilmez. Tarih ve saat "tercih"tir; kesin randevu WhatsApp üzerinden onaylanır.
+// Randevu talebi: 3 adımda (görüşme → takvimden tarih ve saat → bilgiler) hazırlanır.
+// ŞU ANKİ DÜZEN (takibimAcik = false): talep her zaman hazır bir WhatsApp mesajı olarak gönderilir; sunucuya gitmez.
+// - takibimAcik = true ve diyetisyen paneli sunucuya bağlıysa talep ziyaretçinin tarayıcısında diyetisyenin açık anahtarıyla şifrelenir ve
+//   panele iletilir (sunucu içeriği okuyamaz; panel talebi aldığında sunucudan silinir). Onay WhatsApp'tan bildirilir.
+// - Panel bağlı değilse veya iletim başarısız olursa talep, hazır bir WhatsApp mesajı olarak gönderilir.
+// Tarih ve saat "tercih"tir; randevu onaylandıktan sonra kesinleşir.
 // Çalışma saatleri ve kapalı günler: src/data/site.ts (hours, closedDates, bookingDaysAhead)
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import Icon from '../components/Icon.astro';
 import { serviceOptions } from '../data/services';
 import { site } from '../data/site';
+import { takibimAcik } from '../data/portal';
 
 const takvim = JSON.stringify({ hours: site.hours, closed: site.closedDates, ahead: site.bookingDaysAhead });
 const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -19,13 +24,15 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
   <PageHero
     title="Randevu Talebi Oluştur"
     eyebrow="Yüz Yüze veya Online"
-    lead="Görüşme türünü seçin, takvimden size uygun gün ve saati işaretleyin; talebiniz hazır bir mesaj olarak WhatsApp üzerinden iletilir."
+    lead={takibimAcik
+      ? 'Görüşme türünü seçin, takvimden size uygun gün ve saati işaretleyin; talebiniz diyetisyene iletilir ve randevunuz onaylandığında WhatsApp üzerinden bilgilendirilirsiniz.'
+      : 'Görüşme türünü seçin, takvimden size uygun gün ve saati işaretleyin; talebiniz hazır bir mesaj olarak WhatsApp üzerinden iletilir.'}
     crumbs={[{ label: 'Randevu Talebi Oluştur' }]}
   />
 
   <section class="section">
     <div class="container booking">
-      <form class="card booking-form" id="randevu-formu" novalidate data-booking data-wa={site.whatsappNumber} data-takvim={takvim}>
+      <form class="card booking-form" id="randevu-formu" novalidate data-booking data-wa={site.whatsappNumber} data-takvim={takvim} data-panel={takibimAcik ? '1' : '0'}>
         <p class="request-note">
           <Icon name="info" size={20} />
           <span
@@ -173,20 +180,33 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
           <label class="consent">
             <input type="checkbox" name="kvkk" required />
-            <span>
+            <span data-mod="wa">
               Randevu talebimin iletilmesi için bilgilerimin WhatsApp üzerinden paylaşılacağını biliyorum.{' '}
+              <a href="/kvkk-aydinlatma-metni/" target="_blank">KVKK Aydınlatma Metni</a>’ni okudum.
+            </span>
+            <span data-mod="panel" hidden>
+              Randevu talebimin, bilgilerim tarayıcımda şifrelenerek diyetisyene iletileceğini ve onay için WhatsApp
+              üzerinden benimle iletişime geçileceğini biliyorum.{' '}
               <a href="/kvkk-aydinlatma-metni/" target="_blank">KVKK Aydınlatma Metni</a>’ni okudum.
             </span>
           </label>
           <p class="field-error" data-error-for="kvkk"></p>
 
-          <button type="submit" class="btn btn-primary btn-block submit">
+          <button type="submit" class="btn btn-primary btn-block submit" data-mod="wa">
             <Icon name="whatsapp" size={20} />WhatsApp ile Randevu Talebi Gönder
           </button>
-          <p class="after-note">
+          <button type="submit" class="btn btn-primary btn-block submit" data-mod="panel" hidden>
+            <Icon name="calendar" size={20} />Randevu Talebi Gönder
+          </button>
+          <p class="form-error" data-gonderim-hata hidden role="alert"></p>
+          <p class="after-note" data-mod="wa">
             Butona bastığınızda WhatsApp, bilgilerinizi içeren hazır bir mesajla açılır. Mesajı göndermek için
             WhatsApp’ta <strong>Gönder</strong>’e basmanız yeterli. Seçtiğiniz tarih ve saat bir tercihtir; randevunuz
             WhatsApp üzerinden onaylandıktan sonra kesinleşir.
+          </p>
+          <p class="after-note" data-mod="panel" hidden>
+            Talebiniz doğrudan diyetisyene iletilir. Seçtiğiniz tarih ve saat bir tercihtir; randevunuz onaylandığında
+            WhatsApp üzerinden size bilgi verilir.
           </p>
 
           <div class="step-actions">
@@ -196,13 +216,27 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
         </fieldset>
       </form>
 
+      <div class="card booking-form sent" data-sent hidden tabindex="-1">
+        <h2>Talebiniz alındı</h2>
+        <p>
+          Randevu talebiniz diyetisyene iletildi. Seçtiğiniz tarih ve saat bir tercihtir; randevunuz onaylandığında
+          WhatsApp üzerinden size bilgi verilecek.
+        </p>
+        <div class="summary" data-sent-summary></div>
+        <p class="after-note">Acil bir durumunuz varsa telefonla arayabilirsiniz: <a href={site.phoneHref}>{site.phoneDisplay}</a></p>
+        <div class="step-actions">
+          <a class="btn btn-outline" href="/">Ana Sayfa</a>
+          <a class="btn btn-primary" href="/randevu-olustur/">Yeni Talep</a>
+        </div>
+      </div>
+
       <aside class="side">
         <div class="card side-card">
           <h2>Nasıl işliyor?</h2>
           <ol class="mini-steps">
             <li><span>1</span>Görüşme türü ve konu seçilir.</li>
             <li><span>2</span>Takvimden tercih edilen gün ve saat işaretlenir.</li>
-            <li><span>3</span>Bilgiler yazılır ve WhatsApp’taki hazır mesaj gönderilir.</li>
+            <li><span>3</span>{takibimAcik ? 'Bilgiler yazılır ve talep gönderilir.' : 'Bilgiler yazılır ve WhatsApp’taki hazır mesaj gönderilir.'}</li>
             <li><span>4</span>Randevu WhatsApp üzerinden onaylanır ve kesinleşir.</li>
           </ol>
         </div>
@@ -652,6 +686,30 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     white-space: normal;
     text-align: center;
   }
+  [data-mod][hidden] {
+    display: none !important;
+  }
+  .form-error {
+    margin: -6px 0 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--terracotta-50);
+    color: var(--terracotta-700);
+    font-weight: 600;
+    font-size: 0.93rem;
+  }
+  .form-error[hidden] {
+    display: none;
+  }
+  .form-error a {
+    color: inherit;
+  }
+  .sent h2 {
+    margin: 0;
+  }
+  .sent[hidden] {
+    display: none;
+  }
   .after-note {
     margin: -8px 0 0;
     font-size: 0.84rem;
@@ -842,6 +900,23 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
       const [h, m] = hhmm.split(':').map(Number);
       return h * 60 + m;
     };
+
+    // ---------- Gönderim yolu: diyetisyen paneli bağlıysa şifreli talep, değilse WhatsApp ----------
+    let panelAnahtari: JsonWebKey | null = null;
+    const modAyarla = (panel: boolean) => {
+      for (const el of document.querySelectorAll<HTMLElement>('[data-booking] [data-mod]')) el.hidden = el.dataset.mod !== (panel ? 'panel' : 'wa');
+    };
+    // Takibim/sunucu özellikleri kapalıyken (src/data/portal.ts → takibimAcik) sunucuya hiç istek gönderilmez
+    if (form.dataset.panel === '1')
+      fetch('/api/portal/durum', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d?.randevuKutusu && d.anahtar) {
+            panelAnahtari = d.anahtar;
+            modAyarla(true);
+          }
+        })
+        .catch(() => undefined);
 
     // ---------- Adres çubuğundan gelen bilgiler (VKİ hesaplayıcı, hizmet ve online sayfaları) ----------
     const hizmet = params.get('hizmet');
@@ -1153,9 +1228,81 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
       if (not) lines.push(`• Not: ${not}`);
 
       const url = `https://wa.me/${form.dataset.wa}?text=${encodeURIComponent(lines.join('\n'))}`;
-      const win = window.open(url, '_blank');
-      if (win) win.opener = null;
-      else location.href = url;
+      const whatsappAc = () => {
+        const win = window.open(url, '_blank');
+        if (win) win.opener = null;
+        else location.href = url;
+      };
+      if (!panelAnahtari) return whatsappAc();
+
+      // Panel bağlı: talep tarayıcıda şifrelenip diyetisyene iletilir
+      const hataKutusu = $<HTMLElement>('[data-gonderim-hata]');
+      const btn = $<HTMLButtonElement>('button[type=submit][data-mod="panel"]');
+      hataKutusu.hidden = true;
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+      (async () => {
+        try {
+          const { muhurle } = await import('../scripts/portal/sifre');
+          const saatDegeri = anyDate || !selTime || selTime === 'Fark etmez' ? '' : selTime;
+          const zarf = await muhurle(panelAnahtari!, {
+            ad,
+            telefon: tel,
+            tur: turText() === 'Online' ? 'online' : 'yuzyuze',
+            konu: select.value || 'Emin değilim / Genel danışmanlık',
+            tarih: anyDate ? '' : selDate,
+            saat: saatDegeri,
+            not,
+            vki: vki && durum ? `${vki} – ${durum}` : '',
+            gonderim: Date.now(),
+          });
+          const r = await fetch('/api/portal/randevu', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Portal-Istek': '1' },
+            body: JSON.stringify({ zarf }),
+          });
+          if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error((j as { hata?: string }).hata || 'Talep gönderilemedi.');
+          }
+          const sent = document.querySelector<HTMLElement>('[data-sent]')!;
+          const ozet = sent.querySelector<HTMLElement>('[data-sent-summary]')!;
+          ozet.replaceChildren(
+            ...[
+              ['Görüşme', turText()],
+              ['Konu', select.value || 'Emin değilim / Genel danışmanlık'],
+              ['Tarih', tarihText()],
+              ['Saat', saatText()],
+            ].map(([a, b]) => {
+              const d = document.createElement('div');
+              const sp = document.createElement('span');
+              sp.textContent = a;
+              const st = document.createElement('strong');
+              st.textContent = b;
+              d.append(sp, st);
+              return d;
+            }),
+          );
+          form.hidden = true;
+          sent.hidden = false;
+          sent.focus();
+          sent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (err) {
+          hataKutusu.replaceChildren(
+            `${err instanceof Error ? err.message : 'Talep gönderilemedi.'} Talebinizi WhatsApp üzerinden de gönderebilirsiniz: `,
+          );
+          const a = document.createElement('a');
+          a.href = url;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = 'WhatsApp ile gönder';
+          hataKutusu.append(a);
+          hataKutusu.hidden = false;
+        } finally {
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+        }
+      })();
     });
   }
 </script>

@@ -22,16 +22,18 @@ derlenip yayına alınır.
 | Sayfa geçişi ve açılış animasyonları | `src/styles/global.css` (“Hafif animasyonlar” bölümü) |
 | Menü sırası ve adları | `src/data/site.ts` (`nav`) |
 | Randevu takvimi: çalışma saatleri, kapalı günler (tatiller), kaç gün sonrası seçilebilir | `src/data/site.ts` (`hours`, `closedDates`, `bookingDaysAhead`) |
-| Danışan paneli: ölçüm alanları, üyelik formu seçenekleri, yasal metin sürümleri | `src/data/portal.ts` |
-| Danışan paneli yasal metinleri | `src/pages/kvkk-aydinlatma-metni.astro`, `acik-riza-metni.astro`, `danisan-sozlesmesi.astro` |
+| Panel: Takibim açık/kapalı (`takibimAcik`), sınırlar, yasal metin sürümleri | `src/data/portal.ts` |
+| KVKK aydınlatma metni (şu anki düzen) | `src/components/kvkk/AydinlatmaYerel.astro` |
+| KVKK aydınlatma metni (Takibim açıkken), Takibim açık rıza ve kullanım koşulları | `src/components/kvkk/AydinlatmaTakibim.astro`, `src/pages/acik-riza-metni.astro`, `danisan-sozlesmesi.astro` |
 
 ## Sayfalar
 
 Ana sayfa · Hakkında · Sertifikalar · Hizmetler · Vücut Kitle İndeksi Hesaplama · Online Görüşme · Blog & Reels ·
 İletişim · Randevu Talebi Oluştur (3 adım: görüşme → takvimden tercih edilen tarih ve saat → bilgiler; WhatsApp mesajı olarak gönderilir, randevu onaydan sonra kesinleşir) ·
-KVKK Aydınlatma Metni · Açık Rıza Metni · Danışan Paneli Kullanım Sözleşmesi
+KVKK Aydınlatma Metni
 
-Arama motorlarına kapalı sayfalar: `/danisan/…` (danışan paneli) ve `/yonetim/…` (diyetisyen paneli).
+Arama motorlarına kapalı sayfa: `/yonetim/` (diyetisyen paneli). Takibim kapalıyken `/takibim/`, eski `/danisan/…`
+adresleri ana sayfaya; Takibim açık rıza ve kullanım koşulları sayfaları KVKK Aydınlatma Metni'ne yönlenir.
 
 ## Site asistanı
 
@@ -78,63 +80,64 @@ yapılmış olsa bile, yasaklıyor.
   tablosu (CDC / IOM 2009) ve “Gebeyseniz” uyarısı yer alır.
 - Hesaplama tarayıcıda yapılır; girilen bilgiler hiçbir yere gönderilmez.
 
-## Danışan paneli (deneme sürümü)
+## Diyetisyen paneli
 
-Danışanların üye olup süreçlerini takip ettiği panel ile diyetisyenin danışanlarını yönettiği panel. Ücretsiz Cloudflare
-planında çalışır (Durable Objects + SQLite); ek hizmet veya kart tanımı gerekmez.
+Ücretsizdir; kart tanımı, abonelik veya ek ayar gerekmez.
 
-**Danışan (`/danisan/`):** 5 adımlı üyelik (hesap → kişisel → hedef/ölçüler → sağlık → onaylar) · özet · gelişim
-grafikleri (kilo, yağ ve kas kütlesi, yağ oranı, bel…) · ölçüm ekleme (kilo, bel, kalça) · paket talebi · randevu
-talebi · belgeler · mesajlar · profil · verilerini indirme, açık rızayı geri çekme, hesap silme talebi.
+**Şu anki düzen (`src/data/portal.ts` → `takibimAcik = false`): hiçbir danışan verisi internete gönderilmez.**
 
-**Diyetisyen (`/yonetim/`):** iki adımlı doğrulamalı giriş · özet · danışan listesi ve danışan dosyası (profil, sağlık,
-klinik ölçümleri, paketler, randevular, belgeler, mesajlar, özel notlar, erişim kayıtları) · paket tanımları · randevu
-onayı · tüm danışanlara tek tuşla panel duyurusu · WhatsApp tek tık mesaj şablonları · erişim kayıtları.
+- **Randevu talepleri WhatsApp ile gelir.** Sitedeki form, ziyaretçinin telefonunda hazır bir WhatsApp mesajı açar.
+  Diyetisyen bu mesajı kopyalayıp panelde **Randevu Talepleri → WhatsApp Talebi Ekle** penceresine yapıştırır; ad,
+  telefon, görüşme türü, konu, tarih, saat, VKİ ve not kendiliğinden dolar. "Onayla" ile danışan kaydı açılır ve adres
+  ile konum içeren hazır WhatsApp onay mesajı gönderilir.
+- **Danışan kayıtları yalnızca diyetisyenin bilgisayarında**, tarayıcının içinde ve panel parolasıyla şifreli
+  (AES-256-GCM, PBKDF2 600.000 tur) durur. Bölümler: Özet · Randevu Talepleri · Randevular · Danışanlar (ekle, düzenle,
+  sil) · danışan dosyası (Ölçümler, Paket, Randevular, Bilgiler ve Notlar) · Duyuru · Paketler · Ayarlar. Panel 30
+  dakika işlem yapılmazsa kilitlenir ve aynı anda tek sekmede açılır.
+- **Vücut analizi PDF'i:** Tanita MC-780 raporu danışan dosyasına sürüklenince değerler (kilo, yağ, kas, yağsız kütle,
+  su, iç yağ, bazal metabolizma, metabolik yaş, bel, BKİ, kol/bacak/gövde segmental değerleri) ve cihazın ölçüm geçmişi
+  otomatik okunur (`src/scripts/portal/tanita.ts`, tarayıcıda pdf.js ile; PDF hiçbir yere yüklenmez). PDF'teki ad
+  danışan adıyla uyuşmazsa onay istenir. Ölçümler insan modeli üzerinde vücut haritası ve gelişim grafikleriyle görünür.
+- `/api/portal/*` adresleri kapalıdır (404); `/takibim/` ana sayfaya yönlenir; menüde Takibim düğmesi yoktur.
 
-**Otomatik hatırlatmalar:** Her gün saat 09.00’dan sonra, ertesi gün onaylı randevusu olan ve paketinin bitmesine 3 gün
-kalan danışanların paneline hatırlatma düşer. WhatsApp mesajları diyetisyen tarafından tek tıkla gönderilir.
+### Kurulum (bir kez)
 
-**Ödeme:** Sitede ödeme alınmaz. Paket talebi panele düşer, ödeme bilgisi danışana ayrıca iletilir, ödeme alınınca
-diyetisyen paketi “Aktif” yapar. (Kartla ödeme ileride eklenebilir; ödeme kuruluşu ücretlidir.)
+1. `/yonetim/` açılır → panel parolası belirlenir (en az 10 karakter; **unutulursa kayıtlar açılamaz**).
+2. Ayarlar → Mesaj Şablonları: ödeme şablonundaki IBAN'ı düzenleyin.
+3. **Haftada bir Ayarlar → "Yedek İndir"** — kayıtlar yalnızca o bilgisayarda durur. Yedek dosyası şifrelidir; USB
+   bellek veya harici diskte saklanması önerilir. Yeni bilgisayarda `/yonetim/` → "Yedekten Yükle".
 
-**Güvenlik:** Sağlık verileri, belgeler, notlar ve mesajlar AES-256 ile şifrelenir · şifreler PBKDF2 ile saklanır ·
-hatalı girişlerde geçici kilit · oturum çerezleri Secure/HttpOnly/SameSite=Strict · diyetisyende iki adımlı doğrulama ·
-belge yüklemede yalnızca PDF/JPG/PNG/WEBP (en fazla 10 MB) · tüm görüntüleme ve değişiklikler kayıt altında (2 yıl).
+`KURULUM_KODU` ve eski `VERI_ANAHTARI` Secret'ları bu düzende kullanılmaz; eklenmesine gerek yoktur, varsa silinebilir.
 
-### İlk kurulum (bir kez)
+### Takibim'i açmak (ileride, isteğe bağlı)
 
-1. Cloudflare panelinde Worker → **Settings → Variables and Secrets** bölümüne **Secret** türünde iki değer eklenir:
-   `VERI_ANAHTARI` ve `KURULUM_KODU`. Bu değerler `/yonetim/kurulum/` sayfası açıldığında sayfada üretilir.
-2. `/yonetim/kurulum/` sayfasında kurulum kodu, e-posta ve şifre girilir; telefondaki doğrulama uygulamasıyla
-   (Google Authenticator vb.) QR kodu okutulur.
-3. **`VERI_ANAHTARI` güvenli bir yerde saklanmalı ve değiştirilmemelidir.** Değişirse veya kaybolursa panel verileri
-   okunamaz.
-4. Deneme sürümünde üyelik yalnızca `KURULUM_KODU` ile yapılabilir (ör. test için). Gerçek kişisel veya sağlık bilgisi
-   girilmez.
+Kodda hazırdır ama kapalıdır: danışanın QR ile telefonundan ölçümlerini görmesi (uçtan uca şifreli), randevu formunun
+talebi şifreli olarak doğrudan panele iletmesi ve telefona bildirim. Bu özellikler şifreli veriyi sitenin sunucusunda
+(Cloudflare, yurt dışı) tuttuğu için açmadan önce:
 
-### Yayına alma kontrol listesi
+1. Hukukçu görüşü alınır (KVKK md. 9 yurt dışı aktarım; Cloudflare standart sözleşmesi ve Kurum'a bildirim).
+2. `src/data/portal.ts` → `takibimAcik = true`; Cloudflare'e **Secret** `KURULUM_KODU` (en az 12 karakter) eklenir.
+3. Panelde Özet → "Şimdi Bağlan" ile kurulum kodu girilir; Ayarlar → Bildirimler açılır.
+4. KVKK aydınlatma metni kendiliğinden Takibim sürümüne (`AydinlatmaTakibim.astro`) geçer; Takibim açık rıza ve
+   kullanım koşulları sayfaları açılır. Metinlerin sürümü `src/data/portal.ts` içinde artırılır.
 
-- [ ] Yasal metinler (aydınlatma, açık rıza, kullanım sözleşmesi) bir hukukçu tarafından gözden geçirildi.
-- [ ] Yurt dışı aktarım: Cloudflare ile KVKK standart sözleşmesi imzalandı ve imzadan sonra 5 iş günü içinde Kuruma
-      bildirildi — ya da panel verileri Türkiye’de barındırılan bir altyapıya taşındı.
-- [ ] Paket fiyatlarının gösterimi, Sağlık Hizmetlerinde Tanıtım ve Bilgilendirme Faaliyetleri Hakkında Yönetmelik
-      md. 5(1)(m) açısından değerlendirildi (fiyat gösterimi paket bazında kapatılabilir).
-- [ ] `wrangler.jsonc` içinde `PORTAL_MODU` → `"canli"`; `src/data/site.ts` içinde `portalYayinda` → `true`
-      (menüde “Danışan Girişi” görünür, deneme notları kalkar).
-- [ ] Deneme sırasında girilen test hesapları silindi.
+### Yasal kontrol listesi
+
+- [ ] KVKK aydınlatma metni bir hukukçu tarafından gözden geçirildi.
+- [ ] Paket fiyatlarının sitede gösterimi Sağlık Hizmetlerinde Tanıtım ve Bilgilendirme Faaliyetleri Hakkında
+      Yönetmelik açısından değerlendirildi.
 
 ### Kural: her yenilikte KVKK teyidi
 
-Panelde veya sitede kişisel veri işleyen her değişiklikte (yeni form alanı, yeni hizmet sağlayıcı, yeni bildirim
-kanalı, ödeme vb.) üç yasal metin kontrol edilir; metin değişirse `src/data/portal.ts` içindeki ilgili `surum` tarihi
-güncellenir. Sürüm değişince danışanlar bir sonraki girişlerinde güncel metni yeniden onaylar.
+Sitede, randevu formunda veya panelde kişisel veri işleyen her değişiklikte (yeni alan, yeni hizmet sağlayıcı, yeni
+bildirim kanalı, ödeme vb.) KVKK aydınlatma metni kontrol edilir; metin değişirse `src/data/portal.ts` içindeki
+`surum` ve `guncelleme` değerleri güncellenir.
 
 ## Mevzuat notları
 
 - Sitede danışan yorumu, teşekkür/memnuniyet ifadesi, ücret/indirim/kampanya bilgisi ve öncesi-sonrası görseli
   bulunmamalıdır (Sağlık Hizmetlerinde Tanıtım ve Bilgilendirme Faaliyetleri Hakkında Yönetmelik).
 - Alt bilgide “Son güncelleme” tarihi (her yayında otomatik) ve site editörü iletişim bilgisi yer alır.
-- Paket fiyatları, diyetisyenin tercihiyle danışan panelinde gösterilir (paket bazında kapatılabilir).
 - “Uzman” unvanı kullanılmaz.
 
 ## Geliştirme
@@ -146,11 +149,11 @@ npm run build    # yayın dosyalarını dist/ klasörüne üretir
 ```
 
 Cloudflare ayarları: `wrangler.jsonc` (derleme komutu `npm run build`, yayın komutu `npx wrangler deploy`). Sayfalar
-statik dosya olarak sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır (Instagram Reels ve
-danışan paneli). Panel sunucu kodu `worker/portal/`, arayüz kodu `src/scripts/portal/` klasöründedir.
+statik dosya olarak sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır (Instagram Reels; Takibim
+açıkken Takibim posta kutusu). Sunucu kodu `worker/portal/`, panel ve Takibim arayüzü `src/scripts/portal/` klasöründedir.
 
-Paneli bilgisayarda denemek için `npx wrangler dev` kullanılır (`VERI_ANAHTARI` ve `KURULUM_KODU` değerleri
-`--var` ile verilir).
+Paneli bilgisayarda denemek için `npm run build` ardından `npx wrangler dev` kullanılır (Takibim açıkken
+`--var KURULUM_KODU:<kod>` eklenir).
 
 ## Yazım kuralları
 
