@@ -96,6 +96,9 @@ yapılmış olsa bile, yasaklıyor.
   (AES-256-GCM, PBKDF2 600.000 tur) durur. Bölümler: Özet · Randevu Talepleri · Randevular · Danışanlar (ekle, düzenle,
   sil) · danışan dosyası (Ölçümler, Takibim, Paket, Randevular, Bilgiler ve Notlar) · Duyuru · Paketler · Ayarlar. Panel 30
   dakika işlem yapılmazsa kilitlenir ve aynı anda tek sekmede açılır.
+- **Mesajlarda hitap:** Panelden açılan tüm WhatsApp mesajlarında `{ad}` “Ayşe Hanım” / “Mehmet Bey” olur (soyadı
+  dışındaki adlar + hitap). Cinsiyet danışan kaydından veya talepteki “Hitap” seçiminden gelir; bu alanlar addan
+  tahminle kendiliğinden seçilir (`src/scripts/portal/hitap.ts`, iki cinsiyette kullanılan adlarda elle seçilir).
 - **Paketler (panel):** “Sitedeki Paketleri Ekle” düğmesi Paketler sayfasındaki paketleri (ör. “Kilo Yönetimi – 3 Ay (12
   Görüşme)”, süre 90 gün) hazır tanım olarak ekler; ücret alanı yalnızca panelde, diyetisyen için tutulur.
 - **Vücut analizi PDF'i:** Tanita MC-780 raporu danışan dosyasına sürüklenince değerler (kilo, yağ, kas, yağsız kütle,

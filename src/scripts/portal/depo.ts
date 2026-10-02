@@ -52,6 +52,8 @@ export interface Randevu {
   id: string;
   danisanId?: string;
   ad: string;
+  /** Hitap için (K: Hanım, E: Bey); danışan kaydı varsa onun cinsiyeti kullanılır */
+  cinsiyet?: 'K' | 'E';
   telefon: string;
   tarih: string; // YYYY-AA-GG veya '' (tarih fark etmez)
   saat: string; // SS:DD veya ''

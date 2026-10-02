@@ -13,6 +13,7 @@ import qrcode from 'qrcode-generator';
 import { fullAddress, site } from '../../data/site';
 import { hedefSecenekleri, randevuDurumlari, sinirlar, sunucuAcik, takibimGorunur, takibimKipi, takibimRizaSurumu, type RandevuDurumu } from '../../data/portal';
 import { paketGruplari, paketSecenekleri } from '../../data/packages';
+import { cinsiyetTahmini, hitap, type Cinsiyet } from './hitap';
 import { Depo, ParolaHatasi, type Danisan, type PaketTanimi, type Randevu } from './depo';
 import { gelisimGorunumu, olcumSirala, olcumTablosu } from './gelisim';
 import {
@@ -119,11 +120,35 @@ const SABLONLAR: Record<string, { ad: string; metin: string }> = {
 const sablon = (ad: keyof typeof SABLONLAR | string, d: Record<string, string | undefined>) =>
   (V().sablonlar[ad] ?? SABLONLAR[ad]?.metin ?? '').replace(/\{(\w+)\}/g, (m, k) => d[k] ?? m);
 
-const ilkAd = (ad: string) => ad.trim().split(/\s+/)[0];
+/** Talep / randevu sahibinin cinsiyeti (hitap için): danışan kaydı → talebe seçilen hitap → addan tahmin */
+const kisiCinsiyeti = (r: { ad: string; danisanId?: string; cinsiyet?: Cinsiyet }): Cinsiyet | undefined =>
+  danisanBul(r.danisanId)?.cinsiyet ?? r.cinsiyet ?? cinsiyetTahmini(r.ad);
 
-function randevuDegiskenleri(r: { ad: string; tarih: string; saat: string }) {
+/** Mesajlarda kullanılan ad: "Ayşe Hanım", "Mehmet Bey" */
+const danisanHitabi = (d: Danisan) => hitap(d.ad, d.cinsiyet);
+
+/** Formlardaki "Hitap" seçimi (Hanım / Bey) */
+const hitapSecimi = (deger: Cinsiyet | '' | undefined = '') => secim('hitap', [['', 'Seçin'], ['K', 'Hanım'], ['E', 'Bey']], deger ?? '');
+const hitapDegeri = (v: unknown): Cinsiyet | undefined => (v === 'K' || v === 'E' ? v : undefined);
+/** Ad yazıldıkça, hitap/cinsiyet seçilmemişse addan tahmin edip seçer */
+function hitapTahminiBagla(kap: HTMLElement, secimAdi: 'hitap' | 'cinsiyet' = 'hitap') {
+  const ad = kap.querySelector<HTMLInputElement>('input[name=ad]');
+  const sec = kap.querySelector<HTMLSelectElement>(`select[name=${secimAdi}]`);
+  if (!ad || !sec) return;
+  let elle = Boolean(sec.value);
+  sec.addEventListener('change', () => (elle = Boolean(sec.value)));
+  const tahmin = () => {
+    if (elle) return;
+    sec.value = cinsiyetTahmini(ad.value) ?? '';
+  };
+  ad.addEventListener('input', tahmin);
+  ad.addEventListener('change', tahmin);
+  tahmin();
+}
+
+function randevuDegiskenleri(r: { ad: string; tarih: string; saat: string; danisanId?: string; cinsiyet?: Cinsiyet }) {
   return {
-    ad: ilkAd(r.ad),
+    ad: hitap(r.ad, kisiCinsiyeti(r)),
     adSoyad: r.ad,
     tarih: r.tarih ? tarih(r.tarih) : '',
     gun: r.tarih ? gunAdi(r.tarih) : '',
@@ -690,7 +715,7 @@ function ozet(): Node[] {
                 'li',
                 null,
                 h('div', { class: 'ana' }, h('strong', null, h('a', { href: `#danisan/${d.id}/paket` }, d.ad)), h('span', null, ` ${d.paket!.ad} · bitiş ${tarih(d.paket!.bitis)}`)),
-                h('div', { class: 'eylemler' }, waDugme(d.telefon, sablon('paketBitiyor', { ad: ilkAd(d.ad), paket: d.paket!.ad, bitis: tarih(d.paket!.bitis) }), 'Hatırlat')),
+                h('div', { class: 'eylemler' }, waDugme(d.telefon, sablon('paketBitiyor', { ad: danisanHitabi(d), paket: d.paket!.ad, bitis: tarih(d.paket!.bitis) }), 'Hatırlat')),
               ),
             ),
           )
@@ -762,7 +787,7 @@ function talepler(): Node[] {
                   { class: 'eylemler' },
                   dugme('Onayla', () => randevuOnayla(r), 'btn btn-primary btn-xs'),
                   dugme('Uygun Değil', () => randevuUygunDegil(r), 'btn btn-outline btn-xs'),
-                  waDugme(r.telefon, sablon('genel', { ad: ilkAd(r.ad) })),
+                  waDugme(r.telefon, sablon('genel', { ad: hitap(r.ad, kisiCinsiyeti(r)) })),
                 ),
               );
             }),
@@ -814,12 +839,13 @@ async function whatsappTalebiEkle() {
       'div',
       { class: 'form-grid iki' },
       alan('Ad Soyad', input('ad', '', { autocomplete: 'off', maxlength: 80 })),
+      alan('Hitap', hitapSecimi(), 'Mesajlarda “… Hanım / … Bey” diye yazılır.'),
       alan('Telefon', input('telefon', '', { type: 'tel', autocomplete: 'off' })),
       alan('Görüşme', secim('tur', [['yuzyuze', 'Yüz yüze'], ['online', 'Online']])),
-      alan('Konu', input('konu', '', { maxlength: 120 })),
       alan('Tercih edilen tarih', input('tarih', '', { type: 'date' }), 'Boşsa: tarih fark etmez'),
       alan('Tercih edilen saat', input('saat', '', { type: 'time', step: 300 }), 'Boşsa: saat fark etmez'),
     ),
+    alan('Konu', input('konu', '', { maxlength: 120 })),
     alan('VKİ sonucu', input('vki', '', { maxlength: 80 })),
     alan('Not', metinAlani('not', '', { rows: 2, maxlength: 600 })),
     h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'hemenOnayla', checked: true }), h('span', null, 'Ekledikten sonra onay penceresini aç')),
@@ -831,7 +857,9 @@ async function whatsappTalebiEkle() {
       if (el && v) el.value = ad === 'telefon' ? telefonGoster(v) : v;
     };
     for (const [k, v] of Object.entries(c)) yaz(k, v);
+    icerik.querySelector('input[name=ad]')?.dispatchEvent(new Event('change'));
   });
+  hitapTahminiBagla(icerik);
   const ok = await pencere({
     baslik: 'WhatsApp Talebi Ekle',
     kaydet: 'Talebi Ekle',
@@ -843,9 +871,12 @@ async function whatsappTalebiEkle() {
       if (ad.length < 2) throw new Uyari('Ad soyad yazın (mesajı yapıştırınca kendiliğinden dolar).', 'Ad Soyad');
       const tel = telNormal(f.telefon);
       if (tel.length < 10 || tel.length > 15) throw new Uyari('Geçerli bir telefon yazın.', 'Telefon');
+      const cinsiyet = hitapDegeri(f.hitap);
+      if (!cinsiyet) throw new Uyari('Hitap seçin (Hanım / Bey).', 'Hitap');
       const r: Randevu = {
         id: kimlik(),
         ad,
+        cinsiyet,
         telefon: tel,
         tarih: /^\d{4}-\d{2}-\d{2}$/.test(f.tarih) ? f.tarih : '',
         saat: /^\d{2}:\d{2}$/.test(f.saat) ? f.saat : '',
@@ -888,6 +919,7 @@ async function randevuOnayla(r: Randevu) {
         alan('Saat', input('saat', r.saat, { type: 'time', required: true, step: 300 })),
       ),
       alan('Görüşme', secim('tur', [['yuzyuze', 'Yüz yüze'], ['online', 'Online']], r.tur)),
+      kayitli?.cinsiyet ? null : alan('Hitap', hitapSecimi(r.cinsiyet ?? cinsiyetTahmini(r.ad)), 'Mesajlarda “… Hanım / … Bey” diye yazılır.'),
       kayitli
         ? h('p', { class: 'hint' }, 'Bu telefon numarası kayıtlı bir danışana ait; randevu onun dosyasına eklenecek.')
         : h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'ekle', checked: true }), h('span', null, 'Danışan listesine ekle')),
@@ -896,11 +928,15 @@ async function randevuOnayla(r: Randevu) {
       const f = formNesnesi(form);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(f.tarih)) throw new Uyari('Tarih seçin.', 'Tarih');
       if (!/^\d{2}:\d{2}$/.test(f.saat)) throw new Uyari('Saat seçin.', 'Saat');
+      const cinsiyet = kayitli?.cinsiyet ?? hitapDegeri(f.hitap);
+      if (!cinsiyet) throw new Uyari('Hitap seçin (Hanım / Bey).', 'Hitap');
       r.tarih = f.tarih;
       r.saat = f.saat;
       r.tur = f.tur === 'online' ? 'online' : 'yuzyuze';
       r.durum = 'onaylandi';
-      if (!kayitli && f.ekle) r.danisanId = yeniDanisanKaydi({ ad: r.ad, telefon: r.telefon }).id;
+      r.cinsiyet = cinsiyet;
+      if (kayitli && !kayitli.cinsiyet) kayitli.cinsiyet = cinsiyet;
+      if (!kayitli && f.ekle) r.danisanId = yeniDanisanKaydi({ ad: r.ad, telefon: r.telefon, cinsiyet }).id;
       await degisti(danisanBul(r.danisanId), true);
     },
   });
@@ -1031,13 +1067,22 @@ async function randevuDuzenle(r?: Randevu, danisanId?: string) {
     olusturma: Date.now(),
   };
   const kisiler = [...V().danisanlar].sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+  // Listede olmayan kişi: ad, telefon ve hitap (addan tahminle seçilir)
+  const serbest = h(
+    'div',
+    { class: 'form-grid iki', 'data-serbest': true },
+    alan('Ad Soyad', input('ad', kayit.ad)),
+    alan('Telefon', input('telefon', kayit.telefon ? telefonGoster(kayit.telefon) : '', { type: 'tel' })),
+    alan('Hitap', hitapSecimi(kayit.cinsiyet), 'Mesajlarda “… Hanım / … Bey” diye yazılır.'),
+  );
+  hitapTahminiBagla(serbest);
   const ok = await pencere({
     baslik: yeni ? 'Yeni Randevu' : 'Randevuyu Düzenle',
     icerik: h(
       'div',
       { class: 'form-grid' },
       alan('Danışan', secim('danisan', [['', 'Listede olmayan kişi'], ...kisiler.map((d) => [d.id, `${d.ad} · ${telefonGoster(d.telefon)}`] as [string, string])], kayit.danisanId ?? '')),
-      h('div', { class: 'form-grid iki', 'data-serbest': true }, alan('Ad Soyad', input('ad', kayit.ad)), alan('Telefon', input('telefon', kayit.telefon ? telefonGoster(kayit.telefon) : '', { type: 'tel' }))),
+      serbest,
       h(
         'div',
         { class: 'form-grid iki' },
@@ -1060,12 +1105,15 @@ async function randevuDuzenle(r?: Randevu, danisanId?: string) {
       const d = danisanBul(f.danisan);
       if (!d && String(f.ad).trim().length < 2) throw new Uyari('Ad soyad yazın veya listeden danışan seçin.', 'Ad Soyad');
       if (!d && telNormal(f.telefon).length < 10) throw new Uyari('Geçerli bir telefon yazın.', 'Telefon');
+      const cinsiyet = d ? undefined : hitapDegeri(f.hitap);
+      if (!d && !cinsiyet) throw new Uyari('Hitap seçin (Hanım / Bey).', 'Hitap');
       if (!/^\d{4}-\d{2}-\d{2}$/.test(f.tarih)) throw new Uyari('Tarih seçin.', 'Tarih');
       if (!/^\d{2}:\d{2}$/.test(f.saat)) throw new Uyari('Saat seçin.', 'Saat');
       const eskiDanisan = kayit.danisanId;
       Object.assign(kayit, {
         danisanId: d?.id,
         ad: d?.ad ?? String(f.ad).trim(),
+        cinsiyet,
         telefon: d ? d.telefon : telNormal(f.telefon),
         tarih: f.tarih,
         saat: f.saat,
@@ -1171,28 +1219,30 @@ async function danisanDuzenle(d?: Danisan, onDolgu?: Partial<Danisan>): Promise<
   const k = { ...onDolgu, ...d } as Partial<Danisan>;
   let sonuc: Danisan | null = null;
   const yil = new Date().getFullYear();
+  const icerik = h(
+    'div',
+    { class: 'form-grid' },
+    h(
+      'div',
+      { class: 'form-grid iki' },
+      alan('Ad Soyad', input('ad', k.ad ?? '', { autocomplete: 'off', maxlength: 80 })),
+      alan('Telefon', input('telefon', k.telefon ? telefonGoster(k.telefon) : '', { type: 'tel', autocomplete: 'off' })),
+      alan('E-posta', input('eposta', k.eposta ?? '', { type: 'email', autocomplete: 'off' }), 'İsteğe bağlı'),
+      alan('Cinsiyet', secim('cinsiyet', [['', 'Seçin'], ['K', 'Kadın'], ['E', 'Erkek']], k.cinsiyet ?? ''), 'Mesajlarda “Hanım / Bey” hitabı için de kullanılır.'),
+      alan('Doğum Yılı', input('dogumYili', k.dogumYili ?? '', { inputmode: 'numeric', maxlength: 4 })),
+      alan('Boy (cm)', sayiAlani('boy', k.boy)),
+      alan('Hedef Kilo (kg)', sayiAlani('hedefKilo', k.hedefKilo)),
+      alan('Hedef', secim('hedef', [['', 'Seçilmedi'], ...hedefSecenekleri.map((x) => [x, x] as [string, string])], k.hedef ?? '')),
+    ),
+    alan('Alerji ve İntoleranslar', metinAlani('alerjiler', k.alerjiler ?? '', { rows: 2, maxlength: 500 })),
+    alan('Hastalıklar', metinAlani('hastaliklar', k.hastaliklar ?? '', { rows: 2, maxlength: 800 })),
+    alan('İlaç ve Takviyeler', metinAlani('ilaclar', k.ilaclar ?? '', { rows: 2, maxlength: 800 })),
+    h('p', { class: 'hint' }, 'Alerji, hastalık ve ilaç bilgileri yalnızca bu panelde durur; danışanın Takibim sayfasına gönderilmez.'),
+  );
+  hitapTahminiBagla(icerik, 'cinsiyet');
   const ok = await pencere({
     baslik: d ? 'Danışan Bilgileri' : 'Yeni Danışan',
-    icerik: h(
-      'div',
-      { class: 'form-grid' },
-      h(
-        'div',
-        { class: 'form-grid iki' },
-        alan('Ad Soyad', input('ad', k.ad ?? '', { autocomplete: 'off', maxlength: 80 })),
-        alan('Telefon', input('telefon', k.telefon ? telefonGoster(k.telefon) : '', { type: 'tel', autocomplete: 'off' })),
-        alan('E-posta', input('eposta', k.eposta ?? '', { type: 'email', autocomplete: 'off' }), 'İsteğe bağlı'),
-        alan('Cinsiyet', secim('cinsiyet', [['', 'Seçilmedi'], ['K', 'Kadın'], ['E', 'Erkek']], k.cinsiyet ?? '')),
-        alan('Doğum Yılı', input('dogumYili', k.dogumYili ?? '', { inputmode: 'numeric', maxlength: 4 })),
-        alan('Boy (cm)', sayiAlani('boy', k.boy)),
-        alan('Hedef Kilo (kg)', sayiAlani('hedefKilo', k.hedefKilo)),
-        alan('Hedef', secim('hedef', [['', 'Seçilmedi'], ...hedefSecenekleri.map((x) => [x, x] as [string, string])], k.hedef ?? '')),
-      ),
-      alan('Alerji ve İntoleranslar', metinAlani('alerjiler', k.alerjiler ?? '', { rows: 2, maxlength: 500 })),
-      alan('Hastalıklar', metinAlani('hastaliklar', k.hastaliklar ?? '', { rows: 2, maxlength: 800 })),
-      alan('İlaç ve Takviyeler', metinAlani('ilaclar', k.ilaclar ?? '', { rows: 2, maxlength: 800 })),
-      h('p', { class: 'hint' }, 'Alerji, hastalık ve ilaç bilgileri yalnızca bu panelde durur; danışanın Takibim sayfasına gönderilmez.'),
-    ),
+    icerik,
     onKaydet: async (form) => {
       const f = formNesnesi(form);
       const ad = String(f.ad).replace(/\s+/g, ' ').trim();
@@ -1201,6 +1251,7 @@ async function danisanDuzenle(d?: Danisan, onDolgu?: Partial<Danisan>): Promise<
       if (tel.length < 10 || tel.length > 15) throw new Uyari('Geçerli bir telefon yazın (örn. 0532 123 45 67).', 'Telefon');
       const ayni = V().danisanlar.find((x) => x !== d && telNormal(x.telefon) === tel);
       if (ayni) throw new Uyari(`Bu telefon "${ayni.ad}" adlı danışanda kayıtlı.`, 'Telefon');
+      if (f.cinsiyet !== 'K' && f.cinsiyet !== 'E') throw new Uyari('Cinsiyet seçin (mesajlarda “Hanım / Bey” hitabı için gerekli).', 'Cinsiyet');
       const dy = String(f.dogumYili).trim() ? Number(f.dogumYili) : undefined;
       if (dy !== undefined && (!Number.isInteger(dy) || dy < yil - 110 || dy > yil)) throw new Uyari('Doğum yılını kontrol edin.', 'Doğum Yılı');
       const v: Partial<Danisan> = {
@@ -1492,7 +1543,7 @@ function danisanDosyasi(id: string, sekme: string): Node[] {
       d.ad,
       h('span', null, telefonGoster(d.telefon), d.eposta ? ` · ${d.eposta}` : '', d.dogumYili ? ` · ${new Date().getFullYear() - d.dogumYili} yaş` : '', d.boy ? ` · ${sayi(d.boy, 0)} cm` : ''),
       sunucuAcik ? takipEtiketi(d) : null,
-      waDugme(d.telefon, sablon('genel', { ad: ilkAd(d.ad) }), 'WhatsApp\'tan Yaz'),
+      waDugme(d.telefon, sablon('genel', { ad: danisanHitabi(d) }), 'WhatsApp\'tan Yaz'),
     ),
     d.alerjiler ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, h('strong', null, 'Alerji / intolerans: '), d.alerjiler)) : null,
     h(
@@ -1607,7 +1658,7 @@ async function linkGonder(d: Danisan) {
   if (!t) return;
   const kod = altiHane();
   const adres = await linkAdresi(t, kod);
-  const mesaj = sablon('takibim', { ad: ilkAd(d.ad), baglanti: adres });
+  const mesaj = sablon('takibim', { ad: danisanHitabi(d), baglanti: adres });
   await pencere({
     baslik: 'Bağlantı Linki Gönder',
     kaydet: 'Kapat',
@@ -1706,7 +1757,7 @@ function takibimSekmesi(d: Danisan): Node[] {
         toast(r === 'tamam' ? 'Takibim güncellendi.' : 'Güncellenemedi.', r === 'tamam' ? 'tamam' : 'hata');
         ciz();
       }),
-      waDugme(d.telefon, sablon('yeniSonuc', { ad: ilkAd(d.ad), takibim: `${site.url}/takibim/` }), 'Yeni Sonuç Mesajı') as Node,
+      waDugme(d.telefon, sablon('yeniSonuc', { ad: danisanHitabi(d), takibim: `${site.url}/takibim/` }), 'Yeni Sonuç Mesajı') as Node,
       dugme('Yeni QR (Telefon Değişti)', () => takipOlustur(d, true)),
     );
   }
@@ -1831,7 +1882,7 @@ async function qrTakibimGoster(d: Danisan) {
 async function qrBaglantiGonder(d: Danisan) {
   const kod = altiHane();
   const adres = `${location.origin}/takibim/#${await qrBaglantiParcasi(takipVerisi(d, V().randevular), d.id, kod, await takibimAnahtari(d))}`;
-  const mesaj = sablon('takibim', { ad: ilkAd(d.ad), baglanti: adres });
+  const mesaj = sablon('takibim', { ad: danisanHitabi(d), baglanti: adres });
   await pencere({
     baslik: 'Online Danışana Bağlantı Gönder',
     kaydet: 'Kapat',
@@ -1859,7 +1910,7 @@ async function qrBaglantiGonder(d: Danisan) {
 
 async function takibimGuncellemeGonder(d: Danisan) {
   const adres = `${location.origin}/takibim/#${await guncellemeParcasi(takipVerisi(d, V().randevular), d.id, await takibimAnahtari(d))}`;
-  const mesaj = sablon('takibimGuncelleme', { ad: ilkAd(d.ad), baglanti: adres });
+  const mesaj = sablon('takibimGuncelleme', { ad: danisanHitabi(d), baglanti: adres });
   const gonderildi = async () => {
     d.guncellemeGonderim = Date.now();
     islemKaydet(`Takibim güncelleme bağlantısı hazırlandı: ${d.ad}`);
@@ -2131,8 +2182,8 @@ function paketSekmesi(d: Danisan): Node[] {
                   ciz();
                 })
               : null,
-            waDugme(d.telefon, sablon('odeme', { ad: ilkAd(d.ad), adSoyad: d.ad, paket: p.ad }), 'Ödeme Bilgisi Gönder'),
-            p.bitis ? waDugme(d.telefon, sablon('paketBitiyor', { ad: ilkAd(d.ad), paket: p.ad, bitis: tarih(p.bitis) }), 'Bitiş Hatırlat') : null,
+            waDugme(d.telefon, sablon('odeme', { ad: danisanHitabi(d), adSoyad: d.ad, paket: p.ad }), 'Ödeme Bilgisi Gönder'),
+            p.bitis ? waDugme(d.telefon, sablon('paketBitiyor', { ad: danisanHitabi(d), paket: p.ad, bitis: tarih(p.bitis) }), 'Bitiş Hatırlat') : null,
           )
         : null,
       form,
@@ -2403,7 +2454,7 @@ function duyuru(): Node[] {
           'li',
           null,
           h('div', { class: 'ana' }, h('strong', null, d.ad), h('span', null, ` ${telefonGoster(d.telefon)}`)),
-          h('div', { class: 'eylemler' }, waDugme(d.telefon, `Merhaba ${ilkAd(d.ad)}, ${waMetni.value}`.trim())),
+          h('div', { class: 'eylemler' }, waDugme(d.telefon, `Merhaba ${danisanHitabi(d)}, ${waMetni.value}`.trim())),
         ),
       ),
     );
@@ -2693,7 +2744,7 @@ function ayarlar(): Node[] {
     h(
       'p',
       { class: 'hint' },
-      `Kullanılabilen alanlar: {ad} (ilk ad), {adSoyad}, {tarih}, {gun}, {saat}, {adres}, {konum}, {paket}, {bitis}, {tur}${takibimGorunur ? ', {baglanti}' : ''}${sunucuAcik ? ', {takibim}' : ''}. Ödeme şablonundaki IBAN bilgisini kendi hesabınızla değiştirin.`,
+      `Kullanılabilen alanlar: {ad} (ad ve hitap, ör. “Ayşe Hanım”, “Mehmet Bey”), {adSoyad}, {tarih}, {gun}, {saat}, {adres}, {konum}, {paket}, {bitis}, {tur}${takibimGorunur ? ', {baglanti}' : ''}${sunucuAcik ? ', {takibim}' : ''}. Ödeme şablonundaki IBAN bilgisini kendi hesabınızla değiştirin.`,
     ),
     dugme('Varsayılan Şablonlara Dön', async () => {
       V().sablonlar = {};

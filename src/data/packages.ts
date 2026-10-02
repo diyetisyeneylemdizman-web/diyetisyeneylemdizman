@@ -41,7 +41,7 @@ export const paketlerGiris = {
     'Paketler, hizmet alanlarına göre 1, 2 ve 3 aylık olarak hazırlanmıştır. Her pakette görüşmeler yüz yüze veya online yapılabilir; görüşme günleri sizinle birlikte planlanır.',
   ],
   tumPaketlerde: [
-    'Yüz yüze (Seyhan/Adana) veya online birebir görüşme',
+    'Kliniğimizde yüz yüze veya online birebir görüşme',
     'Yaşam düzeninize ve sağlık ihtiyaçlarınıza uygun beslenme planı',
     'Görüşmelerde ilerlemenin değerlendirilmesi ve planın güncellenmesi',
     'Yüz yüze görüşmelerde, uygun olduğunda vücut bileşimi ölçümü',
