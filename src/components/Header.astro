@@ -1,10 +1,14 @@
 ---
 import Icon from './Icon.astro';
 import { nav, site } from '../data/site';
-import { takibimAcik } from '../data/portal';
+import { takibimGorunur } from '../data/portal';
 
 const path = Astro.url.pathname;
 const isActive = (href: string) => path === href || path.startsWith(href);
+// Takibim (danışanın ölçümlerini telefonundan izlediği sayfa) menüde Hizmetler'in hemen yanında yer alır
+const menu: { label: string; href: string; title?: string }[] = takibimGorunur
+  ? nav.flatMap((item) => (item.href === '/hizmetler/' ? [item, { label: 'Takibim', href: '/takibim/' }] : [item]))
+  : nav;
 ---
 
 <div class="topbar">
@@ -14,7 +18,8 @@ const isActive = (href: string) => path === href || path.startsWith(href);
       <span>Online & Yüz Yüze Beslenme Danışmanlığı</span>
     </p>
     <div class="topbar-links">
-      <a href={site.phoneHref} class="topbar-phone"><Icon name="phone" size={15} /><span>{site.phoneDisplay}</span></a>
+      <a href="/yonetim/" rel="nofollow" class="topbar-yonetim" title="Diyetisyen paneli"><Icon name="lock" size={15} /><span>Yönetim Girişi</span></a>
+      <a href={site.phoneHref} class="topbar-phone" aria-label={`Telefon: ${site.phoneDisplay}`} title={site.phoneDisplay}><Icon name="phone" size={16} /></a>
       <a href={site.instagram} target="_blank" rel="noopener" aria-label="Instagram hesabı"><Icon name="instagram" size={17} /></a>
       <a href={site.linkedin} target="_blank" rel="noopener" aria-label="LinkedIn hesabı"><Icon name="linkedin" size={17} /></a>
     </div>
@@ -30,7 +35,7 @@ const isActive = (href: string) => path === href || path.startsWith(href);
     <nav class="main-nav" aria-label="Ana menü">
       <ul>
         {
-          nav.map((item) => (
+          menu.map((item) => (
             <li>
               <a href={item.href} title={item.title} aria-current={isActive(item.href) ? 'page' : undefined}>
                 {item.label}
@@ -42,14 +47,6 @@ const isActive = (href: string) => path === href || path.startsWith(href);
     </nav>
 
     <div class="header-actions">
-      {
-        takibimAcik && (
-          <a href="/takibim/" class="btn btn-outline btn-sm header-login" aria-label="Takibim" title="Takibim">
-            <Icon name="user" size={18} />
-            <span class="header-login-metin">Takibim</span>
-          </a>
-        )
-      }
       <a href="/randevu-olustur/" class="btn btn-primary btn-sm header-cta">
         <Icon name="calendar" size={18} />
         <span>Randevu Talebi Oluştur</span>
@@ -66,7 +63,7 @@ const isActive = (href: string) => path === href || path.startsWith(href);
     <nav class="container" aria-label="Mobil menü">
       <ul>
         {
-          nav.map((item) => (
+          menu.map((item) => (
             <li>
               <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
                 <span>{item.title ?? item.label}</span>
@@ -79,14 +76,6 @@ const isActive = (href: string) => path === href || path.startsWith(href);
       <a href="/randevu-olustur/" class="btn btn-primary btn-block">
         <Icon name="calendar" size={18} />Randevu Talebi Oluştur
       </a>
-      {
-        takibimAcik && (
-          <a href="/takibim/" class="btn btn-outline btn-block" style="margin-top:10px">
-            <Icon name="user" size={18} />
-            Takibim
-          </a>
-        )
-      }
       <div class="mobile-contact">
         <a href={site.phoneHref}><Icon name="phone" size={18} />{site.phoneDisplay}</a>
         <a href={site.instagram} target="_blank" rel="noopener"><Icon name="instagram" size={18} />{site.instagramHandle}</a>
@@ -134,6 +123,10 @@ const isActive = (href: string) => path === href || path.startsWith(href);
   .topbar-links a:hover {
     opacity: 1;
     text-decoration: underline;
+  }
+  .topbar-yonetim {
+    padding-right: 16px;
+    border-right: 1px solid rgb(41 44 41 / 0.2);
   }
 
   .site-header {
@@ -210,17 +203,6 @@ const isActive = (href: string) => path === href || path.startsWith(href);
     color: var(--sage-800);
   }
 
-  .header-login {
-    padding-inline: 0.8em;
-  }
-  .header-login-metin {
-    display: none;
-  }
-  @media (min-width: 1360px) {
-    .header-login-metin {
-      display: inline;
-    }
-  }
   .header-actions {
     display: flex;
     align-items: center;
@@ -293,7 +275,7 @@ const isActive = (href: string) => path === href || path.startsWith(href);
     text-decoration: none;
   }
 
-  @media (max-width: 1240px) {
+  @media (max-width: 1300px) {
     .main-nav {
       display: none;
     }

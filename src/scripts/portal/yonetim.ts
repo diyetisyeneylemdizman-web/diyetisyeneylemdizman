@@ -1,16 +1,17 @@
 // Diyetisyen paneli — tek sayfa uygulama.
 //
 // Tüm danışan kayıtları YALNIZCA bu bilgisayarda, tarayıcının içinde ve panel parolasıyla şifreli olarak durur.
-// ŞU ANKİ DÜZEN (src/data/portal.ts → takibimAcik = false): Panel hiçbir şekilde sunucuya bağlanmaz; randevu talepleri
-// WhatsApp'tan gelir ve "WhatsApp Talebi Ekle" ile mesaj yapıştırılarak eklenir. Takibim, belgeler ve mesajlar gizlidir.
-// takibimAcik = true olursa sunucu yalnızca şu işler için kullanılır (hepsi uçtan uca şifreli; sunucu içeriği okuyamaz):
+// ŞU ANKİ DÜZEN (src/data/portal.ts → takibimKipi = 'qr'): Panel hiçbir şekilde sunucuya bağlanmaz; randevu talepleri
+// WhatsApp'tan gelir ve "WhatsApp Talebi Ekle" ile mesaj yapıştırılarak eklenir. Takibim: ölçümden sonra panel bir QR
+// kodu gösterir; danışanın özeti QR'ın içindedir ve doğrudan telefonuna geçer (qrtakip.ts). Belgeler ve mesajlar gizlidir.
+// takibimKipi = 'sunucu' olursa sunucu yalnızca şu işler için kullanılır (hepsi uçtan uca şifreli; sunucu içeriği okuyamaz):
 //   - Siteden gelen randevu talepleri (diyetisyenin açık anahtarıyla mühürlü gelir, burada açılır, sunucudan silinir)
 //   - Takibim: danışana özel anahtarla şifrelenmiş özet ve belgeler (danışanın telefonu okur)
 //   - Bildirimler (içeriksiz "yeni talep var" sinyali)
 
 import qrcode from 'qrcode-generator';
 import { fullAddress, site } from '../../data/site';
-import { hedefSecenekleri, randevuDurumlari, sinirlar, takibimAcik, takibimRizaSurumu, type RandevuDurumu } from '../../data/portal';
+import { hedefSecenekleri, randevuDurumlari, sinirlar, sunucuAcik, takibimGorunur, takibimKipi, takibimRizaSurumu, type RandevuDurumu } from '../../data/portal';
 import { Depo, ParolaHatasi, type Danisan, type PaketTanimi, type Randevu } from './depo';
 import { gelisimGorunumu, olcumSirala, olcumTablosu } from './gelisim';
 import {
@@ -50,12 +51,16 @@ import {
   takipAnahtari,
   takipBaslat,
   takipGonder,
+  takipVerisi,
 } from './takip';
+import { guncellemeParcasi, qrBaglantiParcasi, qrPaketle, yeniGuncellemeAnahtari } from './qrtakip';
 import type { Olcum, TakipBelge } from './tipler';
 
 const kok = $('[data-uygulama]');
 let depo: Depo | null = null;
 const V = () => depo!.veri;
+/** Sunucusuz Takibim: ölçümler QR kodunun içinde danışanın telefonuna geçer */
+const qrKipi = takibimKipi === 'qr';
 
 // ================================================================ Şablonlar
 
@@ -92,6 +97,11 @@ const SABLONLAR: Record<string, { ad: string; metin: string }> = {
     ad: 'Takibim bağlantısı',
     metin:
       'Merhaba {ad}, Takibim sayfanızın bağlantısı:\n{baglanti}\n\nBağlantıyı açınca istenecek 6 haneli kodu size telefonda ileteceğim. Bağlantıyı kimseyle paylaşmayın.\n\nDyt. Eylem Dizman',
+  },
+  takibimGuncelleme: {
+    ad: 'Takibim güncellemesi',
+    metin:
+      'Merhaba {ad}, yeni ölçüm sonuçlarınız hazır. Takibim sayfanızı güncellemek için bağlantıya dokunun:\n{baglanti}\n\nBağlantı yalnızca Takibim\'i açtığınız telefonda çalışır.\n\nDyt. Eylem Dizman',
   },
   yeniSonuc: {
     ad: 'Yeni ölçüm bildirimi',
@@ -371,14 +381,14 @@ function uygulama() {
       if (Date.now() - sonHareket > sinirlar.panelKilitDakika * 60_000) kilitle();
     }, 30_000),
   ];
-  if (takibimAcik)
+  if (sunucuAcik)
     zamanlayicilar.push(
       window.setInterval(() => void talepleriAl(), 60_000),
       window.setInterval(() => void durumlariGuncelle(depo!).then(() => cizSessiz()).catch(() => undefined), 5 * 60_000),
     );
   ustEylemler();
   ciz();
-  if (takibimAcik) {
+  if (sunucuAcik) {
     void talepleriAl();
     void durumlariGuncelle(depo!).then(() => cizSessiz()).catch(() => undefined);
   }
@@ -486,7 +496,7 @@ const metin = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\
 
 let talepAliniyor = false;
 async function talepleriAl() {
-  if (!takibimAcik || !depo?.veri.sunucu || talepAliniyor) return;
+  if (!sunucuAcik || !depo?.veri.sunucu || talepAliniyor) return;
   talepAliniyor = true;
   let yeni = 0;
   try {
@@ -559,7 +569,7 @@ function ozet(): Node[] {
   const haftalik = onayli.filter((r) => r.tarih >= bu && r.tarih <= haftaSonu).length;
 
   const uyarilar: Node[] = [];
-  if (takibimAcik && !V().sunucu)
+  if (sunucuAcik && !V().sunucu)
     uyarilar.push(
       h(
         'div',
@@ -608,7 +618,7 @@ function ozet(): Node[] {
       h('a', { class: 'kart gosterge tiklanir', href: '#talepler' }, h('span', { class: 'etiket' }, 'Bekleyen Talep'), h('span', { class: 'deger' }, String(talepSayisi))),
       h('div', { class: 'kart gosterge' }, h('span', { class: 'etiket' }, 'Bugünkü Randevu'), h('span', { class: 'deger' }, String(bugunkuler.length))),
       h('a', { class: 'kart gosterge tiklanir', href: '#danisanlar' }, h('span', { class: 'etiket' }, 'Danışan'), h('span', { class: 'deger' }, String(V().danisanlar.length))),
-      takibimAcik
+      sunucuAcik
         ? h('div', { class: 'kart gosterge' }, h('span', { class: 'etiket' }, 'Takibim Kullanan'), h('span', { class: 'deger' }, String(takibim)))
         : h('a', { class: 'kart gosterge tiklanir', href: '#randevular' }, h('span', { class: 'etiket' }, '7 Gün İçindeki Randevu'), h('span', { class: 'deger' }, String(haftalik))),
     ),
@@ -635,7 +645,7 @@ function ozet(): Node[] {
           )
         : bos('Önümüzdeki 7 günde biten paket yok.'),
     ),
-    takibimAcik && gonderilemeyen.length
+    sunucuAcik && gonderilemeyen.length
       ? kart(
           'Takibim Güncellenemeyenler',
           h('p', null, `${gonderilemeyen.length} danışanın Takibim sayfası güncellenemedi (bağlantı sorunu).`),
@@ -663,18 +673,18 @@ function talepler(): Node[] {
   return [
     bolumBasligi(
       'Randevu Talepleri',
-      takibimAcik
+      sunucuAcik
         ? 'Siteden gelen talepler burada görünür. Onayladığınızda danışana WhatsApp\'tan onay mesajı gönderebilirsiniz.'
         : 'Siteden WhatsApp\'a gelen talep mesajını "WhatsApp Talebi Ekle" ile buraya yapıştırın. Onayladığınızda danışana hazır onay mesajı gönderebilirsiniz.',
       dugme('WhatsApp Talebi Ekle', () => whatsappTalebiEkle(), 'btn btn-primary btn-sm'),
-      takibimAcik
+      sunucuAcik
         ? dugme('Yenile', async (e) => {
             await mesgul(e.currentTarget as HTMLButtonElement, () => talepleriAl());
             ciz();
           })
         : null,
     ),
-    takibimAcik && !V().sunucu ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, 'Talepler, panel sunucuya bağlandıktan sonra buraya düşer. '), dugme('Şimdi Bağlan', () => sunucuBagla(), 'btn btn-primary btn-sm')) : null,
+    sunucuAcik && !V().sunucu ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, 'Talepler, panel sunucuya bağlandıktan sonra buraya düşer. '), dugme('Şimdi Bağlan', () => sunucuBagla(), 'btn btn-primary btn-sm')) : null,
     kart(
       null,
       liste.length
@@ -706,7 +716,7 @@ function talepler(): Node[] {
               );
             }),
           )
-        : bos(takibimAcik ? 'Bekleyen randevu talebi yok.' : 'Bekleyen talep yok. WhatsApp\'tan gelen talep mesajını "WhatsApp Talebi Ekle" ile ekleyebilirsiniz.'),
+        : bos(sunucuAcik ? 'Bekleyen randevu talebi yok.' : 'Bekleyen talep yok. WhatsApp\'tan gelen talep mesajını "WhatsApp Talebi Ekle" ile ekleyebilirsiniz.'),
     ),
   ].filter(Boolean) as Node[];
 }
@@ -1074,7 +1084,7 @@ function danisanlar(): Node[] {
             h(
               'table',
               { class: 'tablo' },
-              h('thead', null, h('tr', null, h('th', null, 'Ad Soyad'), h('th', null, 'Telefon'), h('th', null, 'Son Ölçüm'), h('th', null, 'Paket'), takibimAcik ? h('th', null, 'Takibim') : null)),
+              h('thead', null, h('tr', null, h('th', null, 'Ad Soyad'), h('th', null, 'Telefon'), h('th', null, 'Son Ölçüm'), h('th', null, 'Paket'), sunucuAcik ? h('th', null, 'Takibim') : null)),
               h(
                 'tbody',
                 null,
@@ -1087,7 +1097,7 @@ function danisanlar(): Node[] {
                     h('td', null, telefonGoster(d.telefon)),
                     h('td', null, son ? `${tarih(son.tarih)}${son.kilo ? ` · ${sayi(son.kilo)} kg` : ''}` : '—'),
                     h('td', null, d.paket ? `${d.paket.ad}${d.paket.bitis ? ` · ${tarih(d.paket.bitis)}` : ''}` : '—'),
-                    takibimAcik ? h('td', null, takipEtiketi(d)) : null,
+                    sunucuAcik ? h('td', null, takipEtiketi(d)) : null,
                   );
                   tr.addEventListener('click', (e) => {
                     if (!(e.target as HTMLElement).closest('a')) location.hash = `#danisan/${d.id}`;
@@ -1317,11 +1327,16 @@ async function olcumOnizleme(d: Danisan, r: TanitaSonuc, dosya: File) {
       : null,
     takipAcik
       ? h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'pdfGonder', checked: true }), h('span', null, 'PDF raporunu danışanın Takibim sayfasına da ekle (çıktı almanıza gerek kalmaz)'))
-      : takibimAcik
+      : sunucuAcik
         ? h('p', { class: 'hint' }, 'Bu danışanın Takibim\'i açık değil. Sonuçları telefonunda görmesi için "Takibim" sekmesinden QR oluşturun.')
-        : null,
+        : qrKipi
+          ? d.qrPaylasim
+            ? h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'qrGoster', checked: true }), h('span', null, 'Kaydettikten sonra Takibim güncellemesini WhatsApp\'tan gönder (danışan bağlantıya dokununca telefonundaki Takibim güncellenir)'))
+            : h('label', { class: 'onay-satiri' }, h('input', { type: 'checkbox', name: 'qrGoster', checked: true }), h('span', null, 'Kaydettikten sonra Takibim QR kodunu göster (danışan bir kez okutur, sonuçlarını telefonunda görür)'))
+          : null,
   );
-  await pencere({
+  let qrAc = false;
+  const kaydedildi = await pencere({
     baslik: 'Vücut Analizi Sonucu',
     kaydet: 'Kaydet',
     genis: true,
@@ -1345,9 +1360,11 @@ async function olcumOnizleme(d: Danisan, r: TanitaSonuc, dosya: File) {
       }
       d.olcumler.push(yeni);
       await degisti(d);
+      qrAc = qrKipi && Boolean(f.qrGoster);
     },
   });
   ciz();
+  if (kaydedildi && qrAc) await (d.qrPaylasim ? takibimGuncellemeGonder(d) : qrTakibimGoster(d));
 }
 
 async function elleOlcum(d: Danisan) {
@@ -1407,12 +1424,13 @@ const SEKMELER: [string, string][] = [
   ['bilgiler', 'Bilgiler ve Notlar'],
 ];
 
-// Takibim kapalıyken gizlenen sekmeler (hepsi danışanın telefonuna veri gönderir)
-const TAKIBIM_SEKMELERI = ['takibim', 'belgeler', 'mesajlar'];
+// Sunucu kapalıyken gizlenen sekmeler: belgeler ve mesajlar yalnızca sunuculu Takibim'de gönderilebilir.
+// Sunucusuz (QR) Takibim'de "Takibim" sekmesi QR ve bağlantı gösterir; Takibim kapalıysa o da gizlenir.
+const GIZLI_SEKMELER = sunucuAcik ? [] : takibimGorunur ? ['belgeler', 'mesajlar'] : ['takibim', 'belgeler', 'mesajlar'];
 
 function danisanDosyasi(id: string, sekme: string): Node[] {
   const d = danisanBul(id);
-  if (!takibimAcik && TAKIBIM_SEKMELERI.includes(sekme)) sekme = 'olcumler';
+  if (GIZLI_SEKMELER.includes(sekme)) sekme = 'olcumler';
   if (!d) return [bolumBasligi('Danışan bulunamadı'), h('a', { href: '#danisanlar' }, '← Danışanlar')];
   const ust = h(
     'div',
@@ -1421,14 +1439,14 @@ function danisanDosyasi(id: string, sekme: string): Node[] {
     bolumBasligi(
       d.ad,
       h('span', null, telefonGoster(d.telefon), d.eposta ? ` · ${d.eposta}` : '', d.dogumYili ? ` · ${new Date().getFullYear() - d.dogumYili} yaş` : '', d.boy ? ` · ${sayi(d.boy, 0)} cm` : ''),
-      takibimAcik ? takipEtiketi(d) : null,
+      sunucuAcik ? takipEtiketi(d) : null,
       waDugme(d.telefon, sablon('genel', { ad: ilkAd(d.ad) }), 'WhatsApp\'tan Yaz'),
     ),
     d.alerjiler ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, h('strong', null, 'Alerji / intolerans: '), d.alerjiler)) : null,
     h(
       'nav',
       { class: 'sekme-cubugu', 'aria-label': 'Danışan dosyası' },
-      SEKMELER.filter(([k]) => takibimAcik || !TAKIBIM_SEKMELERI.includes(k)).map(([k, ad]) =>
+      SEKMELER.filter(([k]) => !GIZLI_SEKMELER.includes(k)).map(([k, ad]) =>
         h('a', { href: `#danisan/${d.id}/${k}`, 'aria-current': k === sekme ? 'page' : null }, ad),
       ),
     ),
@@ -1436,7 +1454,7 @@ function danisanDosyasi(id: string, sekme: string): Node[] {
   const govde: Node[] = (() => {
     switch (sekme) {
       case 'takibim':
-        return takibimSekmesi(d);
+        return qrKipi ? qrTakibimSekmesi(d) : takibimSekmesi(d);
       case 'paket':
         return paketSekmesi(d);
       case 'randevular':
@@ -1460,12 +1478,16 @@ function olcumSekmesi(d: Danisan): Node[] {
       'div',
       { class: 'olcum-ekle' },
       pdfBirakmaAlani(
-        takibimAcik
+        sunucuAcik
           ? 'Değerler otomatik doldurulur; kaydettiğinizde danışanın Takibim sayfası da güncellenir.'
-          : 'Değerler otomatik doldurulur. PDF yalnızca bu bilgisayarda okunur, hiçbir yere yüklenmez.',
+          : qrKipi
+            ? 'Değerler otomatik doldurulur. PDF yalnızca bu bilgisayarda okunur, hiçbir yere yüklenmez. Kaydedince danışanın Takibim\'ine gönderebilirsiniz.'
+            : 'Değerler otomatik doldurulur. PDF yalnızca bu bilgisayarda okunur, hiçbir yere yüklenmez.',
         (dosya) => pdfIleOlcum(d, dosya),
       ),
-      dugme('Elle Ölçüm Ekle', () => elleOlcum(d), 'btn btn-outline btn-sm'),
+      qrKipi
+        ? h('div', { class: 'olcum-eylemler' }, dugme('Elle Ölçüm Ekle', () => elleOlcum(d), 'btn btn-outline btn-sm'), ...takibimDugmeleri(d))
+        : dugme('Elle Ölçüm Ekle', () => elleOlcum(d), 'btn btn-outline btn-sm'),
     ),
     ...(d.olcumler.length ? gelisimGorunumu(d.olcumler, { hedefKilo: d.hedefKilo }) : []),
     kart(
@@ -1478,7 +1500,7 @@ function olcumSekmesi(d: Danisan): Node[] {
               baslik: 'Ölçümü Sil',
               tehlikeli: true,
               kaydet: 'Sil',
-              icerik: h('p', null, `${tarih(o.tarih)} tarihli ölçüm silinsin mi?${takibimAcik ? ' Danışanın Takibim sayfasından da kalkar.' : ''}`),
+              icerik: h('p', null, `${tarih(o.tarih)} tarihli ölçüm silinsin mi?${sunucuAcik ? ' Danışanın Takibim sayfasından da kalkar.' : ''}`),
             });
             if (!ok) return;
             d.olcumler = d.olcumler.filter((x) => x !== o);
@@ -1671,6 +1693,182 @@ function takibimSekmesi(d: Danisan): Node[] {
   ];
 }
 
+// ---------------------------------------------------------------- Sunucusuz Takibim (QR)
+//
+// İlk seferde QR (klinikte) veya 6 haneli kodlu bağlantı (online) ile danışanın telefonuna özeti ve danışana özel
+// güncelleme anahtarını verir. Sonraki ölçümlerde "Güncellemeyi Gönder" bu anahtarla şifreli bir bağlantıyı WhatsApp'tan
+// gönderir; danışan bağlantıya dokununca telefonundaki Takibim güncellenir. QR yeniden okutulmaz.
+
+function takibimQrSvg(adres: string): SVGElement {
+  // Adres byte kipinde, "#n=" sonrasındaki rakamlar sayısal kipte kodlanır (QR daha seyrek ve kolay okunur)
+  const i = adres.indexOf('#n=') + 3;
+  const qr = qrcode(0, 'L');
+  qr.addData(adres.slice(0, i), 'Byte');
+  qr.addData(adres.slice(i), 'Numeric');
+  qr.make();
+  const svg = new DOMParser().parseFromString(qr.createSvgTag({ cellSize: 4, margin: 4, scalable: true }), 'image/svg+xml').documentElement;
+  const el = document.importNode(svg, true) as unknown as SVGElement;
+  el.setAttribute('role', 'img');
+  el.setAttribute('aria-label', 'Takibim QR kodu');
+  el.setAttribute('shape-rendering', 'crispEdges');
+  return el;
+}
+
+/** Danışana özel güncelleme anahtarı (yoksa oluşturulur) */
+async function takibimAnahtari(d: Danisan): Promise<string> {
+  if (!d.takibimAnahtar) {
+    d.takibimAnahtar = yeniGuncellemeAnahtari();
+    await depo!.simdiKaydet();
+  }
+  return d.takibimAnahtar;
+}
+
+async function qrPaylasildi(d: Danisan) {
+  d.qrPaylasim = Date.now();
+  await depo!.kaydet();
+}
+
+/** Ölçümler ve Takibim sekmelerindeki Takibim düğmeleri */
+function takibimDugmeleri(d: Danisan): Node[] {
+  return [
+    dugme('QR Göster', () => qrTakibimGoster(d), 'btn btn-outline btn-sm'),
+    d.qrPaylasim ? dugme('Güncellemeyi WhatsApp\'tan Gönder', () => takibimGuncellemeGonder(d), 'btn btn-outline btn-sm') : null,
+    dugme('Online Danışana Bağlantı Gönder', () => qrBaglantiGonder(d), 'btn btn-outline btn-sm'),
+  ].filter(Boolean) as Node[];
+}
+
+async function qrTakibimGoster(d: Danisan) {
+  const paket = qrPaketle(takipVerisi(d, V().randevular), d.id, await takibimAnahtari(d));
+  const adres = `${location.origin}/takibim/#${paket.parca}`;
+  const olcumYok = !d.olcumler.some((o) => o.kaynak !== 'ev');
+  await pencere({
+    baslik: `${d.ad} · Takibim QR Kodu`,
+    kaydet: 'Kapat',
+    vazgecYok: true,
+    genis: true,
+    icerik: h(
+      'div',
+      { class: 'qr-alani' },
+      h(
+        'div',
+        { class: 'qr-yan-yana' },
+        h('div', { class: 'qr buyuk' }, takibimQrSvg(adres)),
+        h(
+          'ol',
+          { class: 'adim-liste' },
+          h('li', null, 'Danışan telefonunun kamerasını QR koda tutsun ve çıkan bağlantıya dokunsun.'),
+          h('li', null, 'İlk seferde "Takibimi Aç"a bassın; ölçümleri, vücut haritası ve gelişim grafikleri telefonunda açılır.'),
+          h('li', null, 'QR bir kez okutulur. Sonraki ölçümlerde "Güncellemeyi WhatsApp\'tan Gönder" ile bağlantı gönderin; danışan dokununca Takibim\'i güncellenir.'),
+        ),
+      ),
+      olcumYok ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, 'Bu danışanın henüz ölçümü yok; QR\'da yalnızca paket ve randevu bilgileri var.')) : null,
+      paket.cikarilan
+        ? h('p', { class: 'hint' }, `Ölçüm geçmişinin ${tarih(paket.ilkTarih)} sonrası QR'a sığdı (en eski ${paket.cikarilan} ölçüm eklenmedi). İlk güncelleme bağlantısıyla tüm geçmiş telefona geçer.`)
+        : null,
+      h('p', { class: 'hint' }, 'Bilgiler QR kodunun içindedir ve doğrudan danışanın telefonuna geçer; sunucuya gönderilmez. Alerji, hastalık, ilaç bilgileri ve notlarınız eklenmez. QR\'ı yalnızca danışana gösterin ve okuttuktan sonra kapatın.'),
+    ),
+  });
+  await qrPaylasildi(d);
+  cizSessiz();
+}
+
+async function qrBaglantiGonder(d: Danisan) {
+  const kod = altiHane();
+  const adres = `${location.origin}/takibim/#${await qrBaglantiParcasi(takipVerisi(d, V().randevular), d.id, kod, await takibimAnahtari(d))}`;
+  const mesaj = sablon('takibim', { ad: ilkAd(d.ad), baglanti: adres });
+  await pencere({
+    baslik: 'Online Danışana Bağlantı Gönder',
+    kaydet: 'Kapat',
+    vazgecYok: true,
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h('p', null, 'İlk kez Takibim açacak online danışan için. Bağlantıyı WhatsApp\'tan gönderin. Bilgiler bu 6 haneli kodla şifrelidir; kodu WhatsApp\'a yazmayın, görüşmede sözlü olarak söyleyin.'),
+      h('div', { class: 'kod-kutu', 'aria-label': 'Açılış kodu' }, kod),
+      h('a', { class: 'btn btn-wa', href: whatsapp(d.telefon, mesaj), target: '_blank', rel: 'noopener', onclick: () => void qrPaylasildi(d) }, 'WhatsApp ile Bağlantıyı Gönder'),
+      dugme('Bağlantıyı Kopyala', async () => {
+        try {
+          await navigator.clipboard.writeText(adres);
+          await qrPaylasildi(d);
+          toast('Bağlantı kopyalandı.');
+        } catch {
+          toast('Kopyalanamadı.', 'hata');
+        }
+      }),
+      h('p', { class: 'hint' }, 'Bu bağlantı bir kez açılır; sonraki ölçümlerde "Güncellemeyi WhatsApp\'tan Gönder" kullanın (kod gerekmez).'),
+    ),
+  });
+  cizSessiz();
+}
+
+async function takibimGuncellemeGonder(d: Danisan) {
+  const adres = `${location.origin}/takibim/#${await guncellemeParcasi(takipVerisi(d, V().randevular), d.id, await takibimAnahtari(d))}`;
+  const mesaj = sablon('takibimGuncelleme', { ad: ilkAd(d.ad), baglanti: adres });
+  const gonderildi = async () => {
+    d.guncellemeGonderim = Date.now();
+    await depo!.kaydet();
+  };
+  await pencere({
+    baslik: 'Takibim Güncellemesini Gönder',
+    kaydet: 'Kapat',
+    vazgecYok: true,
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h('p', null, `${d.ad} için güncel ölçümler hazır. Bağlantıyı WhatsApp'tan gönderin; danışan bağlantıya dokununca telefonundaki Takibim güncellenir. QR'ı yeniden okutmasına gerek yoktur.`),
+      h('a', { class: 'btn btn-wa', href: whatsapp(d.telefon, mesaj), target: '_blank', rel: 'noopener', onclick: () => void gonderildi() }, 'WhatsApp ile Güncellemeyi Gönder'),
+      dugme('Bağlantıyı Kopyala', async () => {
+        try {
+          await navigator.clipboard.writeText(adres);
+          await gonderildi();
+          toast('Bağlantı kopyalandı.');
+        } catch {
+          toast('Kopyalanamadı.', 'hata');
+        }
+      }),
+      h(
+        'p',
+        { class: 'hint' },
+        'Bağlantı, danışana özel anahtarla şifrelidir ve yalnızca Takibim\'i açtığı telefonda çalışır; başkasının eline geçse de açılmaz. Danışan telefonunu değiştirdiyse veya Takibim\'i silmişse "QR Göster" ile bir kez yeniden okutun.',
+      ),
+    ),
+  });
+  cizSessiz();
+}
+
+function qrTakibimSekmesi(d: Danisan): Node[] {
+  const son = d.olcumler.filter((o) => o.kaynak !== 'ev').sort((a, b) => a.tarih.localeCompare(b.tarih)).at(-1);
+  return [
+    kart(
+      'Takibim',
+      h(
+        'p',
+        null,
+        'Danışan, ölçümlerini, vücut haritasını, gelişim grafiklerini, paketini ve randevularını kendi telefonunda görür. Bilgiler internete veya sunucuya gönderilmez.',
+      ),
+      h(
+        'ol',
+        { class: 'adim-liste' },
+        h('li', null, 'İlk sefer: klinikte "QR Göster" (danışan okutur) ya da online danışana "Online Danışana Bağlantı Gönder" (6 haneli kod sözlü söylenir).'),
+        h('li', null, 'Sonraki ölçümler: "Güncellemeyi WhatsApp\'tan Gönder". Danışan bağlantıya dokunur, Takibim\'i güncellenir; QR yeniden okutulmaz.'),
+        h('li', null, 'Danışan her zaman sitedeki menüden "Takibim"e girerek kendi bilgilerini görür.'),
+      ),
+      h(
+        'dl',
+        { class: 'sabit-bilgi' },
+        h('dt', null, 'Son ölçüm'),
+        h('dd', null, son ? tarih(son.tarih) : 'Henüz yok'),
+        h('dt', null, 'İlk paylaşım (QR / bağlantı)'),
+        h('dd', null, d.qrPaylasim ? tarihSaat(d.qrPaylasim) : 'Henüz paylaşılmadı'),
+        h('dt', null, 'Son güncelleme gönderimi'),
+        h('dd', null, d.guncellemeGonderim ? tarihSaat(d.guncellemeGonderim) : '—'),
+      ),
+      h('div', { class: 'eylemler genis-eylem' }, ...takibimDugmeleri(d)),
+      h('p', { class: 'hint' }, 'Alerji, hastalık, ilaç bilgileri, paket notu ve notlarınız Takibim\'e eklenmez.'),
+    ),
+  ];
+}
+
 function paketSekmesi(d: Danisan): Node[] {
   const p = d.paket;
   const tanimlar = V().paketler.filter((x) => x.aktif);
@@ -1688,7 +1886,7 @@ function paketSekmesi(d: Danisan): Node[] {
       alan('Toplam Görüşme', input('toplamGorusme', p?.toplamGorusme ?? '', { inputmode: 'numeric' })),
       alan('Kalan Görüşme', input('kalanGorusme', p?.kalanGorusme ?? '', { inputmode: 'numeric' })),
     ),
-    alan(takibimAcik ? 'Danışanın göreceği not' : 'Not', metinAlani('not', p?.not ?? '', { rows: 2, maxlength: 300 })),
+    alan(sunucuAcik ? 'Danışanın göreceği not' : 'Not', metinAlani('not', p?.not ?? '', { rows: 2, maxlength: 300 })),
     h('div', { class: 'eylemler' }, h('button', { type: 'submit', class: 'btn btn-primary btn-sm' }, 'Paketi Kaydet'), p ? dugme('Paketi Kaldır', async () => {
       d.paket = null;
       await degisti(d);
@@ -2025,8 +2223,8 @@ function duyuru(): Node[] {
   waMetni.addEventListener('input', listeCiz);
   listeCiz();
   return [
-    bolumBasligi('Duyuru', takibimAcik ? 'Tek tuşla tüm danışanların Takibim sayfasına duyuru gönderin.' : 'Danışanlarınıza WhatsApp ile duyuru gönderin.'),
-    takibimAcik ? kart('Takibim Duyurusu', form) : null,
+    bolumBasligi('Duyuru', sunucuAcik ? 'Tek tuşla tüm danışanların Takibim sayfasına duyuru gönderin.' : 'Danışanlarınıza WhatsApp ile duyuru gönderin.'),
+    sunucuAcik ? kart('Takibim Duyurusu', form) : null,
     kart('WhatsApp ile Tek Tek', h('p', { class: 'hint' }, 'Mesajı bir kez yazın; WhatsApp toplu mesaja izin vermediği için her danışanın yanındaki düğme, mesajı o kişiye hazır olarak açar.'), waMetni, tum.length ? waListe : bos('Danışan yok.')),
   ].filter(Boolean) as Node[];
 }
@@ -2230,7 +2428,7 @@ async function telefonaBildirim() {
 function ayarlar(): Node[] {
   const sunucu = V().sunucu;
   const cihazlar = h('div', null, bos('Yükleniyor…'));
-  if (takibimAcik && sunucu)
+  if (sunucuAcik && sunucu)
     void api<{ aboneler: { ad: string; olusturma: number; endpoint: string }[] }>('GET', '/bildirim/aboneler', undefined, panelBasligi(depo!))
       .then(({ aboneler }) =>
         cihazlar.replaceChildren(
@@ -2259,7 +2457,7 @@ function ayarlar(): Node[] {
     'div',
     { class: 'form-grid' },
     Object.entries(SABLONLAR)
-      .filter(([k]) => takibimAcik || !['takibim', 'yeniSonuc'].includes(k))
+      .filter(([k]) => (sunucuAcik ? k !== 'takibimGuncelleme' : k !== 'yeniSonuc' && (!['takibim', 'takibimGuncelleme'].includes(k) || takibimGorunur)))
       .map(([k, s]) => {
       const ta = metinAlani(`s-${k}`, V().sablonlar[k] ?? s.metin, { rows: 4 });
       ta.addEventListener('change', async () => {
@@ -2274,7 +2472,7 @@ function ayarlar(): Node[] {
     h(
       'p',
       { class: 'hint' },
-      `Kullanılabilen alanlar: {ad} (ilk ad), {adSoyad}, {tarih}, {gun}, {saat}, {adres}, {konum}, {paket}, {bitis}${takibimAcik ? ', {baglanti}, {takibim}' : ''}. Ödeme şablonundaki IBAN bilgisini kendi hesabınızla değiştirin.`,
+      `Kullanılabilen alanlar: {ad} (ilk ad), {adSoyad}, {tarih}, {gun}, {saat}, {adres}, {konum}, {paket}, {bitis}${takibimGorunur ? ', {baglanti}' : ''}${sunucuAcik ? ', {takibim}' : ''}. Ödeme şablonundaki IBAN bilgisini kendi hesabınızla değiştirin.`,
     ),
     dugme('Varsayılan Şablonlara Dön', async () => {
       V().sablonlar = {};
@@ -2285,8 +2483,10 @@ function ayarlar(): Node[] {
 
   return [
     bolumBasligi('Ayarlar'),
-    takibimAcik ? null : kart('Veriler Nerede?', h('p', null, 'Tüm danışan kayıtları yalnızca bu bilgisayarda, panel parolasıyla şifreli olarak saklanır; internete gönderilmez. Bu yüzden düzenli yedek almanız önemlidir; yedek dosyasını USB bellek veya harici diskte saklayın.')),
-    !takibimAcik ? null : kart(
+    sunucuAcik ? null : kart('Veriler Nerede?', h('p', null, 'Tüm danışan kayıtları yalnızca bu bilgisayarda, panel parolasıyla şifreli olarak saklanır; internete gönderilmez. Bu yüzden düzenli yedek almanız önemlidir; yedek dosyasını USB bellek veya harici diskte saklayın.'),
+      qrKipi ? h('p', null, 'Takibim QR kodu, danışanın özetini (ölçümler, paket, yaklaşan randevular) doğrudan danışanın telefonuna aktarır; sunucuya gönderilmez. Alerji, hastalık, ilaç bilgileri ve notlarınız QR\'a eklenmez.') : null,
+    ),
+    !sunucuAcik ? null : kart(
       'Sunucu Bağlantısı',
       sunucu
         ? h('p', null, h('strong', null, 'Bağlı. '), `Bağlantı tarihi: ${tarihSaat(sunucu.baglandi)}. Sitedeki randevu talepleri bu panele gelir; Takibim etkin.`)
@@ -2294,7 +2494,7 @@ function ayarlar(): Node[] {
       sunucuUyarisi ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, sunucuUyarisi)) : null,
       h('div', { class: 'eylemler' }, dugme(sunucu ? 'Yeniden Bağlan' : 'Sunucuya Bağlan', () => sunucuBagla(), sunucu ? 'btn btn-outline btn-sm' : 'btn btn-primary btn-sm')),
     ),
-    !takibimAcik ? null : kart(
+    !sunucuAcik ? null : kart(
       'Bildirimler',
       h('p', null, 'Siteden yeni randevu talebi geldiğinde bildirim alırsınız. Bildirimde kişisel bilgi yer almaz.'),
       sunucu

@@ -1,13 +1,13 @@
 ---
 // Diyetisyenin telefonuna "yeni randevu talebi" bildirimi eklemek için (paneldeki 6 haneli kodla).
-// Takibim/sunucu özellikleri kapalıyken (src/data/portal.ts → takibimAcik) bu adres panele yönlenir.
+// Yalnızca sunuculu Takibim'de kullanılır (src/data/portal.ts → takibimKipi = 'sunucu'); diğer düzenlerde panele yönlenir.
 import PortalLayout from '../../../layouts/PortalLayout.astro';
 import Yonlendir from '../../../layouts/Yonlendir.astro';
-import { takibimAcik } from '../../../data/portal';
+import { sunucuAcik } from '../../../data/portal';
 ---
 
 {
-  takibimAcik ? (
+  sunucuAcik ? (
     <PortalLayout title="Telefona Bildirim" alan="yonetim" manifest="/yonetim/bildirim.webmanifest">
       <div class="auth">
         <div class="auth-kart" data-bildirim>
@@ -39,4 +39,4 @@ import { takibimAcik } from '../../../data/portal';
   )
 }
 
-{takibimAcik && <script src="../../../scripts/portal/bildirim.ts" />}
+{sunucuAcik && <script src="../../../scripts/portal/bildirim.ts" />}

@@ -1,7 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
-import { takibimAcik } from './src/data/portal.ts';
+import { sunucuAcik } from './src/data/portal.ts';
 
 // Sitenin yayındaki adresi (SEO, sitemap ve paylaşım görselleri için kullanılır)
 export default defineConfig({
@@ -18,7 +18,7 @@ export default defineConfig({
         !page.includes('/danisan/') &&
         !page.includes('/yonetim/') &&
         !page.includes('/takibim/') &&
-        (takibimAcik || (!page.includes('/acik-riza-metni/') && !page.includes('/danisan-sozlesmesi/'))),
+        (sunucuAcik || (!page.includes('/acik-riza-metni/') && !page.includes('/danisan-sozlesmesi/'))),
     }),
   ],
 });

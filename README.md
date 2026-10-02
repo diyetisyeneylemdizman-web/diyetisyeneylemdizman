@@ -22,9 +22,9 @@ derlenip yayına alınır.
 | Sayfa geçişi ve açılış animasyonları | `src/styles/global.css` (“Hafif animasyonlar” bölümü) |
 | Menü sırası ve adları | `src/data/site.ts` (`nav`) |
 | Randevu takvimi: çalışma saatleri, kapalı günler (tatiller), kaç gün sonrası seçilebilir | `src/data/site.ts` (`hours`, `closedDates`, `bookingDaysAhead`) |
-| Panel: Takibim açık/kapalı (`takibimAcik`), sınırlar, yasal metin sürümleri | `src/data/portal.ts` |
-| KVKK aydınlatma metni (şu anki düzen) | `src/components/kvkk/AydinlatmaYerel.astro` |
-| KVKK aydınlatma metni (Takibim açıkken), Takibim açık rıza ve kullanım koşulları | `src/components/kvkk/AydinlatmaTakibim.astro`, `src/pages/acik-riza-metni.astro`, `danisan-sozlesmesi.astro` |
+| Panel: Takibim düzeni (`takibimKipi`: `'qr'` / `'sunucu'` / `'kapali'`), sınırlar, yasal metin sürümleri | `src/data/portal.ts` |
+| KVKK aydınlatma metni (şu anki düzen, QR'lı Takibim dahil) | `src/components/kvkk/AydinlatmaYerel.astro` |
+| KVKK aydınlatma metni (sunuculu Takibim), Takibim açık rıza ve kullanım koşulları | `src/components/kvkk/AydinlatmaTakibim.astro`, `src/pages/acik-riza-metni.astro`, `danisan-sozlesmesi.astro` |
 
 ## Sayfalar
 
@@ -32,8 +32,9 @@ Ana sayfa · Hakkında · Sertifikalar · Hizmetler · Vücut Kitle İndeksi Hes
 İletişim · Randevu Talebi Oluştur (3 adım: görüşme → takvimden tercih edilen tarih ve saat → bilgiler; WhatsApp mesajı olarak gönderilir, randevu onaydan sonra kesinleşir) ·
 KVKK Aydınlatma Metni
 
-Arama motorlarına kapalı sayfa: `/yonetim/` (diyetisyen paneli). Takibim kapalıyken `/takibim/`, eski `/danisan/…`
-adresleri ana sayfaya; Takibim açık rıza ve kullanım koşulları sayfaları KVKK Aydınlatma Metni'ne yönlenir.
+Arama motorlarına kapalı sayfalar: `/yonetim/` (diyetisyen paneli), `/takibim/` (danışan). Eski `/danisan/…` adresleri
+Takibim'e yönlenir. Takibim açık rıza ve kullanım koşulları sayfaları yalnızca sunuculu Takibim'de kullanılır; şu an
+KVKK Aydınlatma Metni'ne yönlenir.
 
 ## Site asistanı
 
@@ -84,7 +85,7 @@ yapılmış olsa bile, yasaklıyor.
 
 Ücretsizdir; kart tanımı, abonelik veya ek ayar gerekmez.
 
-**Şu anki düzen (`src/data/portal.ts` → `takibimAcik = false`): hiçbir danışan verisi internete gönderilmez.**
+**Şu anki düzen (`src/data/portal.ts` → `takibimKipi = 'qr'`): hiçbir danışan verisi sitenin sunucusuna gönderilmez.**
 
 - **Randevu talepleri WhatsApp ile gelir.** Sitedeki form, ziyaretçinin telefonunda hazır bir WhatsApp mesajı açar.
   Diyetisyen bu mesajı kopyalayıp panelde **Randevu Talepleri → WhatsApp Talebi Ekle** penceresine yapıştırır; ad,
@@ -92,13 +93,28 @@ yapılmış olsa bile, yasaklıyor.
   ile konum içeren hazır WhatsApp onay mesajı gönderilir.
 - **Danışan kayıtları yalnızca diyetisyenin bilgisayarında**, tarayıcının içinde ve panel parolasıyla şifreli
   (AES-256-GCM, PBKDF2 600.000 tur) durur. Bölümler: Özet · Randevu Talepleri · Randevular · Danışanlar (ekle, düzenle,
-  sil) · danışan dosyası (Ölçümler, Paket, Randevular, Bilgiler ve Notlar) · Duyuru · Paketler · Ayarlar. Panel 30
+  sil) · danışan dosyası (Ölçümler, Takibim, Paket, Randevular, Bilgiler ve Notlar) · Duyuru · Paketler · Ayarlar. Panel 30
   dakika işlem yapılmazsa kilitlenir ve aynı anda tek sekmede açılır.
 - **Vücut analizi PDF'i:** Tanita MC-780 raporu danışan dosyasına sürüklenince değerler (kilo, yağ, kas, yağsız kütle,
   su, iç yağ, bazal metabolizma, metabolik yaş, bel, BKİ, kol/bacak/gövde segmental değerleri) ve cihazın ölçüm geçmişi
   otomatik okunur (`src/scripts/portal/tanita.ts`, tarayıcıda pdf.js ile; PDF hiçbir yere yüklenmez). PDF'teki ad
   danışan adıyla uyuşmazsa onay istenir. Ölçümler insan modeli üzerinde vücut haritası ve gelişim grafikleriyle görünür.
-- `/api/portal/*` adresleri kapalıdır (404); `/takibim/` ana sayfaya yönlenir; menüde Takibim düğmesi yoktur.
+- **Takibim (QR, sunucusuz):** Danışan Takibim'i bir kez açar: klinikte panelin gösterdiği QR'ı okutur (PDF kaydedince
+  ya da Ölçümler → "QR Göster"), online danışan "Online Danışana Bağlantı Gönder" ile gelen bağlantıyı açıp görüşmede
+  sözlü söylenen 6 haneli kodu girer. QR'da danışanın özeti (ad, boy, hedef kilo, ölçümler ve vücut haritası, paket,
+  randevular) ve danışana özel bir güncelleme anahtarı vardır; adres `https://…/takibim/#n=<rakamlar>` biçimindedir ve
+  "#" sonrası tarayıcıdan sunucuya gitmez. Bilgiler yalnızca o telefonda (tarayıcı depolaması) saklanır; danışan sitedeki
+  menüden "Takibim"e girince kendi bilgilerini görür.
+- **Sonraki ölçümler (QR yeniden okutulmaz):** Takibim'i olan danışanda PDF kaydedilince (ya da Ölçümler →
+  "Güncellemeyi WhatsApp'tan Gönder") panel `…/takibim/#g=…` bağlantısını hazırlar; bağlantı danışana özel anahtarla
+  şifrelidir (AES-256-GCM) ve yalnızca Takibim'in açıldığı telefonda/tarayıcıda açılır, kod gerekmez. Danışan WhatsApp'ta
+  bağlantıya dokununca Takibim güncellenir (evde girilen ölçümler korunur). Telefon değişirse "QR Göster" ile bir kez
+  yeniden okutulur. Alerji, hastalık, ilaç, notlar ve paket notu eklenmez; belge ve mesaj gönderilmez. Kod:
+  `src/scripts/portal/qrtakip.ts` (paketleme: sıkıştırma + QR'ın sayısal kipi; QR'a sığmayan çok eski geçmiş çıkarılır,
+  ilk güncelleme bağlantısıyla tamamlanır), `danisan.ts` (telefon).
+- Menü: "Takibim" ana menüde Hizmetler'in yanında (menü 1300 px altında hamburgere geçer). Üst bantta "Yönetim Girişi"
+  (`/yonetim/`) ve yalnızca simge olarak telefon.
+- `/api/portal/*` adresleri kapalıdır (404).
 
 ### Kurulum (bir kez)
 
@@ -109,14 +125,15 @@ yapılmış olsa bile, yasaklıyor.
 
 `KURULUM_KODU` ve eski `VERI_ANAHTARI` Secret'ları bu düzende kullanılmaz; eklenmesine gerek yoktur, varsa silinebilir.
 
-### Takibim'i açmak (ileride, isteğe bağlı)
+### Sunuculu Takibim'i açmak (ileride, isteğe bağlı)
 
-Kodda hazırdır ama kapalıdır: danışanın QR ile telefonundan ölçümlerini görmesi (uçtan uca şifreli), randevu formunun
-talebi şifreli olarak doğrudan panele iletmesi ve telefona bildirim. Bu özellikler şifreli veriyi sitenin sunucusunda
-(Cloudflare, yurt dışı) tuttuğu için açmadan önce:
+Kodda hazırdır ama kapalıdır: telefonun QR'sız kendiliğinden güncellenmesi, belge (beslenme planı, rapor) ve mesaj
+gönderme (uçtan uca şifreli), randevu formunun talebi şifreli olarak doğrudan panele iletmesi ve telefona bildirim. Bu
+özellikler şifreli veriyi sitenin sunucusunda (Cloudflare, yurt dışı) tuttuğu için açmadan önce:
 
 1. Hukukçu görüşü alınır (KVKK md. 9 yurt dışı aktarım; Cloudflare standart sözleşmesi ve Kurum'a bildirim).
-2. `src/data/portal.ts` → `takibimAcik = true`; Cloudflare'e **Secret** `KURULUM_KODU` (en az 12 karakter) eklenir.
+2. `src/data/portal.ts` → `takibimKipi = 'sunucu'`; Cloudflare'e **Secret** `KURULUM_KODU` (en az 12 karakter) eklenir.
+   QR'lı (sunucusuz) Takibim kullanan danışanlar yeni QR okutur.
 3. Panelde Özet → "Şimdi Bağlan" ile kurulum kodu girilir; Ayarlar → Bildirimler açılır.
 4. KVKK aydınlatma metni kendiliğinden Takibim sürümüne (`AydinlatmaTakibim.astro`) geçer; Takibim açık rıza ve
    kullanım koşulları sayfaları açılır. Metinlerin sürümü `src/data/portal.ts` içinde artırılır.
@@ -149,10 +166,10 @@ npm run build    # yayın dosyalarını dist/ klasörüne üretir
 ```
 
 Cloudflare ayarları: `wrangler.jsonc` (derleme komutu `npm run build`, yayın komutu `npx wrangler deploy`). Sayfalar
-statik dosya olarak sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır (Instagram Reels; Takibim
-açıkken Takibim posta kutusu). Sunucu kodu `worker/portal/`, panel ve Takibim arayüzü `src/scripts/portal/` klasöründedir.
+statik dosya olarak sunulur; yalnızca `/api/*` adresleri `worker/index.ts` dosyasında çalışır (Instagram Reels; sunuculu
+Takibim'de Takibim posta kutusu). Sunucu kodu `worker/portal/`, panel ve Takibim arayüzü `src/scripts/portal/` klasöründedir.
 
-Paneli bilgisayarda denemek için `npm run build` ardından `npx wrangler dev` kullanılır (Takibim açıkken
+Paneli bilgisayarda denemek için `npm run build` ardından `npx wrangler dev` kullanılır (sunuculu Takibim'de
 `--var KURULUM_KODU:<kod>` eklenir).
 
 ## Yazım kuralları

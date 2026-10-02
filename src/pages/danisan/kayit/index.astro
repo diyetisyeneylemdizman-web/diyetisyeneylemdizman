@@ -1,7 +1,7 @@
 ---
 // Eski danışan paneli adresi: Takibim açıksa Takibim'e, kapalıysa ana sayfaya yönlendirilir
 import Yonlendir from '../../../layouts/Yonlendir.astro';
-import { takibimAcik } from '../../../data/portal';
+import { takibimGorunur } from '../../../data/portal';
 ---
 
-<Yonlendir hedef={takibimAcik ? '/takibim/' : '/'} />
+<Yonlendir hedef={takibimGorunur ? '/takibim/' : '/'} />

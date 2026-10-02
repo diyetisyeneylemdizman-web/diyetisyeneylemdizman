@@ -3,11 +3,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import AydinlatmaYerel from '../components/kvkk/AydinlatmaYerel.astro';
 import AydinlatmaTakibim from '../components/kvkk/AydinlatmaTakibim.astro';
-import { portalBelgeleri, takibimAcik } from '../data/portal';
+import { portalBelgeleri, sunucuAcik } from '../data/portal';
 // NOT: Bu metin genel bir şablondur. Bir hukukçu tarafından gözden geçirilmesi önerilir.
 // Metnin içeriği src/components/kvkk/ klasöründedir:
-//   - AydinlatmaYerel.astro   → şu anki düzen (takibimAcik = false): danışan verisi sunucuya gönderilmez
-//   - AydinlatmaTakibim.astro → Takibim ve şifreli randevu kutusu açıkken (takibimAcik = true)
+//   - AydinlatmaYerel.astro   → şu anki düzen (takibimKipi 'qr' veya 'kapali'): danışan verisi sunucuya gönderilmez
+//   - AydinlatmaTakibim.astro → sunuculu Takibim ve şifreli randevu kutusu açıkken (takibimKipi = 'sunucu')
 // Kişisel veri işleyişi değiştiğinde ilgili metin güncellenmeli ve src/data/portal.ts içindeki "aydinlatma" sürümü ve
 // tarihi değiştirilmelidir.
 const b = portalBelgeleri.aydinlatma;
@@ -16,7 +16,7 @@ const guncelleme = b.guncelleme.split('-').reverse().join('.');
 
 <BaseLayout
   title="KVKK Aydınlatma Metni"
-  description={takibimAcik
+  description={sunucuAcik
     ? 'Diyetisyen Eylem Dizman internet sitesi, randevu talepleri, danışan kayıtları ve Takibim kapsamında kişisel verilerin işlenmesine ilişkin aydınlatma metni.'
     : 'Diyetisyen Eylem Dizman internet sitesi, randevu talepleri ve danışan kayıtları kapsamında kişisel verilerin işlenmesine ilişkin aydınlatma metni.'}
 >
@@ -25,7 +25,7 @@ const guncelleme = b.guncelleme.split('-').reverse().join('.');
   <section class="section">
     <div class="container-narrow prose">
       <p class="surum">Son güncelleme: {guncelleme} · Sürüm {b.surum}</p>
-      {takibimAcik ? <AydinlatmaTakibim /> : <AydinlatmaYerel />}
+      {sunucuAcik ? <AydinlatmaTakibim /> : <AydinlatmaYerel />}
     </div>
   </section>
 </BaseLayout>

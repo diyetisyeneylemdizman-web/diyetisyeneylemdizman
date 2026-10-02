@@ -897,6 +897,30 @@
   height: auto;
   aspect-ratio: 1;
 }
+/* Sunucusuz Takibim QR'ı bilgileri içinde taşır; daha sık olduğu için büyük gösterilir */
+.pencere.genis:has(.qr.buyuk) {
+  width: min(96vw, 980px);
+}
+.qr-alani .qr.buyuk {
+  padding: 8px;
+  max-width: 100%;
+}
+.qr-alani .qr.buyuk svg {
+  width: min(540px, calc(96vw - 72px), 58vh);
+  min-width: min(300px, calc(96vw - 72px));
+  max-width: 100%;
+}
+.qr-yan-yana {
+  display: grid;
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .qr-yan-yana {
+    grid-template-columns: auto minmax(200px, 1fr);
+  }
+}
 
 /* PDF bırakma alanı */
 .olcum-ekle {
@@ -908,6 +932,15 @@
 }
 .olcum-ekle > .btn {
   align-self: center;
+}
+.olcum-eylemler {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+}
+.olcum-eylemler .btn {
+  width: 100%;
+  justify-content: center;
 }
 .birakma {
   display: grid;

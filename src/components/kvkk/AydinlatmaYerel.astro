@@ -1,15 +1,17 @@
 ---
-// KVKK aydınlatma metninin içeriği — şu anki düzen (src/data/portal.ts → takibimAcik = false):
+// KVKK aydınlatma metninin içeriği — şu anki düzen (src/data/portal.ts → takibimKipi 'qr' veya 'kapali'):
 // randevu talepleri WhatsApp ile gelir, danışan kayıtları yalnızca diyetisyenin bilgisayarında şifreli durur,
-// internet sitesinin sunucusuna danışan verisi gönderilmez. Takibim kapalıdır.
+// internet sitesinin sunucusuna danışan verisi gönderilmez. Takibim (takibimKipi = 'qr') açıksa danışanın özeti QR kodu
+// ile doğrudan danışanın telefonuna aktarılır ve yalnızca orada saklanır (2.3 ve ilgili maddeler).
 import { site, fullAddress } from '../../data/site';
-import { sinirlar } from '../../data/portal';
+import { sinirlar, takibimGorunur } from '../../data/portal';
 ---
 
 <p>
   Bu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) uyarınca;
-  <strong>{site.url.replace('https://', '')}</strong> internet sitesini ziyaret eden, randevu talebi ileten ve beslenme
-  danışmanlığı hizmeti alan kişileri, kişisel verilerinin işlenmesi hakkında bilgilendirmek amacıyla hazırlanmıştır.
+  <strong>{site.url.replace('https://', '')}</strong> internet sitesini ziyaret eden, randevu talebi ileten, beslenme
+  danışmanlığı hizmeti alan{takibimGorunur && <> ve isteğe bağlı <strong>Takibim</strong> sayfasını kullanan</>} kişileri,
+  kişisel verilerinin işlenmesi hakkında bilgilendirmek amacıyla hazırlanmıştır.
 </p>
 
 <h2>1. Veri sorumlusu</h2>
@@ -68,12 +70,50 @@ import { sinirlar } from '../../data/portal';
   aynı parolayla şifrelidir ve diyetisyenin kendi cihazlarında saklanır. Sitede ve panelde banka veya kredi kartı
   bilgisi alınmaz.
 </p>
+{
+  takibimGorunur && (
+    <>
+      <h3 id="takibim">2.3. Takibim (isteğe bağlı)</h3>
+      <p>
+        Takibim, ölçümlerinizi ve sürecinizi kendi telefonunuzdan izlemenizi sağlayan isteğe bağlı bir sayfadır;
+        kullanmasanız da danışmanlık hizmetiniz aynı şekilde devam eder. Ölçümünüzden sonra diyetisyeninizin gösterdiği QR
+        kodunu okutmanız hâlinde:
+      </p>
+      <ul>
+        <li>
+          Adınız, cinsiyetiniz, boyunuz, hedef kilonuz, ölçüm sonuçlarınız (vücut haritası ve ölçüm geçmişi dahil), paket
+          bilgileriniz ve randevularınız <strong>QR kodunun içinde doğrudan telefonunuza aktarılır</strong> ve yalnızca
+          telefonunuzun tarayıcısında saklanır. Bu bilgiler sitenin sunucusuna veya üçüncü kişilere gönderilmez: QR
+          kodundaki bilgiler adresin “#” işaretinden sonraki bölümündedir ve tarayıcılar bu bölümü sunucuya iletmez.
+        </li>
+        <li>
+          <strong>Hastalık, ilaç, alerji bilgileriniz, ödeme notları ve diyetisyenin danışmanlık notları Takibim’e
+          eklenmez.</strong>
+        </li>
+        <li>
+          Online görüşmelerde aynı bilgiler, 6 haneli bir kodla şifrelenmiş bir bağlantı olarak WhatsApp üzerinden
+          gönderilir; kod size görüşmede sözlü olarak söylenir. Bağlantı, kod olmadan açılamaz.
+        </li>
+        <li>
+          QR kodu bir kez okutulur. Sonraki ölçümlerinizden sonra güncel bilgileriniz WhatsApp üzerinden bir güncelleme
+          bağlantısı olarak gönderilir. Bağlantıdaki bilgiler, ilk QR okutmada telefonunuza kaydedilen size özel bir
+          anahtarla şifrelidir; bağlantı yalnızca o telefonda açılır.
+        </li>
+        <li>
+          Takibim’e evde girdiğiniz ölçümler ve isteğe bağlı PIN yalnızca telefonunuzda kalır; diyetisyene veya başka bir
+          yere gönderilmez.
+        </li>
+      </ul>
+    </>
+  )
+}
 
 <h2>3. Kişisel verilerin işlenme amaçları</h2>
 <ul>
   <li>Randevu taleplerinizin alınması, planlanması, randevunun onaylanması ve hatırlatılması,</li>
   <li>Soru ve taleplerinizin yanıtlanması,</li>
   <li>Beslenme danışmanlığı hizmetinin sunulması; kişiye özel beslenme planının hazırlanması ve sürecin takibi,</li>
+  {takibimGorunur && <li>Takibim’i kullanmayı seçmeniz hâlinde ölçüm sonuçlarınızın ve sürecinizin size iletilmesi,</li>}
   <li>Paket ve ödeme süreçlerinin yürütülmesi,</li>
   <li>Bilgi güvenliğinin sağlanması,</li>
   <li>Hukuki yükümlülüklerin yerine getirilmesi ve olası uyuşmazlıklarda hakların korunması.</li>
@@ -94,26 +134,34 @@ import { sinirlar } from '../../data/portal';
 <p>
   Sağlık verileriniz KVKK’nın 6. maddesi kapsamında; beslenme danışmanlığı hizmeti kapsamında (randevu talebinde
   belirttiğiniz konu ve VKİ sonucu dahil), sır saklama yükümlülüğü altındaki sağlık meslek mensubu tarafından tedavi ve
-  bakım hizmetlerinin planlanması ve yürütülmesi amacıyla işlenir. Randevu talebinizde ayrıntılı sağlık bilgisi
-  paylaşmamanızı öneririz; bu bilgiler görüşmede ele alınır.
+  bakım hizmetlerinin planlanması ve yürütülmesi amacıyla işlenir.{
+    takibimGorunur && ' Takibim kapsamında ölçüm sonuçlarınızın kendi telefonunuza aktarılması da bu hizmetin parçasıdır.'
+  }{' '}
+  Randevu talebinizde ayrıntılı sağlık bilgisi paylaşmamanızı öneririz; bu bilgiler görüşmede ele alınır.
 </p>
 
 <h2>5. Kişisel verilerin aktarılması</h2>
 <ul>
   <li>
     <strong>Danışan kayıtları</strong> (sağlık verileri dahil) üçüncü kişilere ve yurt dışına aktarılmaz; yalnızca
-    diyetisyenin bilgisayarında bulunur.
+    diyetisyenin bilgisayarında bulunur.{
+      takibimGorunur && ' Takibim’i kullanmayı seçerseniz özetiniz yalnızca sizin telefonunuza aktarılır.'
+    }
   </li>
   <li>
     <strong>Barındırma hizmeti:</strong> İnternet sitesi Cloudflare, Inc. (ABD) altyapısında barındırılır. Siteyi ziyaret
     ettiğinizde IP adresi ve tarayıcı bilgisi gibi teknik veriler, bu altyapı sağlayıcısı tarafından güvenlik ve sitenin
-    size ulaştırılması amacıyla işlenebilir. Randevu formu bilgileri ve danışan kayıtları bu altyapıya gönderilmez.
+    size ulaştırılması amacıyla işlenebilir. Randevu formu bilgileri, danışan kayıtları{takibimGorunur && ' ve Takibim bilgileri'}{' '}
+    bu altyapıya gönderilmez.
   </li>
   <li>
     <strong>WhatsApp:</strong> Randevu talebi, randevu onayı ve hatırlatma gibi mesajlar WhatsApp üzerinden iletilir.
     WhatsApp üzerinden ilettiğiniz ve size iletilen mesajlar, WhatsApp hizmet sağlayıcısının kendi gizlilik politikası
     kapsamında işlenir ve yurt dışında bulunan sunucularda barındırılabilir. WhatsApp mesajlarında ayrıntılı sağlık
-    bilgisi paylaşılmaz.
+    bilgisi paylaşılmaz.{
+      takibimGorunur &&
+        ' Takibim bağlantıları şifrelidir: ilk bağlantı 6 haneli kodla açılır (kod WhatsApp mesajıyla gönderilmez), güncelleme bağlantıları ise yalnızca telefonunuzdaki size özel anahtarla açılır.'
+    }
   </li>
   <li>
     <strong>Google Haritalar:</strong> Ana sayfadaki ve İletişim sayfasındaki harita, yalnızca “Haritayı Göster”
@@ -133,6 +181,14 @@ import { sinirlar } from '../../data/portal';
     Danışan kayıtları, danışmanlık ilişkisi süresince ve sonrasında ilgili mevzuatın öngördüğü saklama süreleri ile
     olası uyuşmazlıklardaki zamanaşımı süreleri boyunca saklanır; süre sonunda silinir veya anonim hâle getirilir.
   </li>
+  {
+    takibimGorunur && (
+      <li>
+        Takibim bilgileri yalnızca telefonunuzda, siz silene kadar saklanır; Takibim → Ayarlar bölümünden dilediğiniz
+        zaman silebilirsiniz.
+      </li>
+    )
+  }
   <li>Ödeme ve fatura kayıtları, vergi ve ticaret mevzuatındaki süreler boyunca saklanır.</li>
 </ul>
 
@@ -148,12 +204,24 @@ import { sinirlar } from '../../data/portal';
     parola gerekir.
   </li>
   <li>Yedek dosyaları da şifrelidir; parola olmadan açılamaz.</li>
+  {
+    takibimGorunur && (
+      <li>
+        Takibim bilgileri hiçbir sunucuda tutulmaz; telefonunuzda isteğe bağlı PIN ile kilitlenebilir. WhatsApp ile
+        gönderilen Takibim bağlantıları şifrelidir (AES-256): ilk bağlantı 6 haneli kodla, güncelleme bağlantıları
+        yalnızca telefonunuzdaki size özel anahtarla açılır.
+      </li>
+    )
+  }
 </ul>
 
 <h2>8. Çerezler ve cihazda saklama</h2>
 <p>
   Sitemizde reklam veya ziyaretçi takibi amaçlı çerez kullanılmamaktadır. Diyetisyen paneli, kayıtları yalnızca
-  diyetisyenin bilgisayarındaki tarayıcı depolama alanında şifreli olarak tutar. Google Haritalar gibi üçüncü taraf
+  diyetisyenin bilgisayarındaki tarayıcı depolama alanında şifreli olarak tutar.{
+    takibimGorunur && ' Takibim de bilgilerinizi yalnızca telefonunuzdaki tarayıcı depolama alanında tutar.'
+  }{' '}
+  Google Haritalar gibi üçüncü taraf
   içerikleri yalnızca sizin talebinizle yüklendiğinde, ilgili hizmet sağlayıcı çerez kullanabilir.
 </p>
 <p>
@@ -175,11 +243,20 @@ import { sinirlar } from '../../data/portal';
   <li>İşlenen verilerin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme,</li>
   <li>Kanuna aykırı işlenmesi sebebiyle zarara uğramanız hâlinde zararın giderilmesini talep etme.</li>
 </ul>
+{
+  takibimGorunur && (
+    <p>
+      Takibim kullanıyorsanız; telefonunuzdaki bilgilerinizi Takibim → Ayarlar bölümünden indirebilir veya
+      silebilirsiniz.
+    </p>
+  )
+}
+
 <h2>10. Başvuru</h2>
 <p>
   Haklarınıza ilişkin taleplerinizi, Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebliğ’e uygun olarak;{' '}
   {fullAddress} adresine yazılı olarak, kayıtlı elektronik posta (KEP) adresi, güvenli elektronik imza veya mobil imza
-  ile ya da daha önce bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden
+  ile ya da daha önce bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden{' '}
   <a href={`mailto:${site.email}`}>{site.email}</a> adresine iletebilirsiniz. Başvurularınız, talebin niteliğine göre en
   kısa sürede ve en geç otuz gün içinde ücretsiz olarak sonuçlandırılır; işlemin ayrıca bir maliyet gerektirmesi
   hâlinde Kişisel Verileri Koruma Kurulunca belirlenen tarifedeki ücret alınabilir.

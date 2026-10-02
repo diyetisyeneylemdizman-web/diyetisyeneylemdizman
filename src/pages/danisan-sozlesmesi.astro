@@ -3,8 +3,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import { site, fullAddress } from '../data/site';
 import Yonlendir from '../layouts/Yonlendir.astro';
-import { takibimAcik, portalBelgeleri, sinirlar } from '../data/portal';
-// Takibim kapalıyken (src/data/portal.ts → takibimAcik) bu sayfa KVKK Aydınlatma Metni'ne yönlenir.
+import { sunucuAcik, portalBelgeleri, sinirlar } from '../data/portal';
+// Yalnızca sunuculu Takibim'de kullanılır (src/data/portal.ts → takibimKipi = 'sunucu'); diğer düzenlerde KVKK Aydınlatma Metni'ne yönlenir.
 // NOT: Bu metin genel bir şablondur; hukukçu kontrolü önerilir. Metin değiştiğinde src/data/portal.ts içindeki
 // "kosullar" sürümü güncellenmelidir (Takibim kullanan danışanlar bir sonraki açılışta yeniden onay verir).
 // Adres (/danisan-sozlesmesi/) önceki sürümle aynı tutuldu.
@@ -13,7 +13,7 @@ const guncelleme = b.guncelleme.split('-').reverse().join('.');
 ---
 
 {
-  takibimAcik ? (
+  sunucuAcik ? (
     <BaseLayout title="Takibim Kullanım Koşulları" description="Diyetisyen Eylem Dizman Takibim sayfasının kullanım koşulları.">
       <PageHero title="Takibim Kullanım Koşulları" eyebrow="Kullanım Koşulları" crumbs={[{ label: 'Takibim Kullanım Koşulları' }]} />
 

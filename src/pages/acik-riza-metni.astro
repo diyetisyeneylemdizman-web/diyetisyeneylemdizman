@@ -3,8 +3,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import PageHero from '../components/PageHero.astro';
 import { site } from '../data/site';
 import Yonlendir from '../layouts/Yonlendir.astro';
-import { takibimAcik, portalBelgeleri } from '../data/portal';
-// Takibim kapalıyken (src/data/portal.ts → takibimAcik) bu sayfa KVKK Aydınlatma Metni'ne yönlenir.
+import { sunucuAcik, portalBelgeleri } from '../data/portal';
+// Yalnızca sunuculu Takibim'de kullanılır (src/data/portal.ts → takibimKipi = 'sunucu'); diğer düzenlerde KVKK Aydınlatma Metni'ne yönlenir.
 // NOT: Bu metin genel bir şablondur; hukukçu kontrolü önerilir. Metin değiştiğinde src/data/portal.ts içindeki
 // "acikRiza" sürümü güncellenmelidir (Takibim kullanan danışanlar bir sonraki açılışta yeniden onay verir).
 const b = portalBelgeleri.acikRiza;
@@ -12,7 +12,7 @@ const guncelleme = b.guncelleme.split('-').reverse().join('.');
 ---
 
 {
-  takibimAcik ? (
+  sunucuAcik ? (
     <BaseLayout
       title="Takibim İçin Açık Rıza Metni"
       description="Diyetisyen Eylem Dizman Takibim sayfasında sağlık verilerinin işlenmesine ilişkin açık rıza metni."

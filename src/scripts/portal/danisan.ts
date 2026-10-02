@@ -1,20 +1,31 @@
-// Takibim — danışanın telefonundaki takip sayfası.
+// Takibim — danışanın telefonundaki takip sayfası. İki düzende çalışır (src/data/portal.ts → takibimKipi):
 //
-// - Diyetisyenin gösterdiği QR kod (veya gönderdiği bağlantı) bu telefonu danışanın kaydına bağlar.
-// - QR'daki anahtar yalnızca bu telefonda saklanır; sunucudaki veriler bu anahtarla şifrelidir, sunucu okuyamaz.
-// - Diyetisyen yeni ölçüm eklediğinde bu sayfa açılınca kendiliğinden güncellenir; yeniden QR okutmak gerekmez.
-// - Evde girilen ölçümler yalnızca bu telefonda kalır.
+// 'qr' (şu anki düzen, sunucusuz):
+// - Diyetisyenin gösterdiği QR kodu (#n=…) danışanın özetini içinde taşır; bilgiler doğrudan bu telefonda açılır ve
+//   yalnızca burada saklanır. Hiçbir sunucuya istek gönderilmez. Online danışan: 6 haneli kodla şifreli bağlantı (#k=…).
+// - İlk QR / bağlantı danışana özel bir anahtar da getirir; telefonda saklanır. Sonraki ölçümlerde diyetisyenin WhatsApp'tan
+//   gönderdiği güncelleme bağlantısı (#g=…) bu anahtarla açılır ve bilgiler güncellenir (qrtakip.ts → birlestir).
+//   QR yeniden okutulmaz; bağlantı başka bir telefonda / tarayıcıda açılmaz.
+//
+// 'sunucu':
+// - QR (#q=) bu telefonu danışanın uçtan uca şifreli kutusuna bağlar; anahtar yalnızca bu telefonda saklanır.
+// - Diyetisyen yeni ölçüm eklediğinde sayfa açılınca kendiliğinden güncellenir; yeniden QR okutmak gerekmez.
+//
+// Her iki düzende evde girilen ölçümler ve PIN yalnızca bu telefonda kalır.
 
-import { portalBelgeleri, takibimRizaSurumu } from '../../data/portal';
+import { portalBelgeleri, sunucuAcik, takibimRizaSurumu } from '../../data/portal';
 import { site } from '../../data/site';
 import { degisimKartlari, grafikler, olcumTablosu } from './gelisim';
-import { $, alan, api, ApiError, boyut, bugun, formNesnesi, h, indir, mesgul, pencere, tarih, tarihSaat, toast, turAdi, Uyari } from './lib';
+import { $, alan, api, ApiError, boyut, bugun, formNesnesi, h, indir, mesgul, pencere, sayi, tarih, tarihSaat, toast, turAdi, Uyari } from './lib';
+import { birlestir, guncellemeAc, guncellemeKimligi, qrParcaAc, qrParcaTuru, type QrTakip } from './qrtakip';
 import { aesAnahtari, b64, b64url, coz, jsonCoz, parcaCoz, parcaTuru, parolaAnahtari, rastgele, sifrele, unb64, kimlik } from './sifre';
 import type { Olcum, TakipVerisi } from './tipler';
 import { vucutHaritasi } from './vucut';
 
 interface Kayit {
   v: 1;
+  /** Sunucusuz düzende danışanın kimliği (QR'dan); sunuculu düzende boş */
+  kimlik?: string;
   kutu: string;
   anahtar: string;
   cihaz: string;
@@ -81,7 +92,8 @@ const cihazBasligi = () => ({ 'X-Cihaz': kayit!.cihaz });
 // ================================================================ Sunucudan güncelleme
 
 async function guncelle(): Promise<boolean> {
-  if (!kayit || kayit.kapali) return false;
+  // Sunucusuz düzende (QR) hiçbir sunucuya istek gönderilmez; bilgiler yalnızca yeni QR okutulunca güncellenir
+  if (!sunucuAcik || !kayit || kayit.kapali) return false;
   try {
     const r = await api<{ veri: string | null; guncellendi: number }>('GET', `/takip/${kayit.kutu}`, undefined, cihazBasligi());
     cevrimdisi = false;
@@ -118,10 +130,14 @@ function tanitimEkrani() {
     h(
       'ol',
       { class: 'adim-liste' },
-      h('li', null, 'Görüşmenizde diyetisyeninizden Takibim QR kodunu isteyin.'),
+      h('li', null, sunucuAcik ? 'Görüşmenizde diyetisyeninizden Takibim QR kodunu isteyin.' : 'Ölçümünüzden sonra diyetisyeninizden Takibim QR kodunu isteyin.'),
       h('li', null, 'Telefonunuzun kamerasıyla QR kodu okutun.'),
       h('li', null, 'Sonraki girişlerinizde sitedeki "Takibim" düğmesine dokunmanız yeterli.'),
+      sunucuAcik ? null : h('li', null, 'Yeni ölçümlerinizden sonra diyetisyeninizin WhatsApp\'tan gönderdiği güncelleme bağlantısına dokunmanız yeterli.'),
     ),
+    sunucuAcik
+      ? null
+      : h('p', { class: 'hint' }, 'Online görüşüyorsanız diyetisyeninizin WhatsApp\'tan gönderdiği bağlantıyı açıp görüşmede söylenen 6 haneli kodu girin.'),
     iosAnaEkran
       ? h('div', { class: 'bilgi-kutu' }, h('p', null, 'Ana ekrandaki simgeden açılan sayfa, Safari\'deki kaydı göremez. Takibim\'i Safari\'den açın.'))
       : null,
@@ -130,6 +146,20 @@ function tanitimEkrani() {
 }
 
 function onayKutulari() {
+  if (!sunucuAcik)
+    return [
+      h(
+        'label',
+        { class: 'onay-satiri' },
+        h('input', { type: 'checkbox', name: 'aydinlatma', required: true }),
+        h(
+          'span',
+          null,
+          h('a', { href: portalBelgeleri.aydinlatma.yol, target: '_blank', rel: 'noopener' }, 'KVKK Aydınlatma Metni'),
+          '’ni okudum; bilgilerimin bu telefonda saklanmasını istiyorum.',
+        ),
+      ),
+    ];
   return [
     h(
       'label',
@@ -160,6 +190,10 @@ function onayKutulari() {
 }
 
 function onaylariDenetle(f: Record<string, unknown>) {
+  if (!sunucuAcik) {
+    if (!f.aydinlatma) throw new Uyari('Devam etmek için onay kutusunu işaretleyin.');
+    return;
+  }
   if (!f.aydinlatma) throw new Uyari('Devam etmek için aydınlatma metni ve kullanım koşulları kutusunu işaretleyin.');
   if (!f.riza) throw new Uyari('Takibim\'i kullanmak için açık rıza kutusunu işaretleyin. Rıza vermezseniz takibiniz klinikte devam eder.');
 }
@@ -235,7 +269,7 @@ function eslesmeEkrani(parca: string, tur: 'qr' | 'link') {
   );
 }
 
-function pinEkrani(s: Saklanan) {
+function pinEkrani(s: Saklanan, sonra?: () => unknown) {
   const form = h(
     'form',
     { class: 'form-grid', novalidate: true },
@@ -259,6 +293,7 @@ function pinEkrani(s: Saklanan) {
         kayit = acik;
         pinAnahtari = anahtar;
         pinTuzu = s.kilit!.tuz;
+        if (sonra) return void (await sonra());
         uygulama();
         void guncelle().then(() => ciz());
       } catch (err) {
@@ -325,30 +360,176 @@ function rizaYenileEkrani() {
   );
 }
 
+// ================================================================ Sunucusuz Takibim: QR / bağlantı ile açma ve güncelleme
+
+/** QR'daki bilgileri bu telefona kaydeder (aynı kişiyse günceller, değilse yenisiyle değiştirir) */
+async function qrKaydet(v: QrTakip) {
+  const ayniKisi = kayit?.kimlik === v.kimlik;
+  if (ayniKisi && kayit!.onbellek && v.guncellendi < kayit!.onbellek.guncellendi) {
+    toast('Bu QR kodu, telefonunuzdaki bilgilerden daha eski; güncelleme yapılmadı.', 'hata');
+  } else {
+    const evdeki = ayniKisi ? kayit!.evdeki : [];
+    const okunan = ayniKisi ? kayit!.okunan : [];
+    const onceki = ayniKisi ? kayit!.onbellek : undefined;
+    if (!ayniKisi) {
+      // Başka bir kişinin kaydı varsa (ve PIN'i) kaldırılır
+      pinAnahtari = null;
+      pinTuzu = null;
+    }
+    // Güncelleme anahtarı ilk QR / bağlantıyla gelir; güncelleme bağlantılarında yoktur, eskisi korunur
+    const anahtar = v.anahtar ?? (ayniKisi ? kayit!.anahtar : '');
+    kayit = {
+      v: 1,
+      kimlik: v.kimlik,
+      kutu: '',
+      anahtar,
+      cihaz: '',
+      riza: portalBelgeleri.aydinlatma.surum,
+      onbellek: birlestir(onceki, v),
+      alindi: Date.now(),
+      evdeki,
+      okunan,
+    };
+    await kaydet();
+    toast(ayniKisi ? 'Bilgileriniz güncellendi.' : 'Takibiniz bu telefonda açıldı.');
+  }
+  history.replaceState(null, '', `${location.pathname}#ozet`);
+  uygulama();
+}
+
+function qrHosGeldin(parca: string, tur: 'qr' | 'link', hazir: QrTakip | null) {
+  const eskiAd = kayit?.onbellek?.danisan.ad;
+  const baskaKisi = Boolean(kayit && hazir && kayit.kimlik !== hazir.kimlik);
+  const form = h(
+    'form',
+    { class: 'form-grid', novalidate: true },
+    h('p', { class: 'form-hata', 'data-form-hata': true, hidden: true, role: 'alert' }),
+    tur === 'link'
+      ? alan(
+          'Açılış kodu',
+          h('input', { class: 'input kod-girisi', name: 'kod', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6, pattern: '[0-9]{6}' }),
+          'Diyetisyeninizin görüşmede söylediği 6 haneli kod',
+        )
+      : null,
+    ...(kayit && !baskaKisi ? [] : onayKutulari()),
+    baskaKisi || (tur === 'link' && kayit)
+      ? h('div', { class: 'bilgi-kutu uyari' }, h('p', null, `Bu telefonda ${eskiAd ? `${eskiAd} adına ` : ''}kayıtlı bir Takibim var. Bağlantı başka bir kişiye aitse eski bilgiler yenisiyle değiştirilir.`))
+      : null,
+    h('button', { type: 'submit', class: 'btn btn-primary' }, 'Takibimi Aç'),
+  );
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]');
+    await mesgul(btn, async () => {
+      try {
+        const f = formNesnesi(form);
+        if (tur === 'link' && !/^\d{6}$/.test(String(f.kod).trim())) throw new Uyari('6 haneli açılış kodunu girin.');
+        if (!kayit || baskaKisi) onaylariDenetle(f);
+        let v = hazir;
+        if (!v) {
+          try {
+            v = await qrParcaAc(parca, String(f.kod ?? '').trim());
+          } catch {
+            throw new Uyari(tur === 'link' ? 'Açılış kodu hatalı.' : 'QR kodu okunamadı. Diyetisyeninizden yeni QR isteyin.');
+          }
+        }
+        await qrKaydet(v);
+      } catch (err) {
+        hataYaz(form, err);
+      }
+    });
+  });
+  ortaKart(
+    h('h1', null, kayit && !baskaKisi ? 'Takibim' : 'Takibim’e Hoş Geldiniz'),
+    h(
+      'p',
+      null,
+      tur === 'link'
+        ? 'Diyetisyeninizin gönderdiği bağlantı, ölçümlerinizi, vücut haritanızı, paketinizi ve randevularınızı içerir. Açmak için görüşmede söylenen 6 haneli kodu girin.'
+        : `${site.name}’ın klinikteki ölçümleriniz, vücut haritanız, paketiniz ve randevularınız bu telefonda görüntülenecek.`,
+    ),
+    h(
+      'div',
+      { class: 'bilgi-kutu' },
+      h('p', null, h('strong', null, 'Yalnızca bu telefonda: '), 'Bilgileriniz bu telefona kaydedilir; internete veya sunucuya gönderilmez. Telefonunuzu başkalarıyla paylaşıyorsanız Ayarlar bölümünden PIN koyabilirsiniz.'),
+    ),
+    form,
+  );
+}
+
+function guncellemeHatasi(...metin: string[]) {
+  ortaKart(
+    h('h1', null, 'Takibim'),
+    ...metin.map((m) => h('p', null, m)),
+    h('p', { class: 'form-alt' }, h('a', { href: '/takibim/' }, 'Takibim’e dön')),
+  );
+}
+
+/** WhatsApp'tan gelen güncelleme bağlantısı: telefondaki anahtarla açılır */
+async function guncellemeIle(parca: string) {
+  if (!kayit?.anahtar)
+    return guncellemeHatasi(
+      'Bu güncelleme bağlantısı, Takibim’i açtığınız telefonda ve tarayıcıda çalışır; bu tarayıcıda Takibim açık değil.',
+      'Bağlantı WhatsApp’ın içinde açıldıysa sağ üstteki menüden “Tarayıcıda aç”ı seçin. Takibim’i hiç açmadıysanız ya da telefonunuzu değiştirdiyseniz diyetisyeninizden QR kodunu yeniden isteyin.',
+    );
+  if (guncellemeKimligi(parca) !== kayit.kimlik)
+    return guncellemeHatasi('Bu güncelleme bağlantısı, bu telefondaki Takibim’e ait değil. Diyetisyeninizle iletişime geçin.');
+  let v: QrTakip;
+  try {
+    v = await guncellemeAc(parca, kayit.anahtar);
+  } catch {
+    return guncellemeHatasi('Güncelleme açılamadı. Diyetisyeninizden yeni bir güncelleme bağlantısı ya da QR kodu isteyin.');
+  }
+  return qrKaydet(v);
+}
+
+/** Adresteki QR / bağlantı parçasını işler */
+async function qrIle(parca: string, tur: 'qr' | 'link' | 'guncelleme') {
+  if (tur === 'guncelleme') return guncellemeIle(parca);
+  let hazir: QrTakip | null = null;
+  if (tur === 'qr') {
+    try {
+      hazir = await qrParcaAc(parca);
+    } catch {
+      return ortaKart(
+        h('h1', null, 'Takibim'),
+        h('p', null, 'QR kodu okunamadı. QR\'ı yeniden okutun ya da diyetisyeninizden yeni QR isteyin.'),
+        h('p', { class: 'form-alt' }, h('a', { href: '/takibim/' }, 'Takibim’e dön')),
+      );
+    }
+  }
+  // Aynı kişinin yeni QR'ı: onay sormadan güncelle
+  if (hazir && kayit?.kimlik === hazir.kimlik) return qrKaydet(hazir);
+  return qrHosGeldin(parca, tur, hazir);
+}
+
 // ================================================================ Uygulama
 
-const MENU: [string, string][] = [
-  ['ozet', 'Özet'],
-  ['gelisim', 'Gelişimim'],
-  ['olcumler', 'Ölçümlerim'],
-  ['paketim', 'Paketim'],
-  ['randevular', 'Randevularım'],
-  ['belgeler', 'Belgelerim'],
-  ['mesajlar', 'Mesajlar'],
-  ['ayarlar', 'Ayarlar'],
-];
+const MENU: [string, string][] = (
+  [
+    ['ozet', 'Özet'],
+    ['gelisim', 'Gelişimim'],
+    ['olcumler', 'Ölçümlerim'],
+    ['paketim', 'Paketim'],
+    ['randevular', 'Randevularım'],
+    ['belgeler', 'Belgelerim'],
+    ['mesajlar', 'Mesajlar'],
+    ['ayarlar', 'Ayarlar'],
+  ] as [string, string][]
+).filter(([k]) => sunucuAcik || !['belgeler', 'mesajlar'].includes(k));
 
 let olaylar = false;
 function uygulama() {
   if (!olaylar) {
     olaylar = true;
     addEventListener('hashchange', () => kayit && ciz());
-    document.addEventListener('visibilitychange', () => {
+    if (sunucuAcik) document.addEventListener('visibilitychange', () => {
       if (!document.hidden && kayit && (!kayit.alindi || Date.now() - kayit.alindi > 60_000)) void guncelle().then(() => cizSessiz());
     });
-    setInterval(() => {
-      if (!document.hidden && kayit) void guncelle().then(() => cizSessiz());
-    }, 5 * 60_000);
+    if (sunucuAcik)
+      setInterval(() => {
+        if (!document.hidden && kayit) void guncelle().then(() => cizSessiz());
+      }, 5 * 60_000);
   }
   ciz();
 }
@@ -369,8 +550,9 @@ function ciz() {
     ortaKart(h('h1', null, 'Takibim'), h('p', null, 'Bilgileriniz alınamadı. İnternet bağlantınızı kontrol edip sayfayı yenileyin.'));
     return;
   }
-  const bolum = location.hash.slice(1) || 'ozet';
-  if (kayit.riza !== takibimRizaSurumu && bolum !== 'ayarlar' && !kayit.kapali) return rizaYenileEkrani();
+  const istenen = location.hash.slice(1) || 'ozet';
+  const bolum = MENU.some(([k]) => k === istenen) ? istenen : 'ozet';
+  if (sunucuAcik && kayit.riza !== takibimRizaSurumu && bolum !== 'ayarlar' && !kayit.kapali) return rizaYenileEkrani();
   const n = okunmamis();
   const menu = h(
     'nav',
@@ -407,6 +589,20 @@ function sonrakiRandevu() {
     .sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))[0];
 }
 
+function sonOlcumKutusu() {
+  const son = veri()
+    .olcumler.filter((o) => o.kaynak !== 'ev')
+    .sort((a, b) => a.tarih.localeCompare(b.tarih))
+    .at(-1);
+  return h(
+    'a',
+    { class: 'kart gosterge tiklanir', href: '#olcumler' },
+    h('span', { class: 'etiket' }, 'Son Ölçümüm'),
+    h('span', { class: 'deger kucuk' }, son ? tarih(son.tarih) : 'Henüz yok'),
+    son?.kilo !== undefined ? h('span', { class: 'alt' }, `${sayi(son.kilo, 1)} kg`) : null,
+  );
+}
+
 function ozet(): Node[] {
   const v = veri();
   const r = sonrakiRandevu();
@@ -430,13 +626,15 @@ function ozet(): Node[] {
         h('span', { class: 'deger kucuk' }, r ? `${tarih(r.tarih)} · ${r.saat}` : 'Planlı randevu yok'),
         r ? h('span', { class: 'alt' }, turAdi(r.tur)) : null,
       ),
-      h(
-        'a',
-        { class: 'kart gosterge tiklanir', href: '#mesajlar' },
-        h('span', { class: 'etiket' }, 'Mesajlar'),
-        h('span', { class: 'deger' }, String(okunmamis())),
-        h('span', { class: 'alt' }, 'okunmamış'),
-      ),
+      sunucuAcik
+        ? h(
+            'a',
+            { class: 'kart gosterge tiklanir', href: '#mesajlar' },
+            h('span', { class: 'etiket' }, 'Mesajlar'),
+            h('span', { class: 'deger' }, String(okunmamis())),
+            h('span', { class: 'alt' }, 'okunmamış'),
+          )
+        : sonOlcumKutusu(),
     ),
     tumOlcumler().length ? h('h2', { class: 'ara-baslik' }, 'Başlangıçtan Bu Yana') : null,
     tumOlcumler().length ? degisimKartlari(tumOlcumler(), v.danisan.hedefKilo) : null,
@@ -649,7 +847,17 @@ function ayarlar(): Node[] {
   const pinVar = Boolean(pinAnahtari);
   return [
     baslik('Ayarlar'),
-    kart(
+    !sunucuAcik
+      ? kart(
+          'Bilgilerimi Güncelle',
+          h('p', null, kayit!.alindi ? `Son güncelleme: ${tarihSaat(kayit!.alindi)}` : ''),
+          h(
+            'p',
+            null,
+            'Yeni ölçümlerinizden sonra diyetisyeniniz WhatsApp’tan bir güncelleme bağlantısı gönderir; bağlantıya dokunduğunuzda bilgileriniz burada güncellenir. Bağlantı yalnızca bu telefonda ve bu tarayıcıda çalışır. Siteye her girişinizde menüdeki “Takibim” ile kendi bilgilerinizi görürsünüz.',
+          ),
+        )
+      : kart(
       'Bilgilerimi Yenile',
       h('p', null, kayit!.alindi ? `Son güncelleme: ${tarihSaat(kayit!.alindi)}` : ''),
       h(
@@ -731,13 +939,44 @@ function ayarlar(): Node[] {
         { class: 'hint' },
         'Haklarınız ve başvuru yolları: ',
         h('a', { href: portalBelgeleri.aydinlatma.yol, target: '_blank', rel: 'noopener' }, 'KVKK Aydınlatma Metni'),
-        ' · ',
-        h('a', { href: portalBelgeleri.acikRiza.yol, target: '_blank', rel: 'noopener' }, 'Açık Rıza Metni'),
-        ' · ',
-        h('a', { href: portalBelgeleri.kosullar.yol, target: '_blank', rel: 'noopener' }, 'Kullanım Koşulları'),
+        sunucuAcik ? ' · ' : null,
+        sunucuAcik ? h('a', { href: portalBelgeleri.acikRiza.yol, target: '_blank', rel: 'noopener' }, 'Açık Rıza Metni') : null,
+        sunucuAcik ? ' · ' : null,
+        sunucuAcik ? h('a', { href: portalBelgeleri.kosullar.yol, target: '_blank', rel: 'noopener' }, 'Kullanım Koşulları') : null,
       ),
     ),
-    kart(
+    sunucuAcik
+      ? null
+      : kart(
+          'Bilgilerimi Sil',
+          h(
+            'p',
+            null,
+            'Takibim bilgileriniz yalnızca bu telefonda saklanır; başka bir yerde kopyası yoktur. Silerseniz, tekrar görmek için diyetisyeninizden yeni QR kodu isteyin. Klinikteki danışmanlık kayıtlarınız bundan etkilenmez.',
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'btn btn-tehlike btn-sm',
+              onclick: async () => {
+                const ok = await pencere({
+                  baslik: 'Bu Telefondaki Bilgileri Sil',
+                  tehlikeli: true,
+                  kaydet: 'Sil',
+                  icerik: h('p', null, 'Takibim bilgileriniz ve evde girdiğiniz ölçümler bu telefondan silinsin mi? Bu işlem geri alınamaz.'),
+                });
+                if (!ok) return;
+                yerelSil();
+                ortaKart(h('h1', null, 'Bilgileriniz Silindi'), h('p', null, 'Takibim bilgileriniz bu telefondan silindi.'), h('p', null, h('a', { href: '/' }, 'Ana sayfaya dön')));
+              },
+            },
+            'Bu Telefondaki Bilgileri Sil',
+          ),
+        ),
+    !sunucuAcik
+      ? null
+      : kart(
       'Takibi Kapat',
       h(
         'p',
@@ -790,13 +1029,14 @@ function ayarlar(): Node[] {
         ),
       ),
     ),
-  ];
+  ].filter(Boolean) as Node[];
 }
 
 // ================================================================ Başlangıç
 
 async function baslat() {
   const parca = location.hash;
+  if (!sunucuAcik) return qrBaslat(parca);
   const tur = parcaTuru(parca);
   if (tur) {
     // Anahtar adres çubuğunda kalmasın
@@ -818,9 +1058,28 @@ async function baslat() {
   uygulama();
 }
 
+/** Sunucusuz düzen: kayıt yalnızca bu telefonda; adreste QR / bağlantı varsa işlenir */
+async function qrBaslat(parca: string) {
+  const tur = qrParcaTuru(parca);
+  // Bilgiler adres çubuğunda ve tarayıcı geçmişinde kalmasın
+  if (tur) history.replaceState(null, '', location.pathname);
+  try {
+    localStorage.getItem(ANAHTAR);
+  } catch {
+    return ortaKart(h('h1', null, 'Takibim'), h('p', null, 'Bu tarayıcıda bilgiler kaydedilemiyor (gizli sekme olabilir). Takibim\'i normal bir sekmede açın.'));
+  }
+  const s = okuSaklanan();
+  if (s?.kilit) return pinEkrani(s, tur ? () => qrIle(parca, tur) : undefined);
+  if (s?.acik) kayit = s.acik;
+  if (tur) return qrIle(parca, tur);
+  if (!kayit) return tanitimEkrani();
+  if (!location.hash) history.replaceState(null, '', '#ozet');
+  uygulama();
+}
+
 // Sayfa açıkken yeni bir QR/bağlantı açılırsa (aynı sekmede) yeniden başlat
 addEventListener('hashchange', () => {
-  if (parcaTuru(location.hash)) location.reload();
+  if (sunucuAcik ? parcaTuru(location.hash) : qrParcaTuru(location.hash)) location.reload();
 });
 
 void baslat();

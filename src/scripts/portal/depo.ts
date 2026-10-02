@@ -40,6 +40,12 @@ export interface Danisan {
   belgeler: TakipBelge[];
   notlar: { id: string; tarih: number; metin: string }[];
   takip: TakipDurumu | null;
+  /** Sunucusuz Takibim: QR'ın son gösterildiği / bağlantının son gönderildiği zaman */
+  qrPaylasim?: number;
+  /** Sunucusuz Takibim: danışana özel güncelleme anahtarı (ilk QR ile telefonuna geçer) */
+  takibimAnahtar?: string;
+  /** Sunucusuz Takibim: son güncelleme bağlantısının gönderildiği zaman */
+  guncellemeGonderim?: number;
 }
 
 export interface Randevu {

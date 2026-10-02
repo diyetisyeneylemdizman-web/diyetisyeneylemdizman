@@ -1,7 +1,7 @@
 ---
 // Randevu talebi: 3 adımda (görüşme → takvimden tarih ve saat → bilgiler) hazırlanır.
-// ŞU ANKİ DÜZEN (takibimAcik = false): talep her zaman hazır bir WhatsApp mesajı olarak gönderilir; sunucuya gitmez.
-// - takibimAcik = true ve diyetisyen paneli sunucuya bağlıysa talep ziyaretçinin tarayıcısında diyetisyenin açık anahtarıyla şifrelenir ve
+// ŞU ANKİ DÜZEN (sunucuAcik = false, src/data/portal.ts): talep her zaman hazır bir WhatsApp mesajı olarak gönderilir; sunucuya gitmez.
+// - sunucuAcik = true ve diyetisyen paneli sunucuya bağlıysa talep ziyaretçinin tarayıcısında diyetisyenin açık anahtarıyla şifrelenir ve
 //   panele iletilir (sunucu içeriği okuyamaz; panel talebi aldığında sunucudan silinir). Onay WhatsApp'tan bildirilir.
 // - Panel bağlı değilse veya iletim başarısız olursa talep, hazır bir WhatsApp mesajı olarak gönderilir.
 // Tarih ve saat "tercih"tir; randevu onaylandıktan sonra kesinleşir.
@@ -11,7 +11,7 @@ import PageHero from '../components/PageHero.astro';
 import Icon from '../components/Icon.astro';
 import { serviceOptions } from '../data/services';
 import { site } from '../data/site';
-import { takibimAcik } from '../data/portal';
+import { sunucuAcik } from '../data/portal';
 
 const takvim = JSON.stringify({ hours: site.hours, closed: site.closedDates, ahead: site.bookingDaysAhead });
 const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -24,7 +24,7 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
   <PageHero
     title="Randevu Talebi Oluştur"
     eyebrow="Yüz Yüze veya Online"
-    lead={takibimAcik
+    lead={sunucuAcik
       ? 'Görüşme türünü seçin, takvimden size uygun gün ve saati işaretleyin; talebiniz diyetisyene iletilir ve randevunuz onaylandığında WhatsApp üzerinden bilgilendirilirsiniz.'
       : 'Görüşme türünü seçin, takvimden size uygun gün ve saati işaretleyin; talebiniz hazır bir mesaj olarak WhatsApp üzerinden iletilir.'}
     crumbs={[{ label: 'Randevu Talebi Oluştur' }]}
@@ -32,7 +32,7 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
   <section class="section">
     <div class="container booking">
-      <form class="card booking-form" id="randevu-formu" novalidate data-booking data-wa={site.whatsappNumber} data-takvim={takvim} data-panel={takibimAcik ? '1' : '0'}>
+      <form class="card booking-form" id="randevu-formu" novalidate data-booking data-wa={site.whatsappNumber} data-takvim={takvim} data-panel={sunucuAcik ? '1' : '0'}>
         <p class="request-note">
           <Icon name="info" size={20} />
           <span
@@ -236,7 +236,7 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
           <ol class="mini-steps">
             <li><span>1</span>Görüşme türü ve konu seçilir.</li>
             <li><span>2</span>Takvimden tercih edilen gün ve saat işaretlenir.</li>
-            <li><span>3</span>{takibimAcik ? 'Bilgiler yazılır ve talep gönderilir.' : 'Bilgiler yazılır ve WhatsApp’taki hazır mesaj gönderilir.'}</li>
+            <li><span>3</span>{sunucuAcik ? 'Bilgiler yazılır ve talep gönderilir.' : 'Bilgiler yazılır ve WhatsApp’taki hazır mesaj gönderilir.'}</li>
             <li><span>4</span>Randevu WhatsApp üzerinden onaylanır ve kesinleşir.</li>
           </ol>
         </div>
@@ -906,7 +906,7 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const modAyarla = (panel: boolean) => {
       for (const el of document.querySelectorAll<HTMLElement>('[data-booking] [data-mod]')) el.hidden = el.dataset.mod !== (panel ? 'panel' : 'wa');
     };
-    // Takibim/sunucu özellikleri kapalıyken (src/data/portal.ts → takibimAcik) sunucuya hiç istek gönderilmez
+    // Sunucu özellikleri kapalıyken (src/data/portal.ts → sunucuAcik) sunucuya hiç istek gönderilmez
     if (form.dataset.panel === '1')
       fetch('/api/portal/durum', { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))

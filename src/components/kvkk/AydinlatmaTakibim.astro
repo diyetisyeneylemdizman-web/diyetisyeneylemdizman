@@ -1,5 +1,5 @@
 ---
-// KVKK aydınlatma metninin içeriği — Takibim ve şifreli randevu kutusu AÇIKKEN (src/data/portal.ts → takibimAcik = true).
+// KVKK aydınlatma metninin içeriği — sunuculu Takibim ve şifreli randevu kutusu AÇIKKEN (src/data/portal.ts → takibimKipi = 'sunucu').
 // Açmadan önce hukukçu kontrolü ve yurt dışı aktarım (KVKK md. 9) değerlendirmesi gerekir.
 import { site, fullAddress } from '../../data/site';
 import { portalBelgeleri, sinirlar } from '../../data/portal';
@@ -221,7 +221,7 @@ import { portalBelgeleri, sinirlar } from '../../data/portal';
 <p>
   Haklarınıza ilişkin taleplerinizi, Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebliğ’e uygun olarak;{' '}
   {fullAddress} adresine yazılı olarak, kayıtlı elektronik posta (KEP) adresi, güvenli elektronik imza veya mobil imza
-  ile ya da daha önce bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden
+  ile ya da daha önce bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden{' '}
   <a href={`mailto:${site.email}`}>{site.email}</a> adresine iletebilirsiniz. Başvurularınız, talebin niteliğine göre en
   kısa sürede ve en geç otuz gün içinde ücretsiz olarak sonuçlandırılır; işlemin ayrıca bir maliyet gerektirmesi
   hâlinde Kişisel Verileri Koruma Kurulunca belirlenen tarifedeki ücret alınabilir.

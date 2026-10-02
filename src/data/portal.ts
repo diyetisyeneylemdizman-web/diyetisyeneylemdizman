@@ -3,22 +3,34 @@
 // KVKK metinleri değiştiğinde ilgili "surum" ve "guncelleme" değerleri güncellenmelidir. Takibim'i kullanan danışan,
 // açık rıza sürümü değiştiğinde güncel metni telefonunda yeniden onaylar.
 
+export type TakibimKipi = 'qr' | 'sunucu' | 'kapali';
+
 /**
- * Takibim ve panele düşen şifreli randevu talepleri (sunucu özellikleri).
- * - false (şu anki düzen): Hiçbir danışan verisi internet sitesinin sunucusuna gönderilmez. Randevu talepleri WhatsApp
- *   ile gelir ve diyetisyen panele elle (mesajı yapıştırarak) ekler; danışan kayıtları yalnızca diyetisyenin
- *   bilgisayarında durur. Takibim kapalıdır, /api/portal/* adresleri çalışmaz.
- * - true: Takibim ve panele düşen randevu talepleri açılır (uçtan uca şifreli, sitenin sunucusu üzerinden). Açmadan önce
- *   hukukçu görüşü alınmalı ve KVKK metinleri bu özelliklere göre güncellenmelidir (README → "Takibim'i açmak").
+ * Takibim (danışanın ölçümlerini kendi telefonunda gördüğü sayfa) nasıl çalışır?
+ * - 'qr' (şu anki düzen): Hiçbir danışan verisi internet sitesinin sunucusuna gönderilmez. Danışan kayıtları yalnızca
+ *   diyetisyenin bilgisayarında durur. Ölçümden sonra panel bir QR kodu gösterir; ölçümler QR'ın içindedir ve danışanın
+ *   telefonuna doğrudan geçer (adresin "#" sonrası tarayıcıdan sunucuya gitmez), yalnızca o telefonda saklanır.
+ *   Online danışana aynı bilgiler 6 haneli kodla şifreli bir bağlantı olarak WhatsApp'tan gönderilir.
+ *   Randevu talepleri WhatsApp ile gelir; diyetisyen panele mesajı yapıştırarak ekler. /api/portal/* çalışmaz.
+ * - 'sunucu': Uçtan uca şifreli sunucu kutusu (telefon kendiliğinden güncellenir, belge ve mesaj gönderilir; randevu
+ *   talepleri şifreli olarak panele düşer, bildirim gelir). Şifreli veri sitenin barındırıldığı sunucuda (yurt dışı)
+ *   durur: açmadan önce hukukçu görüşü alınmalıdır (README → "Sunuculu Takibim'i açmak").
+ * - 'kapali': Takibim yok (menüde düğme görünmez).
  */
-export const takibimAcik = false;
+export const takibimKipi = 'qr' as TakibimKipi;
+
+/** Sunucu özellikleri: /api/portal/*, şifreli randevu kutusu, sunuculu Takibim, bildirimler, belgeler, mesajlar */
+export const sunucuAcik = takibimKipi === 'sunucu';
+
+/** Takibim sayfası ve menüdeki "Takibim" düğmesi */
+export const takibimGorunur = takibimKipi !== 'kapali';
 
 export const portalBelgeleri = {
   aydinlatma: {
     baslik: 'KVKK Aydınlatma Metni',
     yol: '/kvkk-aydinlatma-metni/',
-    surum: '3',
-    guncelleme: '2026-10-01',
+    surum: '4',
+    guncelleme: '2026-10-02',
   },
   acikRiza: {
     baslik: 'Takibim İçin Açık Rıza Metni',

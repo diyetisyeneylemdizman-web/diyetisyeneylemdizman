@@ -4,7 +4,7 @@
 //   /api/reels               → son Reels videolarının listesi (JSON)
 //   /api/reels/gorsel/<id>   → videonun önizleme görseli (sitemizden sunulur)
 //   /api/portal/*            → randevu talepleri, diyetisyen paneli bağlantısı ve Takibim (uçtan uca şifreli)
-//                              — ayrıntılar: worker/portal/store.ts. Şu an KAPALI (src/data/portal.ts → takibimAcik).
+//                              — ayrıntılar: worker/portal/store.ts. Yalnızca takibimKipi = 'sunucu' iken çalışır (src/data/portal.ts).
 //
 // Nasıl çalışır?
 // - Her 3 saatte bir (wrangler.jsonc → triggers) Instagram hesabındaki son videolar Instagram API'den alınır,
@@ -18,7 +18,7 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { PortalStore, type PortalEnv } from './portal/store';
-import { takibimAcik } from '../src/data/portal';
+import { sunucuAcik } from '../src/data/portal';
 
 export { PortalStore };
 
@@ -241,8 +241,8 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/api/portal/')) {
-      // Takibim kapalıyken (src/data/portal.ts → takibimAcik) bu adresler hiç çalışmaz; sunucuya danışan verisi gelmez.
-      if (!takibimAcik) return Response.json({ hata: 'Bulunamadı.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
+      // Sunuculu Takibim kapalıyken (src/data/portal.ts → sunucuAcik) bu adresler hiç çalışmaz; sunucuya danışan verisi gelmez.
+      if (!sunucuAcik) return Response.json({ hata: 'Bulunamadı.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
       return portalRequest(request, env);
     }
     if (request.method === 'GET' || request.method === 'HEAD') {
@@ -256,7 +256,7 @@ export default {
 
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(store(env).sync().then((r) => console.log('Reels eşitleme:', r)));
-    // Takibim kapalıyken de çalışır: önceki deneme sürümünden kalan tabloları siler, boş tabloları temizler.
+    // Sunucu özellikleri kapalıyken de çalışır: önceki deneme sürümünden kalan tabloları siler, boş tabloları temizler.
     ctx.waitUntil(portal(env).cron().then((r) => console.log('Panel temizliği:', r)));
   },
 } satisfies ExportedHandler<Env>;

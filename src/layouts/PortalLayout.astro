@@ -5,7 +5,7 @@ import '@fontsource-variable/manrope';
 import '../styles/global.css';
 import '../styles/portal.css';
 import { site } from '../data/site';
-import { portalBelgeleri, takibimAcik } from '../data/portal';
+import { portalBelgeleri, sunucuAcik } from '../data/portal';
 
 interface Props {
   title: string;
@@ -53,7 +53,7 @@ const year = new Date().getFullYear();
           {`© ${year} ${site.name}`}{' · '}
           <a href={portalBelgeleri.aydinlatma.yol} target="_blank" rel="noopener">{portalBelgeleri.aydinlatma.baslik}</a>
           {
-            takibimAcik && (
+            sunucuAcik && (
               <>
                 {' · '}
                 <a href={portalBelgeleri.acikRiza.yol} target="_blank" rel="noopener">Açık Rıza Metni</a>
