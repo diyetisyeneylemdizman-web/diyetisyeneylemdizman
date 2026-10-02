@@ -10,6 +10,7 @@ derlenip yayına alınır.
 | --- | --- |
 | Telefon, adres, e-posta, çalışma saatleri, sosyal medya | `src/data/site.ts` |
 | Hizmet alanları, alt başlıklar ve açıklamaları (Hizmetler sayfası, ana sayfa kartları, randevu formundaki konu listesi; `randevu: false` olan madde sayfada görünür ama randevu bağlantısı olmaz ve konu listesine girmez) | `src/data/services.ts` |
+| Paketler sayfası: paket adları, kapsamları, süre ve görüşme sayıları (ücret yazılmaz; “Bilgi Almak İstiyorum” düğmesi paket adıyla WhatsApp'ı açar) | `src/data/packages.ts` |
 | Blog yazıları | `src/content/blog/*.md` (her dosya bir yazı) |
 | Sertifika görselleri | `src/assets/sertifikalar/` klasörüne jpg/png eklenir (kimlik no gibi kişisel veriler önceden gizlenmeli) |
 | Sertifika başlıkları, grupları ve sırası | `src/data/certificates.ts` (listede olmayan görseller “Diğer Belgeler” altında çıkar; sitede gösterilmeyecek bir belge, `src/pages/index.astro` ve `src/pages/sertifikalar.astro` içindeki listeye `!` ile eklenir) |
@@ -28,7 +29,7 @@ derlenip yayına alınır.
 
 ## Sayfalar
 
-Ana sayfa · Hakkında · Sertifikalar · Hizmetler · Vücut Kitle İndeksi Hesaplama · Online Görüşme · Blog & Reels ·
+Ana sayfa · Hakkında · Sertifikalar · Hizmetler · Paketler · Vücut Kitle İndeksi Hesaplama · Online Görüşme · Blog & Reels ·
 İletişim · Randevu Talebi Oluştur (3 adım: görüşme → takvimden tercih edilen tarih ve saat → bilgiler; WhatsApp mesajı olarak gönderilir, randevu onaydan sonra kesinleşir) ·
 KVKK Aydınlatma Metni
 
@@ -95,6 +96,8 @@ yapılmış olsa bile, yasaklıyor.
   (AES-256-GCM, PBKDF2 600.000 tur) durur. Bölümler: Özet · Randevu Talepleri · Randevular · Danışanlar (ekle, düzenle,
   sil) · danışan dosyası (Ölçümler, Takibim, Paket, Randevular, Bilgiler ve Notlar) · Duyuru · Paketler · Ayarlar. Panel 30
   dakika işlem yapılmazsa kilitlenir ve aynı anda tek sekmede açılır.
+- **Paketler (panel):** “Sitedeki Paketleri Ekle” düğmesi Paketler sayfasındaki paketleri (ör. “Kilo Yönetimi – 3 Ay (12
+  Görüşme)”, süre 90 gün) hazır tanım olarak ekler; ücret alanı yalnızca panelde, diyetisyen için tutulur.
 - **Vücut analizi PDF'i:** Tanita MC-780 raporu danışan dosyasına sürüklenince değerler (kilo, yağ, kas, yağsız kütle,
   su, iç yağ, bazal metabolizma, metabolik yaş, bel, BKİ, kol/bacak/gövde segmental değerleri) ve cihazın ölçüm geçmişi
   otomatik okunur (`src/scripts/portal/tanita.ts`, tarayıcıda pdf.js ile; PDF hiçbir yere yüklenmez). PDF'teki ad
@@ -150,8 +153,7 @@ gönderme (uçtan uca şifreli), randevu formunun talebi şifreli olarak doğrud
 ### Yasal kontrol listesi
 
 - [ ] KVKK aydınlatma metni bir hukukçu tarafından gözden geçirildi.
-- [ ] Paket fiyatlarının sitede gösterimi Sağlık Hizmetlerinde Tanıtım ve Bilgilendirme Faaliyetleri Hakkında
-      Yönetmelik açısından değerlendirildi.
+- [x] Paket ücretleri sitede gösterilmez (Tanıtım Yönetmeliği md. 5/1-m); ücret danışana birebir iletilir.
 
 ### Kural: her yenilikte KVKK teyidi
 

@@ -5,9 +5,9 @@ import { takibimGorunur } from '../data/portal';
 
 const path = Astro.url.pathname;
 const isActive = (href: string) => path === href || path.startsWith(href);
-// Takibim (danışanın ölçümlerini telefonundan izlediği sayfa) menüde Hizmetler'in hemen yanında yer alır
+// Takibim (danışanın ölçümlerini telefonundan izlediği sayfa) menüde Hizmetler ve Paketler'in hemen yanında yer alır
 const menu: { label: string; href: string; title?: string }[] = takibimGorunur
-  ? nav.flatMap((item) => (item.href === '/hizmetler/' ? [item, { label: 'Takibim', href: '/takibim/' }] : [item]))
+  ? nav.flatMap((item) => (item.href === '/paketler/' ? [item, { label: 'Takibim', href: '/takibim/' }] : [item]))
   : nav;
 ---
 
@@ -275,6 +275,15 @@ const menu: { label: string; href: string; title?: string }[] = takibimGorunur
     text-decoration: none;
   }
 
+  /* Menüde 9 bağlantı var: dar masaüstü ekranlarda yazı ve aralık biraz küçülür */
+  @media (max-width: 1460px) {
+    .main-nav ul {
+      gap: clamp(12px, 1.15vw, 18px);
+    }
+    .main-nav a {
+      font-size: 0.9rem;
+    }
+  }
   @media (max-width: 1300px) {
     .main-nav {
       display: none;

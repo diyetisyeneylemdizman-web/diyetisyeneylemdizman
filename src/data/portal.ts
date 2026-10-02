@@ -29,7 +29,7 @@ export const portalBelgeleri = {
   aydinlatma: {
     baslik: 'KVKK Aydınlatma Metni',
     yol: '/kvkk-aydinlatma-metni/',
-    surum: '5',
+    surum: '6',
     guncelleme: '2026-10-02',
   },
   acikRiza: {

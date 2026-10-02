@@ -4,8 +4,11 @@ import PageHero from '../components/PageHero.astro';
 import Icon from '../components/Icon.astro';
 import CtaBand from '../components/CtaBand.astro';
 import { serviceAreas, servicesIntro, servicesCta } from '../data/services';
+import { paketGruplari } from '../data/packages';
 
 const randevu = (name: string) => `/randevu-olustur/?hizmet=${encodeURIComponent(name)}#randevu-formu`;
+// Hizmet alanının paketi varsa bölüm başlığının altında Paketler sayfasına bağlantı gösterilir
+const paketi = (alan: string) => paketGruplari.find((p) => p.alan === alan);
 ---
 
 <BaseLayout
@@ -59,6 +62,11 @@ const randevu = (name: string) => `/randevu-olustur/?hizmet=${encodeURIComponent
               </div>
               <h2>{a.title}</h2>
               {!introInBody && a.intro?.map((p) => <p>{p}</p>)}
+              {paketi(a.id) && (
+                <a href={`/paketler/#${paketi(a.id)!.id}`} class="link-arrow paket-link">
+                  Paketleri incele <Icon name="arrowRight" size={17} />
+                </a>
+              )}
             </header>
 
             <div class="area-body">
@@ -190,6 +198,9 @@ const randevu = (name: string) => `/randevu-olustur/?hizmet=${encodeURIComponent
   }
   .area-head p {
     color: var(--ink-2);
+  }
+  .paket-link {
+    margin-top: 6px;
   }
   .item-grid {
     display: grid;

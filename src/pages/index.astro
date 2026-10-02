@@ -153,6 +153,7 @@ const homeAreas = serviceAreas.filter((a) => a.home);
       </div>
       <div class="center-link">
         <a href="/hizmetler/" class="btn btn-outline">Tüm Hizmetleri İnceleyin <Icon name="arrowRight" size={18} /></a>
+        <a href="/paketler/" class="btn btn-sage">Paketleri İnceleyin <Icon name="arrowRight" size={18} /></a>
       </div>
     </div>
   </section>
@@ -566,7 +567,9 @@ const homeAreas = serviceAreas.filter((a) => a.home);
   }
   .center-link {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+    gap: 12px;
     margin-top: 40px;
   }
 

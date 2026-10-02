@@ -12,6 +12,7 @@
 import qrcode from 'qrcode-generator';
 import { fullAddress, site } from '../../data/site';
 import { hedefSecenekleri, randevuDurumlari, sinirlar, sunucuAcik, takibimGorunur, takibimKipi, takibimRizaSurumu, type RandevuDurumu } from '../../data/portal';
+import { paketGruplari, paketSecenekleri } from '../../data/packages';
 import { Depo, ParolaHatasi, type Danisan, type PaketTanimi, type Randevu } from './depo';
 import { gelisimGorunumu, olcumSirala, olcumTablosu } from './gelisim';
 import {
@@ -2432,7 +2433,20 @@ function duyuru(): Node[] {
 
 // ================================================================ Paketler
 
+/** Sitedeki Paketler sayfasında yer alan paketler (panelde hazır tanım olarak eklenebilir; ücret alanı boş gelir) */
+const sitePaketleri = () =>
+  paketGruplari.flatMap((g) =>
+    (g.secenekler ?? paketSecenekleri).map((s) => ({ ad: `${g.kisa} – ${s.ay} Ay (${s.gorusme} Görüşme)`, gorusme: s.gorusme, gun: s.ay * 30 })),
+  );
+
 function paketler(): Node[] {
+  const adlar = new Set(V().paketler.map((p) => p.ad));
+  const eksik = sitePaketleri().filter((p) => !adlar.has(p.ad));
+  const sitedenEkle = async () => {
+    for (const p of eksik) V().paketler.push({ id: kimlik(), ...p, aktif: true });
+    await depo!.kaydet();
+    ciz();
+  };
   const duzenle = async (p?: PaketTanimi) => {
     await pencere({
       baslik: p ? 'Paketi Düzenle' : 'Yeni Paket',
@@ -2475,7 +2489,12 @@ function paketler(): Node[] {
     ciz();
   };
   return [
-    bolumBasligi('Paketler', 'Danışan dosyasında paket seçerken kullanılan hazır tanımlar.', dugme('Yeni Paket', () => duzenle(), 'btn btn-primary btn-sm')),
+    bolumBasligi(
+      'Paketler',
+      'Danışan dosyasında paket seçerken kullanılan hazır tanımlar. Ücret yalnızca burada, sizin için tutulur; sitede ve Takibim\'de görünmez.',
+      eksik.length ? dugme(`Sitedeki Paketleri Ekle (${eksik.length})`, sitedenEkle) : null,
+      dugme('Yeni Paket', () => duzenle(), 'btn btn-primary btn-sm'),
+    ),
     kart(
       null,
       V().paketler.length

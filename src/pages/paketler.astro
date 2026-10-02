@@ -1,0 +1,405 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import CtaBand from '../components/CtaBand.astro';
+import { site, whatsappLink } from '../data/site';
+import { takibimGorunur } from '../data/portal';
+import { paketGruplari, paketSecenekleri, paketlerGiris, paketMesaji, secenekAdi } from '../data/packages';
+
+// Takibim kapalıysa "Takibim sayfası" maddesi gösterilmez
+const tumPaketlerde = paketlerGiris.tumPaketlerde.filter((m) => takibimGorunur || !m.includes('Takibim'));
+---
+
+<BaseLayout
+  title="Paketler"
+  description="Kilo yönetimi, metabolik ve hormonal sağlık, sindirim sistemi, besin alerjisi, deri sağlığı, kalp-damar sağlığı ve yaşam dönemlerinde beslenme için 1, 2 ve 3 aylık yüz yüze veya online danışmanlık paketleri."
+>
+  <PageHero
+    title="Paketler"
+    eyebrow={paketlerGiris.eyebrow}
+    lead="Hizmet alanlarına göre 1, 2 ve 3 aylık beslenme danışmanlığı paketleri. Görüşmeler yüz yüze veya online yapılabilir."
+    crumbs={[{ label: 'Paketler' }]}
+  >
+    <nav class="cat-nav" aria-label="Paketler">
+      {
+        paketGruplari.map((g) => (
+          <a href={`#${g.id}`} class="chip">
+            <Icon name={g.icon} size={16} />
+            {g.kisa}
+          </a>
+        ))
+      }
+    </nav>
+  </PageHero>
+
+  <section class="section-sm intro">
+    <div class="container">
+      <div class="section-head center">
+        <p class="eyebrow">Paketler Hakkında</p>
+        <h2>{paketlerGiris.baslik}</h2>
+        {paketlerGiris.paragraflar.map((p) => <p>{p}</p>)}
+      </div>
+      <div class="intro-grid">
+        <div class="intro-card reveal">
+          <h3><Icon name="check" size={20} />Tüm paketlerde</h3>
+          <ul class="ticks">
+            {
+              tumPaketlerde.map((m) => (
+                <li>
+                  <Icon name="check" size={18} />
+                  {m}
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+        <div class="intro-card reveal">
+          <h3><Icon name="whatsapp" size={20} />Nasıl bilgi alırım?</h3>
+          <ol class="adimlar">
+            {paketlerGiris.nasil.map((m) => <li>{m}</li>)}
+          </ol>
+          <p class="alternatif">
+            WhatsApp kullanmıyorsanız{' '}
+            <a href={site.phoneHref}>{site.phoneDisplay}</a> numarasını arayabilir veya{' '}
+            <a href={`mailto:${site.email}`}>{site.email}</a> adresine yazabilirsiniz.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {
+    paketGruplari.map((g, i) => {
+      const secenekler = g.secenekler ?? paketSecenekleri;
+      return (
+        <section id={g.id} class:list={['section-sm', 'area', { 'bg-paper': i % 2 === 0 }]}>
+          <div class="container area-grid">
+            <header class="area-head">
+              <div class="area-badges">
+                <span class="icon-badge">
+                  <Icon name={g.icon} size={26} />
+                </span>
+                <span class="area-no" aria-hidden="true">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+              </div>
+              <h2>{g.baslik}</h2>
+              <p class="bicim">
+                <span class="chip">
+                  <Icon name="clinic" size={15} />
+                  Yüz yüze
+                </span>
+                <span class="chip">
+                  <Icon name="video" size={15} />
+                  Online
+                </span>
+              </p>
+              <a href={`/hizmetler/#${g.alan}`} class="link-arrow">
+                Hizmet alanını incele <Icon name="arrowRight" size={17} />
+              </a>
+            </header>
+
+            <div class="area-body">
+              <div class="svc kapsam reveal">
+                <h3>Paket kapsamı</h3>
+                {g.metin && <p>{g.metin}</p>}
+                {(g.konular ?? g.liste) && (
+                  <ul class:list={['ticks', { iki: g.konular && g.konular.length > 3 }]}>
+                    {(g.konular ?? g.liste ?? []).map((k) => (
+                      <li>
+                        <Icon name="check" size={18} />
+                        {k}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <ul class="secenekler" aria-label={`${g.baslik} paket seçenekleri`}>
+                {secenekler.map((s) => (
+                  <li class="secenek reveal">
+                    <div class="secenek-bilgi">
+                      <span class="secenek-ay">
+                        <b>{s.ay}</b> Ay
+                      </span>
+                      <span class="secenek-gorusme">
+                        <Icon name="calendar" size={17} />
+                        {s.gorusme} Görüşme
+                      </span>
+                    </div>
+                    <a
+                      class="btn btn-sage btn-sm"
+                      href={whatsappLink(paketMesaji(g, s))}
+                      target="_blank"
+                      rel="noopener"
+                      aria-label={`${g.baslik}, ${secenekAdi(s)}: bilgi almak istiyorum (WhatsApp'ta açılır)`}
+                    >
+                      <Icon name="whatsapp" size={18} />
+                      Bilgi Almak İstiyorum
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      );
+    })
+  }
+
+  <section class="section-sm">
+    <div class="container-narrow">
+      <p class="note">
+        <Icon name="info" size={16} />
+        {paketlerGiris.not}
+      </p>
+    </div>
+  </section>
+
+  <CtaBand
+    title="Hangi paketin size uygun olduğundan emin değil misiniz?"
+    text="İlk görüşmede ihtiyaçlarınızı birlikte değerlendirip size uygun hizmet alanını ve süreyi belirleyelim."
+  />
+</BaseLayout>
+
+<style>
+  .cat-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 28px;
+  }
+  .cat-nav a {
+    text-decoration: none;
+    background: var(--paper);
+    border: 1px solid var(--beige);
+    padding: 0.55em 1em;
+  }
+  .cat-nav a:hover {
+    border-color: var(--sage);
+  }
+  .intro .section-head {
+    margin-bottom: 28px;
+  }
+  .intro .section-head p:not(.eyebrow) {
+    color: var(--ink-2);
+    max-width: 680px;
+    margin-inline: auto;
+  }
+  .intro-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .intro-card {
+    background: var(--ivory-soft);
+    border: 1px solid var(--beige);
+    border-radius: var(--radius-lg);
+    padding: clamp(22px, 3vw, 30px);
+  }
+  .intro-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+    margin-bottom: 14px;
+  }
+  .intro-card h3 :global(svg) {
+    color: var(--sage-700);
+  }
+  .adimlar {
+    margin: 0 0 16px;
+    padding-left: 1.3em;
+    display: grid;
+    gap: 10px;
+    color: var(--ink-2);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .adimlar li::marker {
+    color: var(--terracotta-700);
+    font-weight: 700;
+  }
+  .alternatif {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--ink-3);
+    line-height: 1.55;
+  }
+  .alternatif a {
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+  .area {
+    scroll-margin-top: calc(var(--header-h) + 8px);
+  }
+  .area-grid {
+    display: grid;
+    grid-template-columns: 0.75fr 1.25fr;
+    gap: clamp(28px, 5vw, 72px);
+    align-items: start;
+  }
+  .area-head {
+    position: sticky;
+    top: calc(var(--header-h) + 24px);
+  }
+  .area-badges {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .area-no {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--terracotta-700);
+    letter-spacing: 0.04em;
+  }
+  .area-head h2 {
+    margin-top: 18px;
+    font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+  }
+  .bicim {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 18px;
+  }
+  .svc {
+    background: var(--ivory-soft);
+    border: 1px solid var(--beige);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+  }
+  .bg-paper .svc,
+  .bg-paper .secenek {
+    background: var(--ivory);
+  }
+  .svc h3 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+  }
+  .svc p {
+    color: var(--ink-2);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0;
+  }
+  .ticks {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0 0;
+    display: grid;
+    gap: 10px;
+  }
+  .ticks.iki {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 20px;
+  }
+  .ticks li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    color: var(--ink-2);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .ticks :global(svg) {
+    flex: none;
+    margin-top: 2px;
+    color: var(--sage-700);
+  }
+  .secenekler {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0;
+    display: grid;
+    gap: 12px;
+  }
+  .secenek {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px 20px;
+    background: var(--ivory-soft);
+    border: 1px solid var(--beige);
+    border-radius: var(--radius);
+    padding: 14px 16px 14px 22px;
+    transition: border-color 0.2s ease;
+  }
+  .secenek:hover {
+    border-color: var(--sage);
+  }
+  .secenek-bilgi {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+  }
+  .secenek-ay {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--ink);
+    min-width: 3.6em;
+  }
+  .secenek-ay b {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--terracotta-700);
+  }
+  .secenek-gorusme {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink-2);
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .secenek-gorusme :global(svg) {
+    color: var(--sage-700);
+    align-self: center;
+  }
+  .note {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 0.88rem;
+    color: var(--ink-2);
+    background: var(--sage-50);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin: 0;
+  }
+  .note :global(svg) {
+    flex: none;
+    margin-top: 3px;
+    color: var(--sage-700);
+  }
+  @media (max-width: 900px) {
+    .area-grid {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .area-head {
+      position: static;
+    }
+    .intro-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 560px) {
+    .ticks.iki {
+      grid-template-columns: 1fr;
+    }
+    .secenek {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 16px;
+    }
+    .secenek .btn {
+      width: 100%;
+    }
+  }
+</style>

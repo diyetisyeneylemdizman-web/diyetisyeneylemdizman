@@ -63,6 +63,7 @@ export const nav = [
   { label: 'Hakkında', href: '/hakkinda/' },
   { label: 'Sertifikalar', href: '/sertifikalar/' },
   { label: 'Hizmetler', href: '/hizmetler/' },
+  { label: 'Paketler', href: '/paketler/' },
   { label: 'VKİ Hesaplama', href: '/vucut-kitle-indeksi-hesaplama/', title: 'Vücut Kitle İndeksi Hesaplama' },
   { label: 'Online Görüşme', href: '/online-gorusme/' },
   { label: 'Blog & Reels', href: '/blog/' },
