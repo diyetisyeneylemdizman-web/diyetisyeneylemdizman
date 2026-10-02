@@ -83,6 +83,8 @@ export interface PanelVerisi {
   randevular: Randevu[];
   paketler: PaketTanimi[];
   sonYedek?: number;
+  /** İşlem kayıtları (KVKK: özel nitelikli verilerde yapılan işlemlerin kaydı). En fazla 2 yıl / 3000 kayıt tutulur. */
+  islemler?: { t: number; ne: string }[];
 }
 
 interface Kasa {

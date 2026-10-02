@@ -453,7 +453,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
       bg: '#e3e7dd',
       fg: '#3d4636',
       text: 'VKİ değeriniz normal aralıkta. Bu aralıkta kalmak için düzenli, çeşitli ve dengeli beslenmeyi sürdürmeniz önemlidir.',
-      cta: { label: 'Sağlıklı Beslenme İçin Randevu Talebi Oluştur', hizmet: 'Sağlıklı Beslenme Alışkanlıkları', primary: false },
+      cta: { label: 'Sağlıklı Beslenme İçin Randevu Talebi Oluştur', hizmet: '', primary: false },
     },
     {
       max: 30,
@@ -594,7 +594,8 @@ const months = Array.from({ length: 12 }, (_, i) => i);
 
     const setCta = (info: Cta, extra: Record<string, string> = {}) => {
       const cta = $('[data-bmi-cta]') as HTMLAnchorElement;
-      const params = new URLSearchParams({ hizmet: info.hizmet, ...extra });
+      // hizmet boşsa konu seçilmeden açılır ("Emin değilim / Genel danışmanlık")
+      const params = new URLSearchParams({ ...(info.hizmet ? { hizmet: info.hizmet } : {}), ...extra });
       cta.href = `/randevu-olustur/?${params.toString()}#randevu-formu`;
       $('[data-bmi-cta-label]').textContent = info.label;
       cta.classList.toggle('btn-primary', info.primary);
@@ -760,7 +761,7 @@ const months = Array.from({ length: 12 }, (_, i) => i);
         $('[data-waist-text]').textContent = wr.text;
         box.hidden = false;
         if (cat.key === 'normal' && wr.key !== 'normal') {
-          cta = { label: 'Değerlendirme İçin Randevu Talebi Oluştur', hizmet: 'Yüz Yüze ve Online Danışmanlık', primary: true };
+          cta = { label: 'Değerlendirme İçin Randevu Talebi Oluştur', hizmet: '', primary: true };
         }
       }
       if (yas >= 65) {

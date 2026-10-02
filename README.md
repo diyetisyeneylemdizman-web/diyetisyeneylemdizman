@@ -9,7 +9,7 @@ derlenip yayına alınır.
 | Ne değişecek? | Dosya / klasör |
 | --- | --- |
 | Telefon, adres, e-posta, çalışma saatleri, sosyal medya | `src/data/site.ts` |
-| Hizmet alanları, alt başlıklar ve açıklamaları (Hizmetler sayfası, ana sayfa kartları, randevu formundaki konu listesi) | `src/data/services.ts` |
+| Hizmet alanları, alt başlıklar ve açıklamaları (Hizmetler sayfası, ana sayfa kartları, randevu formundaki konu listesi; `randevu: false` olan madde sayfada görünür ama randevu bağlantısı olmaz ve konu listesine girmez) | `src/data/services.ts` |
 | Blog yazıları | `src/content/blog/*.md` (her dosya bir yazı) |
 | Sertifika görselleri | `src/assets/sertifikalar/` klasörüne jpg/png eklenir (kimlik no gibi kişisel veriler önceden gizlenmeli) |
 | Sertifika başlıkları, grupları ve sırası | `src/data/certificates.ts` (listede olmayan görseller “Diğer Belgeler” altında çıkar; sitede gösterilmeyecek bir belge, `src/pages/index.astro` ve `src/pages/sertifikalar.astro` içindeki listeye `!` ile eklenir) |
@@ -115,6 +115,15 @@ yapılmış olsa bile, yasaklıyor.
 - Menü: "Takibim" ana menüde Hizmetler'in yanında (menü 1300 px altında hamburgere geçer). Üst bantta "Yönetim Girişi"
   (`/yonetim/`) ve yalnızca simge olarak telefon.
 - `/api/portal/*` adresleri kapalıdır (404).
+
+- **Bir sonraki randevu:** Danışan dosyası → Ölçümler → "Bir Sonraki Randevuyu Ekle" (QR Göster'in altında; tarih
+  önerisi 2 hafta sonrası, saat/tür son randevudan). Randevu onaylı eklenir, aynı gün ve saatte başka randevu varsa
+  engellenir. Takibim'i olan danışana randevu ve güncel ölçümler tek WhatsApp mesajıyla (`sonrakiRandevu` şablonu,
+  güncelleme bağlantılı) gider; olmayana randevu onay mesajı ve "QR Göster" seçeneği. Takibim'de "Sonraki Randevum".
+- **KVKK için panelde:** İşlem kayıtları (Ayarlar → İşlem Kayıtları; 2 yıl, CSV indirilebilir), saklama süreleri
+  (danışana dönüşmeyen talepler 1 yıl sonra kendiliğinden silinir; son işlemi 10 yılı geçen danışanlar Ayarlar →
+  Saklama Süreleri'nde listelenir), Duyuru'da ticari ileti / İYS uyarısı. Süreler KVKK metniyle aynı tutulmalıdır
+  (`yonetim.ts` → `DANISAN_SAKLAMA`, `TALEP_SAKLAMA`, `ISLEM_SURESI`).
 
 ### Kurulum (bir kez)
 

@@ -7,7 +7,8 @@
 //   summary  Ana sayfa kartındaki kısa açıklama
 //   intro    Bölümün giriş paragrafları
 //   items    Alt başlıklar (her biri bir kart). "name" randevu formunda, site asistanında ve bağlantılarda kullanılan
-//            addır; "title" verilmezse kartta da bu ad görünür.
+//            addır; "title" verilmezse kartta da bu ad görünür. "randevu: false" olan madde Hizmetler sayfasında
+//            görünür ama altında "Randevu Talebi Oluştur" bağlantısı olmaz ve randevu formundaki konu listesine girmez.
 //   list     Madde listesi (alt başlığı olmayan alanlarda)
 //   outro    Listeden sonra gelen paragraf
 //   note     Hekim takibi gibi bilgilendirme notu (açık renkli kutuda gösterilir)
@@ -16,11 +17,13 @@
 // Hizmet adı değişirse şu yerler de kontrol edilmeli: blog yazılarındaki "relatedService", src/data/assistant.ts
 // (serviceKeywords, serviceNotes), src/components/Footer.astro (featured), src/components/BmiCalculator.astro.
 
-export type IconName = 'consult' | 'scale' | 'drop' | 'gut' | 'shield' | 'sparkle' | 'heart' | 'dumbbell' | 'bloom';
+export type IconName = 'consult' | 'scale' | 'drop' | 'gut' | 'shield' | 'sparkle' | 'heart' | 'bloom';
 
 export type AreaItem = {
   name: string;
   slug: string;
+  /** false: randevu bağlantısı yok, randevu formunda seçilemez (her danışmanlığın parçası olan maddeler) */
+  randevu?: false;
   title?: string;
   text?: string;
   list?: string[];
@@ -43,7 +46,7 @@ export type ServiceArea = {
   name?: string;
 };
 
-export type Service = { name: string; slug: string; description: string; area: string };
+export type Service = { name: string; slug: string; description: string; area: string; /** Randevu formunda seçilebilir mi */ secilebilir: boolean };
 
 export const servicesIntro = {
   eyebrow: 'Beslenme Danışmanlığı ve Hizmet Alanları',
@@ -66,26 +69,31 @@ export const serviceAreas: ServiceArea[] = [
     items: [
       {
         name: 'Yüz Yüze ve Online Danışmanlık',
+        randevu: false,
         slug: 'yuz-yuze-ve-online-danismanlik',
         text: 'Yüz yüze veya online birebir görüşme.',
       },
       {
         name: 'Beslenme Planı Oluşturma',
+        randevu: false,
         slug: 'beslenme-plani-olusturma',
         text: 'Yaşam düzenine, besin tercihlerine ve sağlık ihtiyaçlarına uygun planlama.',
       },
       {
         name: 'Sağlıklı Beslenme Alışkanlıkları',
+        randevu: false,
         slug: 'saglikli-beslenme-aliskanliklari',
         text: 'Günlük yaşamda sürdürülebilecek öğün ve besin seçimleri üzerinde çalışma.',
       },
       {
         name: 'Beslenme Takibi',
+        randevu: false,
         slug: 'beslenme-takibi',
         text: 'Kontrollerde ilerlemenin değerlendirilmesi ve planın ihtiyaçlara göre güncellenmesi.',
       },
       {
         name: 'Vücut Bileşimi Takibi',
+        randevu: false,
         slug: 'vucut-bilesimi-takibi',
         text: 'Uygun olduğunda ölçüm sonuçlarının süreç takibinde değerlendirilmesi.',
       },
@@ -262,28 +270,6 @@ export const serviceAreas: ServiceArea[] = [
     ],
   },
   {
-    id: 'sporcu-beslenmesi',
-    title: 'Sporcu ve Aktif Yaşam Beslenmesi',
-    short: 'Sporcu Beslenmesi',
-    name: 'Sporcu Beslenmesi',
-    icon: 'dumbbell',
-    home: true,
-    summary: 'Spor dalına, antrenman sıklığına ve hedeflere göre planlanan; performans ve toparlanma sürecini destekleyen beslenme.',
-    intro: [
-      'Spor yapan kişilerin beslenme gereksinimleri; yapılan spor dalı, antrenman sıklığı, hedefler ve günlük yaşam düzenine göre değişir.',
-    ],
-    list: [
-      'Antrenman günlerinde öğün düzeni',
-      'Antrenman öncesi ve sonrası beslenme',
-      'Sıvı ve besin alımının değerlendirilmesi',
-      'Performans ve toparlanma sürecini destekleyen beslenme planı',
-      'Kas kütlesi artırma veya vücut kompozisyonu hedefleri',
-      'Yarışma veya yoğun antrenman dönemlerine yönelik planlama',
-    ],
-    outro:
-      'Sporcu beslenmesi kapsamında takviye kullanımı da kişinin sağlık durumu, kullandığı ilaçlar ve ihtiyaçları gözetilerek değerlendirilir.',
-  },
-  {
     id: 'yasam-donemlerinde-beslenme',
     title: 'Yaşam Dönemlerinde Beslenme',
     short: 'Yaşam Dönemlerinde Beslenme',
@@ -328,10 +314,12 @@ const listText = (list: string[]) =>
   `${list.map((x) => (/^(Hashimoto|SIBO|IBS)/.test(x) ? x : x.charAt(0).toLocaleLowerCase('tr') + x.slice(1))).join(', ')}.`;
 
 /** Randevu formunda seçilebilen hizmetler (alan → seçenekler) */
-export const serviceOptions = serviceAreas.map((a) => ({
-  group: a.short,
-  names: a.items ? a.items.map((i) => i.name) : [a.name ?? a.short],
-}));
+export const serviceOptions = serviceAreas
+  .map((a) => ({
+    group: a.short,
+    names: a.items ? a.items.filter((i) => i.randevu !== false).map((i) => i.name) : [a.name ?? a.short],
+  }))
+  .filter((g) => g.names.length);
 
 /** Tüm hizmetler düz liste hâlinde: site asistanı, alt bilgi ve bağlantılar için */
 export const allServices: Service[] = serviceAreas.flatMap((a) =>
@@ -340,6 +328,7 @@ export const allServices: Service[] = serviceAreas.flatMap((a) =>
         name: i.name,
         slug: i.slug,
         area: a.id,
+        secilebilir: i.randevu !== false,
         description: join(
           i.text ?? join(...(a.intro ?? []), a.outro),
           i.list ? (i.text?.endsWith(':') ? listText(i.list) : `Kapsam: ${listText(i.list)}`) : undefined,
@@ -351,6 +340,7 @@ export const allServices: Service[] = serviceAreas.flatMap((a) =>
           name: a.name ?? a.short,
           slug: a.id,
           area: a.id,
+          secilebilir: true,
           description: join(...(a.intro ?? []), a.list ? `Kapsam: ${listText(a.list)}` : undefined, a.outro, a.note),
         },
       ],

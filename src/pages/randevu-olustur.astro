@@ -204,6 +204,10 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
             WhatsApp’ta <strong>Gönder</strong>’e basmanız yeterli. Seçtiğiniz tarih ve saat bir tercihtir; randevunuz
             WhatsApp üzerinden onaylandıktan sonra kesinleşir.
           </p>
+          <p class="after-note alternatif" data-mod="wa">
+            WhatsApp kullanmak istemiyorsanız <a href={site.phoneHref}>{site.phoneDisplay}</a> numarasını arayabilir veya{' '}
+            <a href={`mailto:${site.email}`}>{site.email}</a> adresine yazabilirsiniz.
+          </p>
           <p class="after-note" data-mod="panel" hidden>
             Talebiniz doğrudan diyetisyene iletilir. Seçtiğiniz tarih ve saat bir tercihtir; randevunuz onaylandığında
             WhatsApp üzerinden size bilgi verilir.
@@ -715,6 +719,13 @@ const weekdays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     font-size: 0.84rem;
     color: var(--ink-3);
     text-align: center;
+  }
+  .after-note.alternatif {
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+  }
+  .after-note.alternatif a {
+    color: inherit;
   }
   .request-note,
   .confirm-note {

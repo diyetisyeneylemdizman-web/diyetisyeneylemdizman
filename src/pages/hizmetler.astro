@@ -10,7 +10,7 @@ const randevu = (name: string) => `/randevu-olustur/?hizmet=${encodeURIComponent
 
 <BaseLayout
   title="Hizmetler"
-  description="Beslenme danışmanlığı ve takip, kilo yönetimi, metabolik ve hormonal sağlık, sindirim sistemi, besin alerjisi ve intoleranslar, deri sağlığı, kalp-damar sağlığı, sporcu beslenmesi ve yaşam dönemlerinde beslenme."
+  description="Beslenme danışmanlığı ve takip, kilo yönetimi, metabolik ve hormonal sağlık, sindirim sistemi, besin alerjisi ve intoleranslar, deri sağlığı, kalp-damar sağlığı ve yaşam dönemlerinde beslenme."
 >
   <PageHero
     title="Hizmetler"
@@ -84,9 +84,11 @@ const randevu = (name: string) => `/randevu-olustur/?hizmet=${encodeURIComponent
                           {it.note}
                         </p>
                       )}
-                      <a href={randevu(it.name)} class="link-arrow">
-                        Randevu Talebi Oluştur <Icon name="arrowRight" size={17} />
-                      </a>
+                      {it.randevu !== false && (
+                        <a href={randevu(it.name)} class="link-arrow">
+                          Randevu Talebi Oluştur <Icon name="arrowRight" size={17} />
+                        </a>
+                      )}
                     </article>
                   ))}
                 </div>

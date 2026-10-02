@@ -111,7 +111,7 @@ export const topics: Topic[] = [
     id: 'hizmetler',
     chip: true,
     q: 'Hangi konularda destek alabilirim?',
-    a: 'Beslenme danışmanlığı ve takip, kilo yönetimi, metabolik ve hormonal sağlık (diyabet, insülin direnci, PMOS, tiroid hastalıkları gibi), sindirim sistemi ve bağırsak sağlığı, besin alerjisi ve intoleranslar, deri sağlığı, kalp-damar sağlığı ve gut, sporcu beslenmesi ile gebelik, emzirme, çocukluk ve menopoz gibi yaşam dönemlerinde beslenme konularında danışmanlık verilmektedir.',
+    a: 'Beslenme danışmanlığı ve takip, kilo yönetimi, metabolik ve hormonal sağlık (diyabet, insülin direnci, PMOS, tiroid hastalıkları gibi), sindirim sistemi ve bağırsak sağlığı, besin alerjisi ve intoleranslar, deri sağlığı, kalp-damar sağlığı ve gut ile gebelik, emzirme, çocukluk ve menopoz gibi yaşam dönemlerinde beslenme konularında danışmanlık verilmektedir.',
     actions: ['sayfa:/hizmetler/', 'randevu'],
     k: ['hizmet', 'konular', 'hangi konu', 'neler yapıyor', 'diyet yap', 'diyet program', 'diyetler', 'diyetleri', 'hangi diyet', 'beslenme danışman', 'danışmanlık', 'program', 'hangi hastalık'],
   },
@@ -269,7 +269,6 @@ export const serviceKeywords: Record<string, string[]> = {
   'Kolesterol ve Kan Yağları Yüksekliğinde Beslenme': ['kolesterol', 'trigliserit', 'kan yağ', 'ldl'],
   'Kalp-Damar Hastalıklarında Beslenme': ['kalp', 'damar', 'koroner', 'stent', 'bypass'],
   'Gut Hastalığında Beslenme': ['gut', 'ürik asit', 'pürin'],
-  'Sporcu Beslenmesi': ['spor', 'sporcu', 'antrenman', 'fitness', 'kas kütle', 'kas yap', 'performans', 'maraton', 'vücut geliştirme'],
   'Gebelikte Beslenme': ['gebe', 'hamile', 'gebelik', 'bebek bekli'],
   'Emzirme Döneminde Beslenme': ['emzir', 'lohusa', 'anne sütü', 'doğum sonrası'],
   'Çocuk ve Ergen Beslenmesi': ['çocuk', 'çocuğum', 'oğlum', 'kızım', 'bebek', 'ek gıda', 'okul çağı', 'ergen'],
@@ -315,7 +314,7 @@ export const actionDefs: Record<'randevu' | 'online' | 'whatsapp' | 'telefon' | 
 export function resolveAction(
   tag: string,
   pages: Record<string, string> = assistantPages,
-  services: string[] = allServices.map((s) => s.name),
+  services: string[] = allServices.filter((s) => s.secilebilir).map((s) => s.name),
 ): ResolvedAction | null {
   const t = tag.trim();
   if (Object.prototype.hasOwnProperty.call(actionDefs, t)) return actionDefs[t as keyof typeof actionDefs];

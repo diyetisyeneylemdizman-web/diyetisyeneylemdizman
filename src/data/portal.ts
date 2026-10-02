@@ -29,7 +29,7 @@ export const portalBelgeleri = {
   aydinlatma: {
     baslik: 'KVKK Aydınlatma Metni',
     yol: '/kvkk-aydinlatma-metni/',
-    surum: '4',
+    surum: '5',
     guncelleme: '2026-10-02',
   },
   acikRiza: {
@@ -70,7 +70,6 @@ export const hedefSecenekleri = [
   'Kilomu korumak',
   'Sağlıklı beslenme alışkanlıkları',
   'Hastalıkta beslenme desteği',
-  'Sporcu beslenmesi',
   'Gebelik veya emzirme döneminde beslenme',
   'Diğer',
 ];

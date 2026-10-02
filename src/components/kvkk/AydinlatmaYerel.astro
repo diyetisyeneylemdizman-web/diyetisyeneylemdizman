@@ -1,14 +1,21 @@
 ---
 // KVKK aydınlatma metninin içeriği — şu anki düzen (src/data/portal.ts → takibimKipi 'qr' veya 'kapali'):
-// randevu talepleri WhatsApp ile gelir, danışan kayıtları yalnızca diyetisyenin bilgisayarında şifreli durur,
-// internet sitesinin sunucusuna danışan verisi gönderilmez. Takibim (takibimKipi = 'qr') açıksa danışanın özeti QR kodu
-// ile doğrudan danışanın telefonuna aktarılır ve yalnızca orada saklanır (2.3 ve ilgili maddeler).
+// randevu talepleri WhatsApp (veya telefon / e-posta) ile gelir, danışan kayıtları yalnızca diyetisyenin bilgisayarında
+// şifreli durur, internet sitesinin sunucusuna danışan verisi gönderilmez. Takibim (takibimKipi = 'qr') açıksa danışanın
+// özeti QR kodu / şifreli bağlantı ile doğrudan danışanın telefonuna aktarılır ve yalnızca orada saklanır.
+//
+// 6698 sayılı KVKK md. 10 ve Aydınlatma Yükümlülüğünün Yerine Getirilmesinde Uyulacak Usul ve Esaslar Hakkında Tebliğ'e
+// göre: veri sorumlusu, amaçlar, aktarım (kime / hangi amaçla), toplama yöntemi ve hukuki sebep, md. 11 hakları. Açık rıza
+// bu metinde istenmez (aydınlatma ile açık rıza aynı metinde olmamalıdır).
+// Paneldeki saklama süreleri (src/scripts/portal/yonetim.ts → DANISAN_SAKLAMA, TALEP_SAKLAMA, ISLEM_SURESI) bu metinle
+// aynı tutulmalıdır.
 import { site, fullAddress } from '../../data/site';
 import { sinirlar, takibimGorunur } from '../../data/portal';
 ---
 
 <p>
-  Bu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) uyarınca;
+  Bu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) ve Aydınlatma Yükümlülüğünün Yerine
+  Getirilmesinde Uyulacak Usul ve Esaslar Hakkında Tebliğ uyarınca;
   <strong>{site.url.replace('https://', '')}</strong> internet sitesini ziyaret eden, randevu talebi ileten, beslenme
   danışmanlığı hizmeti alan{takibimGorunur && <> ve isteğe bağlı <strong>Takibim</strong> sayfasını kullanan</>} kişileri,
   kişisel verilerinin işlenmesi hakkında bilgilendirmek amacıyla hazırlanmıştır.
@@ -22,18 +29,19 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
 </p>
 
 <h2>2. İşlenen kişisel veriler ve toplanma yöntemleri</h2>
-<h3>2.1. İnternet sitesi</h3>
+<h3>2.1. İnternet sitesi ve iletişim</h3>
 <ul>
   <li id="randevu">
     <strong>Randevu formu:</strong> ad soyad, telefon numarası, görüşme türü, ilgilendiğiniz konu, tercih ettiğiniz gün
     ve saat, isteğe bağlı olarak yazdığınız not ve (eklemeyi seçerseniz) vücut kitle indeksi sonucunuz. Form bilgileri
     sitemizin sunucusuna <strong>gönderilmez ve kaydedilmez</strong>; cihazınızda hazır bir WhatsApp mesajına
-    dönüştürülür ve mesajı siz gönderdiğinizde tarafımıza ulaşır.
+    dönüştürülür ve mesajı siz gönderdiğinizde tarafımıza ulaşır. WhatsApp kullanmak istemezseniz randevu talebinizi
+    telefonla veya e-postayla da iletebilirsiniz.
   </li>
   <li>
     <strong>Vücut kitle indeksi hesaplayıcı:</strong> Girdiğiniz cinsiyet, boy, kilo, yaş, bel çevresi ve gebelik
     bilgileri yalnızca cihazınızda hesaplama için kullanılır; hiçbir yere gönderilmez ve kaydedilmez. VKİ sonucunuzu
-    randevu talebinize eklemeyi seçerseniz bu bilgi, gönderdiğiniz WhatsApp mesajıyla tarafımıza ulaşır.
+    randevu talebinize eklemeyi seçerseniz bu bilgi, gönderdiğiniz mesajla tarafımıza ulaşır.
   </li>
   <li id="asistan">
     <strong>Site asistanı:</strong> Asistana yazdığınız sorular ve seçtiğiniz konular yalnızca cihazınızda
@@ -41,10 +49,13 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
     Sohbet geçmişi yalnızca tarayıcınızda, sekmeyi kapatana kadar (en fazla 3 saat) tutulur. Asistan yapay zekâ
     kullanmaz, kişisel sağlık değerlendirmesi yapmaz; genel bilgi verir.
   </li>
-  <li><strong>Doğrudan iletişim:</strong> telefon, WhatsApp veya e-posta yoluyla paylaştığınız bilgiler.</li>
+  <li>
+    <strong>Doğrudan iletişim:</strong> telefon, WhatsApp, e-posta veya Instagram yoluyla ilettiğiniz bilgiler.
+  </li>
   <li>
     <strong>Teknik veriler:</strong> sitenin barındırıldığı altyapı sağlayıcısı tarafından güvenlik ve sitenin size
-    ulaştırılması amacıyla işlenebilen IP adresi, tarayıcı bilgisi ve erişim kayıtları.
+    ulaştırılması amacıyla işlenebilen IP adresi, tarayıcı bilgisi ve erişim kayıtları. Sitede reklam veya ziyaretçi
+    takibi amaçlı araç kullanılmaz.
   </li>
 </ul>
 
@@ -60,14 +71,19 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
     danışmanlık notları.
   </li>
   <li><strong>Müşteri işlem bilgileri:</strong> randevu ve paket bilgileri, ödeme notları.</li>
+  <li><strong>İşlem güvenliği bilgileri:</strong> diyetisyen panelinde yapılan işlemlerin kayıtları (tarih ve işlem).</li>
 </ul>
 <p>
-  Bu bilgiler görüşmelerde sizin tarafınızdan iletilir, klinikteki ölçüm cihazıyla elde edilir veya WhatsApp üzerinden
-  gönderdiğiniz randevu talebinden diyetisyen tarafından aktarılır. Kayıtlar diyetisyen panelinde,
-  <strong>yalnızca diyetisyenin kendi bilgisayarında ve parolayla şifrelenmiş olarak</strong> tutulur; internet
-  sitesinin sunucusuna veya herhangi bir bulut hizmetine gönderilmez. Vücut analizi cihazının raporu (PDF) da
-  diyetisyenin bilgisayarında okunur ve hiçbir yere yüklenmez. Bilgisayarın arızalanmasına karşı alınan yedekler de
-  aynı parolayla şifrelidir ve diyetisyenin kendi cihazlarında saklanır. Sitede ve panelde banka veya kredi kartı
+  Bu bilgiler; görüşmelerde sizin tarafınızdan sözlü veya yazılı olarak, klinikteki vücut analizi cihazıyla ve
+  randevu talebinizi ilettiğiniz kanal (WhatsApp, telefon, e-posta) aracılığıyla, kısmen otomatik (ölçüm cihazı ve
+  diyetisyen paneli) kısmen otomatik olmayan yollarla toplanır. 18 yaşından küçük danışanların bilgileri veli veya
+  vasileri aracılığıyla ve onların bilgisi dahilinde alınır.
+</p>
+<p>
+  Kayıtlar diyetisyen panelinde, <strong>yalnızca diyetisyenin kendi bilgisayarında ve parolayla şifrelenmiş olarak</strong>
+  tutulur; internet sitesinin sunucusuna veya herhangi bir bulut hizmetine gönderilmez. Vücut analizi cihazının raporu
+  (PDF) da diyetisyenin bilgisayarında okunur ve hiçbir yere yüklenmez. Bilgisayarın arızalanmasına karşı alınan yedekler
+  de aynı parolayla şifrelidir ve diyetisyenin kendi cihazlarında saklanır. Sitede ve panelde banka veya kredi kartı
   bilgisi alınmaz.
 </p>
 {
@@ -82,9 +98,10 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
       <ul>
         <li>
           Adınız, cinsiyetiniz, boyunuz, hedef kilonuz, ölçüm sonuçlarınız (vücut haritası ve ölçüm geçmişi dahil), paket
-          bilgileriniz ve randevularınız <strong>QR kodunun içinde doğrudan telefonunuza aktarılır</strong> ve yalnızca
-          telefonunuzun tarayıcısında saklanır. Bu bilgiler sitenin sunucusuna veya üçüncü kişilere gönderilmez: QR
-          kodundaki bilgiler adresin “#” işaretinden sonraki bölümündedir ve tarayıcılar bu bölümü sunucuya iletmez.
+          bilgileriniz ve randevularınız (planlanan bir sonraki randevunuz dahil) <strong>QR kodunun içinde doğrudan
+          telefonunuza aktarılır</strong> ve yalnızca telefonunuzun tarayıcısında saklanır. Bu bilgiler sitenin sunucusuna
+          veya üçüncü kişilere gönderilmez: QR kodundaki bilgiler adresin “#” işaretinden sonraki bölümündedir ve
+          tarayıcılar bu bölümü sunucuya iletmez.
         </li>
         <li>
           <strong>Hastalık, ilaç, alerji bilgileriniz, ödeme notları ve diyetisyenin danışmanlık notları Takibim’e
@@ -95,70 +112,85 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
           gönderilir; kod size görüşmede sözlü olarak söylenir. Bağlantı, kod olmadan açılamaz.
         </li>
         <li>
-          QR kodu bir kez okutulur. Sonraki ölçümlerinizden sonra güncel bilgileriniz WhatsApp üzerinden bir güncelleme
-          bağlantısı olarak gönderilir. Bağlantıdaki bilgiler, ilk QR okutmada telefonunuza kaydedilen size özel bir
-          anahtarla şifrelidir; bağlantı yalnızca o telefonda açılır.
+          QR kodu bir kez okutulur. Sonraki ölçümlerinizden ve randevu planlamasından sonra güncel bilgileriniz WhatsApp
+          üzerinden bir güncelleme bağlantısı olarak gönderilir. Bağlantıdaki bilgiler, ilk QR okutmada telefonunuza
+          kaydedilen size özel bir anahtarla şifrelidir; bağlantı yalnızca o telefonda açılır.
         </li>
         <li>
           Takibim’e evde girdiğiniz ölçümler ve isteğe bağlı PIN yalnızca telefonunuzda kalır; diyetisyene veya başka bir
-          yere gönderilmez.
+          yere gönderilmez. 18 yaşından küçük danışanlar için Takibim, veli veya vasinin telefonunda açılır.
         </li>
       </ul>
     </>
   )
 }
 
-<h2>3. Kişisel verilerin işlenme amaçları</h2>
+<h2>3. İşleme amaçları ve hukuki sebepler</h2>
+<p>Kişisel verileriniz aşağıdaki amaçlarla ve her amacın yanında belirtilen hukuki sebebe dayanılarak işlenir:</p>
 <ul>
-  <li>Randevu taleplerinizin alınması, planlanması, randevunun onaylanması ve hatırlatılması,</li>
-  <li>Soru ve taleplerinizin yanıtlanması,</li>
-  <li>Beslenme danışmanlığı hizmetinin sunulması; kişiye özel beslenme planının hazırlanması ve sürecin takibi,</li>
-  {takibimGorunur && <li>Takibim’i kullanmayı seçmeniz hâlinde ölçüm sonuçlarınızın ve sürecinizin size iletilmesi,</li>}
-  <li>Paket ve ödeme süreçlerinin yürütülmesi,</li>
-  <li>Bilgi güvenliğinin sağlanması,</li>
-  <li>Hukuki yükümlülüklerin yerine getirilmesi ve olası uyuşmazlıklarda hakların korunması.</li>
-</ul>
-
-<h2>4. Hukuki sebepler</h2>
-<p>Kişisel verileriniz KVKK’nın 5. maddesinin 2. fıkrasında yer alan;</p>
-<ul>
-  <li>“bir sözleşmenin kurulması veya ifasıyla doğrudan ilgili olması” (randevu talebi ve danışmanlık hizmeti),</li>
-  <li>“veri sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi için zorunlu olması”,</li>
-  <li>“bir hakkın tesisi, kullanılması veya korunması için veri işlemenin zorunlu olması” ve</li>
   <li>
-    “ilgili kişinin temel hak ve özgürlüklerine zarar vermemek kaydıyla, veri sorumlusunun meşru menfaatleri için veri
-    işlenmesinin zorunlu olması” (bilgi güvenliği)
+    <strong>Randevu taleplerinin alınması, planlanması, onaylanması ve hatırlatılması:</strong> kimlik, iletişim ve
+    randevu bilgileriniz KVKK’nın 5. maddesinin 2. fıkrasındaki “bir sözleşmenin kurulması veya ifasıyla doğrudan
+    doğruya ilgili olması” hukuki sebebine; talebinizde belirttiğiniz konu ve VKİ sonucu gibi sağlık verileriniz ise
+    KVKK’nın 6. maddesinin 3. fıkrasındaki “…tıbbi teşhis, tedavi ve bakım hizmetlerinin yürütülmesi… amacıyla, sır
+    saklama yükümlülüğü altında bulunan kişiler… tarafından işlenmesi” hukuki sebebine dayanır.
+  </li>
+  <li>
+    <strong>Beslenme danışmanlığı hizmetinin sunulması</strong> (değerlendirme, kişiye özel beslenme planı, ölçüm ve süreç
+    takibi{takibimGorunur && ', Takibim ile sonuçlarınızın size iletilmesi'}): sağlık verileriniz aynı hukuki sebebe (KVKK
+    md. 6/3, sır saklama yükümlülüğü altındaki kişilerce tıbbi teşhis, tedavi ve bakım hizmetlerinin yürütülmesi); kimlik
+    ve iletişim bilgileriniz md. 5/2’deki “sözleşmenin kurulması veya ifası” hukuki sebebine dayanır.
+    Diyetisyen, sır saklama yükümlülüğü altındaki bir sağlık meslek mensubudur.
+  </li>
+  <li>
+    <strong>Paket, ödeme ve fatura işlemlerinin yürütülmesi:</strong> “sözleşmenin kurulması veya ifası” ve “veri
+    sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi için zorunlu olması” (vergi mevzuatı).
+  </li>
+  <li>
+    <strong>Soru ve taleplerinizin yanıtlanması, sizinle iletişim kurulması:</strong> “sözleşmenin kurulması veya ifası”
+    ve “ilgili kişinin temel hak ve özgürlüklerine zarar vermemek kaydıyla, veri sorumlusunun meşru menfaatleri için veri
+    işlenmesinin zorunlu olması”.
+  </li>
+  <li>
+    <strong>Bilgi güvenliğinin sağlanması</strong> (panel işlem kayıtları, sitenin güvenliği ve teknik veriler): “veri
+    sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi için zorunlu olması” (KVKK md. 12, veri güvenliği) ve “veri
+    sorumlusunun meşru menfaatleri için veri işlenmesinin zorunlu olması”.
+  </li>
+  <li>
+    <strong>Hukuki yükümlülüklerin yerine getirilmesi ve olası uyuşmazlıklarda hakların korunması:</strong> “kanunlarda
+    açıkça öngörülmesi”, “hukuki yükümlülük” ve “bir hakkın tesisi, kullanılması veya korunması için veri işlemenin zorunlu
+    olması” (KVKK md. 5/2 ve md. 6/3).
   </li>
 </ul>
-<p>hukuki sebeplerine dayanılarak işlenir.</p>
 <p>
-  Sağlık verileriniz KVKK’nın 6. maddesi kapsamında; beslenme danışmanlığı hizmeti kapsamında (randevu talebinde
-  belirttiğiniz konu ve VKİ sonucu dahil), sır saklama yükümlülüğü altındaki sağlık meslek mensubu tarafından tedavi ve
-  bakım hizmetlerinin planlanması ve yürütülmesi amacıyla işlenir.{
-    takibimGorunur && ' Takibim kapsamında ölçüm sonuçlarınızın kendi telefonunuza aktarılması da bu hizmetin parçasıdır.'
-  }{' '}
-  Randevu talebinizde ayrıntılı sağlık bilgisi paylaşmamanızı öneririz; bu bilgiler görüşmede ele alınır.
+  Kişisel verileriniz açık rızaya dayalı olarak işlenmez; reklam, pazarlama veya profil çıkarma amacıyla kullanılmaz.
+  Randevu talebinizde ve mesajlarınızda ayrıntılı sağlık bilgisi paylaşmamanızı öneririz; bu bilgiler görüşmede ele
+  alınır.
 </p>
 
-<h2>5. Kişisel verilerin aktarılması</h2>
+<h2>4. Kişisel verilerin aktarılması</h2>
 <ul>
   <li>
     <strong>Danışan kayıtları</strong> (sağlık verileri dahil) üçüncü kişilere ve yurt dışına aktarılmaz; yalnızca
-    diyetisyenin bilgisayarında bulunur.{
-      takibimGorunur && ' Takibim’i kullanmayı seçerseniz özetiniz yalnızca sizin telefonunuza aktarılır.'
-    }
+    diyetisyenin bilgisayarında bulunur.{takibimGorunur && ' Takibim’i kullanmayı seçerseniz özetiniz yalnızca sizin telefonunuza aktarılır.'}
   </li>
   <li>
-    <strong>Barındırma hizmeti:</strong> İnternet sitesi Cloudflare, Inc. (ABD) altyapısında barındırılır. Siteyi ziyaret
-    ettiğinizde IP adresi ve tarayıcı bilgisi gibi teknik veriler, bu altyapı sağlayıcısı tarafından güvenlik ve sitenin
-    size ulaştırılması amacıyla işlenebilir. Randevu formu bilgileri, danışan kayıtları{takibimGorunur && ' ve Takibim bilgileri'}{' '}
-    bu altyapıya gönderilmez.
+    <strong>Yurt içi:</strong> Kanunen yetkili kamu kurum ve kuruluşlarına ve yargı mercilerine, talep edilmesi hâlinde ve
+    talep ile sınırlı olarak; fatura işlemleri için gerekli olduğu ölçüde (ad soyad ve fatura bilgileri, sağlık verisi
+    hariç) mali müşavire.
   </li>
   <li>
-    <strong>WhatsApp:</strong> Randevu talebi, randevu onayı ve hatırlatma gibi mesajlar WhatsApp üzerinden iletilir.
-    WhatsApp üzerinden ilettiğiniz ve size iletilen mesajlar, WhatsApp hizmet sağlayıcısının kendi gizlilik politikası
-    kapsamında işlenir ve yurt dışında bulunan sunucularda barındırılabilir. WhatsApp mesajlarında ayrıntılı sağlık
-    bilgisi paylaşılmaz.{
+    <strong>Barındırma hizmeti (yurt dışı):</strong> İnternet sitesi Cloudflare, Inc. (ABD) altyapısında barındırılır.
+    Siteyi ziyaret ettiğinizde IP adresi ve tarayıcı bilgisi gibi teknik veriler, bu altyapı sağlayıcısı tarafından
+    güvenlik ve sitenin size ulaştırılması amacıyla işlenebilir. Randevu formu bilgileri, danışan
+    kayıtları{takibimGorunur && ' ve Takibim bilgileri'}{' '}bu altyapıya gönderilmez.
+  </li>
+  <li>
+    <strong>WhatsApp, e-posta ve Instagram (yurt dışı):</strong> Bu kanallar yalnızca sizin tercih etmeniz hâlinde, randevu
+    ve iletişim amacıyla kullanılır. Bu kanallardan ilettiğiniz ve size iletilen mesajlar ilgili hizmet sağlayıcıların
+    (WhatsApp, Google e-posta hizmeti, Instagram) kendi gizlilik politikaları kapsamında işlenir ve yurt dışındaki
+    sunucularda barındırılabilir. Bu kanallarla ayrıntılı sağlık bilgisi paylaşılmaz; dilerseniz telefonla veya yüz yüze
+    iletişimi tercih edebilirsiniz.{
       takibimGorunur &&
         ' Takibim bağlantıları şifrelidir: ilk bağlantı 6 haneli kodla açılır (kod WhatsApp mesajıyla gönderilmez), güncelleme bağlantıları ise yalnızca telefonunuzdaki size özel anahtarla açılır.'
     }
@@ -167,32 +199,27 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
     <strong>Google Haritalar:</strong> Ana sayfadaki ve İletişim sayfasındaki harita, yalnızca “Haritayı Göster”
     butonuna bastığınızda Google tarafından yüklenir.
   </li>
-  <li>
-    <strong>Yurt içi:</strong> Talep hâlinde yetkili kamu kurum ve kuruluşlarına ve hukuken yetkili kişilere; ödeme ve
-    fatura işlemleri için gerekli olduğu ölçüde mali müşavire.
-  </li>
 </ul>
-<p>Kişisel verileriniz reklam veya pazarlama amacıyla üçüncü kişilerle paylaşılmaz.</p>
+<p>Kişisel verileriniz satılmaz, reklam veya pazarlama amacıyla üçüncü kişilerle paylaşılmaz.</p>
 
-<h2>6. Saklama süreleri</h2>
+<h2>5. Saklama süreleri</h2>
 <ul>
   <li>Randevu formu, VKİ hesaplayıcı ve site asistanı bilgileri sitede saklanmaz.</li>
   <li>
-    Danışan kayıtları, danışmanlık ilişkisi süresince ve sonrasında ilgili mevzuatın öngördüğü saklama süreleri ile
-    olası uyuşmazlıklardaki zamanaşımı süreleri boyunca saklanır; süre sonunda silinir veya anonim hâle getirilir.
+    Danışana dönüşmeyen randevu talepleri en fazla 1 yıl saklanır ve diyetisyen panelinden kendiliğinden silinir.
+    WhatsApp ve e-posta yazışmaları, iletişim amacı sona erdikten sonra en geç 1 yıl içinde silinir.
   </li>
-  {
-    takibimGorunur && (
-      <li>
-        Takibim bilgileri yalnızca telefonunuzda, siz silene kadar saklanır; Takibim → Ayarlar bölümünden dilediğiniz
-        zaman silebilirsiniz.
-      </li>
-    )
-  }
-  <li>Ödeme ve fatura kayıtları, vergi ve ticaret mevzuatındaki süreler boyunca saklanır.</li>
+  <li>
+    Danışan kayıtları, danışmanlık ilişkisi süresince ve olası uyuşmazlıklardaki zamanaşımı süreleri gözetilerek son
+    işlemden itibaren en fazla 10 yıl saklanır; süre sonunda silinir veya anonim hâle getirilir.
+  </li>
+  <li>Ödeme ve fatura kayıtları, vergi mevzuatında öngörülen süre boyunca (Vergi Usul Kanunu uyarınca 5 yıl) saklanır.</li>
+  <li>Diyetisyen panelinin işlem kayıtları 2 yıl, şifreli yedek dosyaları en fazla 1 yıl saklanır.</li>
+  {takibimGorunur && <li>Takibim bilgileri yalnızca telefonunuzda, siz silene kadar saklanır; Takibim → Ayarlar bölümünden dilediğiniz zaman silebilirsiniz.</li>}
+  <li>Teknik veriler, barındırma hizmet sağlayıcısının güvenlik amacıyla öngördüğü süre boyunca tutulur.</li>
 </ul>
 
-<h2>7. Alınan güvenlik önlemleri</h2>
+<h2>6. Alınan güvenlik önlemleri</h2>
 <ul>
   <li>Sitenin tüm bağlantıları şifreli (HTTPS) olarak kurulur.</li>
   <li>
@@ -201,7 +228,7 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
   </li>
   <li>
     Diyetisyen paneli {sinirlar.panelKilitDakika} dakika işlem yapılmadığında kendini kilitler; yeniden açmak için
-    parola gerekir.
+    parola gerekir. Panelde yapılan işlemler kayıt altına alınır.
   </li>
   <li>Yedek dosyaları da şifrelidir; parola olmadan açılamaz.</li>
   {
@@ -213,15 +240,24 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
       </li>
     )
   }
+  <li>
+    Özel nitelikli kişisel veriler için Kişisel Verileri Koruma Kurulunun belirlediği yeterli önlemler doğrultusunda ayrı
+    bir veri güvenliği politikası uygulanır; kâğıt belgeler kilitli dolapta saklanır.
+  </li>
+  <li>
+    Olası bir veri ihlalinde Kişisel Verileri Koruma Kuruluna ve etkilenen kişilere mevzuatta öngörülen sürede bildirim
+    yapılır.
+  </li>
 </ul>
 
-<h2>8. Çerezler ve cihazda saklama</h2>
+<h2>7. Çerezler ve cihazda saklama</h2>
 <p>
-  Sitemizde reklam veya ziyaretçi takibi amaçlı çerez kullanılmamaktadır. Diyetisyen paneli, kayıtları yalnızca
-  diyetisyenin bilgisayarındaki tarayıcı depolama alanında şifreli olarak tutar.{
-    takibimGorunur && ' Takibim de bilgilerinizi yalnızca telefonunuzdaki tarayıcı depolama alanında tutar.'
+  Sitemizde reklam veya ziyaretçi takibi amaçlı çerez kullanılmamaktadır. Site asistanının sohbet geçmişi yalnızca
+  tarayıcınızda, sekmeyi kapatana kadar tutulur.{
+    takibimGorunur && ' Takibim, bilgilerinizi yalnızca telefonunuzdaki tarayıcı depolama alanında tutar.'
   }{' '}
-  Google Haritalar gibi üçüncü taraf
+  Diyetisyen paneli, kayıtları yalnızca diyetisyenin bilgisayarındaki tarayıcı depolama alanında şifreli olarak tutar.
+  Bunlar, istediğiniz hizmetin çalışması için zorunlu olan cihaz içi kayıtlardır. Google Haritalar gibi üçüncü taraf
   içerikleri yalnızca sizin talebinizle yüklendiğinde, ilgili hizmet sağlayıcı çerez kullanabilir.
 </p>
 <p>
@@ -230,7 +266,7 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
   orada Instagram’ın kendi gizlilik koşulları geçerlidir.
 </p>
 
-<h2>9. KVKK kapsamındaki haklarınız</h2>
+<h2>8. KVKK kapsamındaki haklarınız</h2>
 <p>KVKK’nın 11. maddesi uyarınca, veri sorumlusuna başvurarak aşağıdaki haklarınızı kullanabilirsiniz:</p>
 <ul>
   <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li>
@@ -252,16 +288,33 @@ import { sinirlar, takibimGorunur } from '../../data/portal';
   )
 }
 
-<h2>10. Başvuru</h2>
+<h2>9. Başvuru</h2>
 <p>
   Haklarınıza ilişkin taleplerinizi, Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebliğ’e uygun olarak;{' '}
   {fullAddress} adresine yazılı olarak, kayıtlı elektronik posta (KEP) adresi, güvenli elektronik imza veya mobil imza
   ile ya da daha önce bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden{' '}
-  <a href={`mailto:${site.email}`}>{site.email}</a> adresine iletebilirsiniz. Başvurularınız, talebin niteliğine göre en
-  kısa sürede ve en geç otuz gün içinde ücretsiz olarak sonuçlandırılır; işlemin ayrıca bir maliyet gerektirmesi
-  hâlinde Kişisel Verileri Koruma Kurulunca belirlenen tarifedeki ücret alınabilir.
+  <a href={`mailto:${site.email}`}>{site.email}</a> adresine iletebilirsiniz. Başvurunuzda şunlar yer almalıdır:
+</p>
+<ul>
+  <li>Ad, soyad ve başvuru yazılı ise imza,</li>
+  <li>Türkiye Cumhuriyeti vatandaşları için T.C. kimlik numarası; yabancılar için uyruk ile pasaport numarası veya varsa kimlik numarası,</li>
+  <li>Tebligata esas yerleşim yeri veya iş yeri adresi,</li>
+  <li>Varsa bildirime esas elektronik posta adresi, telefon ve faks numarası,</li>
+  <li>Talep konusu (varsa ilgili bilgi ve belgelerle birlikte).</li>
+</ul>
+<p>
+  Başvurularınız, talebin niteliğine göre en kısa sürede ve en geç otuz gün içinde ücretsiz olarak sonuçlandırılır;
+  işlemin ayrıca bir maliyet gerektirmesi hâlinde Kişisel Verileri Koruma Kurulunca belirlenen tarifedeki ücret
+  alınabilir.
 </p>
 <p>
-  Başvurunuzun reddedilmesi, verilen cevabı yetersiz bulmanız veya süresinde cevap verilmemesi hâlinde, KVKK’nın 14.
+  Başvurunuzun reddedilmesi, verilen cevabı yetersiz bulmanız veya süresinde cevap verilmemesi hâlinde; cevabı
+  öğrendiğiniz tarihten itibaren otuz gün ve her hâlde başvuru tarihinden itibaren altmış gün içinde, KVKK’nın 14.
   maddesi uyarınca Kişisel Verileri Koruma Kuruluna şikâyette bulunabilirsiniz.
+</p>
+
+<h2>10. Değişiklikler</h2>
+<p>
+  Kişisel veri işleme süreçlerinde değişiklik olduğunda bu metin güncellenir; güncel metin ve sürüm bilgisi her zaman bu
+  sayfada yayımlanır.
 </p>

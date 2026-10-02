@@ -103,6 +103,11 @@ const SABLONLAR: Record<string, { ad: string; metin: string }> = {
     metin:
       'Merhaba {ad}, yeni ölçüm sonuçlarınız hazır. Takibim sayfanızı güncellemek için bağlantıya dokunun:\n{baglanti}\n\nBağlantı yalnızca Takibim\'i açtığınız telefonda çalışır.\n\nDyt. Eylem Dizman',
   },
+  sonrakiRandevu: {
+    ad: 'Sonraki randevu + Takibim güncellemesi',
+    metin:
+      'Merhaba {ad}, bir sonraki randevunuz {gun} {tarih} saat {saat} ({tur}) olarak planlanmıştır.\n\nGüncel ölçümleriniz ve randevunuz Takibim sayfanıza eklendi; görmek için bağlantıya dokunun:\n{baglanti}\n\nDyt. Eylem Dizman',
+  },
   yeniSonuc: {
     ad: 'Yeni ölçüm bildirimi',
     metin: 'Merhaba {ad}, yeni ölçüm sonuçlarınız Takibim sayfanıza eklendi: {takibim}\n\nDyt. Eylem Dizman',
@@ -180,9 +185,49 @@ function takipEtiketi(d: Danisan) {
   return etiket('QR süresi doldu', 'pasif');
 }
 
+// ---------------------------------------------------------------- İşlem kayıtları ve saklama süreleri (KVKK)
+
+const ISLEM_SURESI = 2 * 365 * 86_400_000;
+/** Danışan kaydının, son işlemden sonra en fazla saklanacağı süre (KVKK aydınlatma metniyle aynı: 10 yıl) */
+const DANISAN_SAKLAMA = 10 * 365 * 86_400_000;
+/** Danışana dönüşmeyen randevu talepleri ve kayıtsız kişilerin randevuları: 1 yıl */
+const TALEP_SAKLAMA = 365 * 86_400_000;
+
+/** Panelde yapılan işlemi kayda geçirir (kayıtlar da panel parolasıyla şifreli kasada durur) */
+function islemKaydet(ne: string) {
+  if (!depo) return;
+  const liste = (V().islemler ??= []);
+  liste.push({ t: Date.now(), ne });
+  const sinir = Date.now() - ISLEM_SURESI;
+  if (liste.length > 3000 || liste[0].t < sinir) V().islemler = liste.filter((x) => x.t >= sinir).slice(-3000);
+}
+
+/** Saklama süresi dolan randevu taleplerini siler (panel her açıldığında) */
+function eskiTalepleriTemizle() {
+  const sinir = Date.now() - TALEP_SAKLAMA;
+  const once = V().randevular.length;
+  V().randevular = V().randevular.filter((r) => {
+    const zaman = Math.max(r.olusturma || 0, Date.parse(`${r.tarih || '1970-01-01'}T00:00:00Z`) || 0);
+    return !((r.durum === 'talep' || !danisanBul(r.danisanId)) && zaman < sinir);
+  });
+  const silinen = once - V().randevular.length;
+  if (silinen) islemKaydet(`Saklama süresi (1 yıl) dolan ${silinen} randevu talebi / kaydı silindi`);
+}
+
+/** Son işlemi 10 yıldan eski danışanlar (silinmesi gerekenler) */
+function saklamaSuresiDolanlar(): Danisan[] {
+  const sinir = Date.now() - DANISAN_SAKLAMA;
+  return V().danisanlar.filter((d) => {
+    const sonRandevu = Math.max(0, ...V().randevular.filter((r) => r.danisanId === d.id).map((r) => Date.parse(`${r.tarih}T00:00:00Z`) || 0));
+    const sonOlcum = Math.max(0, ...d.olcumler.map((o) => Date.parse(`${o.tarih}T00:00:00Z`) || 0));
+    return Math.max(d.guncelleme || 0, d.olusturma || 0, sonRandevu, sonOlcum) < sinir;
+  });
+}
+
 /** Bir danışanda değişiklik olduğunda: kaydet ve Takibim'i güncelle */
 async function degisti(d?: Danisan, sessiz = false) {
   if (d) d.guncelleme = Date.now();
+  islemKaydet(d ? `Danışan kaydı güncellendi: ${d.ad}` : 'Kayıt güncellendi');
   await depo!.kaydet();
   if (d?.takip && (d.takip.durum === 'eslesti' || d.takip.durum === 'bekliyor')) {
     const r = await takipGonder(depo!, d);
@@ -350,6 +395,7 @@ async function yedektenYukle() {
       } catch (e) {
         throw new Uyari(e instanceof Error ? e.message : 'Yedek açılamadı.', 'Parola');
       }
+      islemKaydet('Panel yedekten yüklendi');
       toast('Yedek yüklendi.');
       location.hash = '#ozet';
       uygulama();
@@ -375,6 +421,9 @@ let ilkAcilis = true;
 
 function uygulama() {
   document.body.classList.add('panel-acik');
+  islemKaydet('Panel açıldı');
+  eskiTalepleriTemizle();
+  void depo!.kaydet();
   for (const z of zamanlayicilar) clearInterval(z);
   zamanlayicilar = [
     window.setInterval(() => {
@@ -401,6 +450,7 @@ function uygulama() {
 
 async function kilitle() {
   if (!depo) return;
+  islemKaydet('Panel kilitlendi');
   await depo.simdiKaydet().catch(() => undefined);
   depo = null;
   for (const z of zamanlayicilar) clearInterval(z);
@@ -809,6 +859,7 @@ async function whatsappTalebiEkle() {
       };
       r.danisanId = telefonlaBul(tel)?.id;
       V().randevular.push(r);
+      islemKaydet(`WhatsApp randevu talebi eklendi: ${ad}`);
       await depo!.simdiKaydet();
       if (f.hemenOnayla) eklenen = r;
     },
@@ -1723,15 +1774,19 @@ async function takibimAnahtari(d: Danisan): Promise<string> {
   return d.takibimAnahtar;
 }
 
-async function qrPaylasildi(d: Danisan) {
+async function qrPaylasildi(d: Danisan, ne = 'Takibim QR kodu gösterildi') {
   d.qrPaylasim = Date.now();
+  islemKaydet(`${ne}: ${d.ad}`);
   await depo!.kaydet();
 }
 
 /** Ölçümler ve Takibim sekmelerindeki Takibim düğmeleri */
 function takibimDugmeleri(d: Danisan): Node[] {
+  const sonraki = sonrakiRandevusu(d);
   return [
     dugme('QR Göster', () => qrTakibimGoster(d), 'btn btn-outline btn-sm'),
+    dugme('Bir Sonraki Randevuyu Ekle', () => sonrakiRandevuEkle(d), 'btn btn-outline btn-sm'),
+    sonraki ? h('p', { class: 'ince sonraki-randevu' }, `Sonraki randevu: ${tarih(sonraki.tarih, true)} · ${sonraki.saat} · ${turAdi(sonraki.tur)}`) : null,
     d.qrPaylasim ? dugme('Güncellemeyi WhatsApp\'tan Gönder', () => takibimGuncellemeGonder(d), 'btn btn-outline btn-sm') : null,
     dugme('Online Danışana Bağlantı Gönder', () => qrBaglantiGonder(d), 'btn btn-outline btn-sm'),
   ].filter(Boolean) as Node[];
@@ -1785,11 +1840,11 @@ async function qrBaglantiGonder(d: Danisan) {
       { class: 'form-grid' },
       h('p', null, 'İlk kez Takibim açacak online danışan için. Bağlantıyı WhatsApp\'tan gönderin. Bilgiler bu 6 haneli kodla şifrelidir; kodu WhatsApp\'a yazmayın, görüşmede sözlü olarak söyleyin.'),
       h('div', { class: 'kod-kutu', 'aria-label': 'Açılış kodu' }, kod),
-      h('a', { class: 'btn btn-wa', href: whatsapp(d.telefon, mesaj), target: '_blank', rel: 'noopener', onclick: () => void qrPaylasildi(d) }, 'WhatsApp ile Bağlantıyı Gönder'),
+      h('a', { class: 'btn btn-wa', href: whatsapp(d.telefon, mesaj), target: '_blank', rel: 'noopener', onclick: () => void qrPaylasildi(d, 'Takibim ilk bağlantısı WhatsApp\'a aktarıldı') }, 'WhatsApp ile Bağlantıyı Gönder'),
       dugme('Bağlantıyı Kopyala', async () => {
         try {
           await navigator.clipboard.writeText(adres);
-          await qrPaylasildi(d);
+          await qrPaylasildi(d, 'Takibim ilk bağlantısı kopyalandı');
           toast('Bağlantı kopyalandı.');
         } catch {
           toast('Kopyalanamadı.', 'hata');
@@ -1806,8 +1861,11 @@ async function takibimGuncellemeGonder(d: Danisan) {
   const mesaj = sablon('takibimGuncelleme', { ad: ilkAd(d.ad), baglanti: adres });
   const gonderildi = async () => {
     d.guncellemeGonderim = Date.now();
+    islemKaydet(`Takibim güncelleme bağlantısı hazırlandı: ${d.ad}`);
     await depo!.kaydet();
   };
+  let randevuEkle = false;
+  const sonraki = sonrakiRandevusu(d);
   await pencere({
     baslik: 'Takibim Güncellemesini Gönder',
     kaydet: 'Kapat',
@@ -1831,9 +1889,136 @@ async function takibimGuncellemeGonder(d: Danisan) {
         { class: 'hint' },
         'Bağlantı, danışana özel anahtarla şifrelidir ve yalnızca Takibim\'i açtığı telefonda çalışır; başkasının eline geçse de açılmaz. Danışan telefonunu değiştirdiyse veya Takibim\'i silmişse "QR Göster" ile bir kez yeniden okutun.',
       ),
+      h(
+        'div',
+        { class: 'bilgi-kutu' },
+        h('p', null, sonraki ? `Planlı sonraki randevu: ${tarih(sonraki.tarih, true)} · ${sonraki.saat}. ` : 'Henüz planlı bir sonraki randevu yok. ', 'Randevuyu şimdi belirleyecekseniz önce ekleyin; randevu ve ölçümler tek mesajla gider.'),
+        dugme('Önce Bir Sonraki Randevuyu Ekle', (e) => {
+          randevuEkle = true;
+          (e.currentTarget as HTMLElement).closest('form')!.requestSubmit();
+        }),
+      ),
     ),
   });
   cizSessiz();
+  if (randevuEkle) await sonrakiRandevuEkle(d);
+}
+
+/** Danışanın en yakın onaylı (gelecekteki) randevusu */
+function sonrakiRandevusu(d: Danisan): Randevu | undefined {
+  const bu = bugun();
+  return V()
+    .randevular.filter((r) => r.danisanId === d.id && r.durum === 'onaylandi' && r.tarih >= bu)
+    .sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))[0];
+}
+
+/** Görüşme sırasında bir sonraki randevuyu ekler; Takibim'i olan danışana randevu + güncel ölçümler tek WhatsApp mesajıyla gider */
+async function sonrakiRandevuEkle(d: Danisan) {
+  const bu = bugun();
+  const oneri = new Date(Date.parse(`${bu}T00:00:00Z`) + 14 * 86_400_000).toISOString().slice(0, 10);
+  const son = [...V().randevular].filter((r) => r.danisanId === d.id && r.durum !== 'talep').sort((a, b) => a.tarih.localeCompare(b.tarih)).at(-1);
+  const mevcut = sonrakiRandevusu(d);
+  let eklenen: Randevu | null = null;
+  const ok = await pencere({
+    baslik: 'Bir Sonraki Randevu',
+    icerik: h(
+      'div',
+      { class: 'form-grid' },
+      h('p', null, h('strong', null, d.ad), ` · ${telefonGoster(d.telefon)}`),
+      mevcut ? h('div', { class: 'bilgi-kutu' }, h('p', null, `Planlı randevu var: ${tarih(mevcut.tarih, true)} · ${mevcut.saat} (${turAdi(mevcut.tur)}). Yeni randevu ayrıca eklenir; eskisini Randevular sekmesinden düzenleyebilirsiniz.`)) : null,
+      h(
+        'div',
+        { class: 'form-grid iki' },
+        alan('Tarih', input('tarih', oneri, { type: 'date', min: bu })),
+        alan('Saat', input('saat', son?.saat ?? '', { type: 'time', step: 300 })),
+        alan('Görüşme', secim('tur', [['yuzyuze', 'Yüz yüze'], ['online', 'Online']], son?.tur ?? 'yuzyuze')),
+        alan('Not', input('not', '', { maxlength: 200, placeholder: 'İsteğe bağlı (ör. kontrol)' })),
+      ),
+      h('p', { class: 'hint' }, 'Randevu onaylı olarak eklenir ve danışanın Takibim sayfasında "Sonraki Randevum" olarak görünür.'),
+    ),
+    onKaydet: async (form) => {
+      const f = formNesnesi(form);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(f.tarih) || f.tarih < bu) throw new Uyari('Bugün veya sonrası için bir tarih seçin.', 'Tarih');
+      if (!/^\d{2}:\d{2}$/.test(f.saat)) throw new Uyari('Saat seçin.', 'Saat');
+      const cakisan = V().randevular.find((r) => r.durum === 'onaylandi' && r.tarih === f.tarih && r.saat === f.saat);
+      if (cakisan) throw new Uyari(`Bu gün ve saatte ${cakisan.ad} ile randevunuz var. Başka bir saat seçin.`, 'Saat');
+      const r: Randevu = {
+        id: kimlik(),
+        danisanId: d.id,
+        ad: d.ad,
+        telefon: d.telefon,
+        tarih: f.tarih,
+        saat: f.saat,
+        tur: f.tur === 'online' ? 'online' : 'yuzyuze',
+        konu: 'Kontrol',
+        not: String(f.not ?? '').trim(),
+        durum: 'onaylandi',
+        kaynak: 'panel',
+        olusturma: Date.now(),
+      };
+      V().randevular.push(r);
+      await degisti(d, true);
+      eklenen = r;
+    },
+  });
+  if (!ok || !eklenen) return;
+  ciz();
+  toast('Randevu eklendi.');
+  await sonrakiRandevuPaylas(d, eklenen);
+}
+
+/** Randevu eklendikten sonra: Takibim'i olan danışana tek mesaj (randevu + güncelleme), olmayana onay mesajı */
+async function sonrakiRandevuPaylas(d: Danisan, r: Randevu) {
+  const degiskenler = { ...randevuDegiskenleri(r), tur: r.tur === 'online' ? 'online' : 'yüz yüze' };
+  let qr = false;
+  const qrDugmesi = dugme('Danışan Yanınızdaysa: QR Göster', (e) => {
+    qr = true;
+    (e.currentTarget as HTMLElement).closest('form')!.requestSubmit();
+  });
+  if (qrKipi && d.qrPaylasim) {
+    const adres = `${location.origin}/takibim/#${await guncellemeParcasi(takipVerisi(d, V().randevular), d.id, await takibimAnahtari(d))}`;
+    const mesaj = sablon('sonrakiRandevu', { ...degiskenler, baglanti: adres });
+    await pencere({
+      baslik: 'Randevu Eklendi',
+      kaydet: 'Kapat',
+      vazgecYok: true,
+      icerik: h(
+        'div',
+        { class: 'form-grid' },
+        h('p', null, `${tarih(r.tarih, true)} · ${r.saat} · ${turAdi(r.tur)}. Danışanın Takibim\'ine eklemek için randevuyu ve güncel ölçümleri tek mesajla gönderin.`),
+        h('a', {
+          class: 'btn btn-wa',
+          href: whatsapp(d.telefon, mesaj),
+          target: '_blank',
+          rel: 'noopener',
+          onclick: () => {
+            d.guncellemeGonderim = Date.now();
+            islemKaydet(`Sonraki randevu ve Takibim güncellemesi WhatsApp'a aktarıldı: ${d.ad}`);
+            void depo!.kaydet();
+          },
+        }, 'WhatsApp ile Randevu ve Güncellemeyi Gönder'),
+        qrDugmesi,
+        h('p', { class: 'hint' }, 'QR okutulursa danışanın Takibim\'i hemen güncellenir; ayrıca mesaj göndermeniz gerekmez.'),
+      ),
+    });
+  } else {
+    const mesaj = sablon(r.tur === 'online' ? 'onayOnline' : 'onayYuzyuze', randevuDegiskenleri(r));
+    await pencere({
+      baslik: 'Randevu Eklendi',
+      kaydet: 'Kapat',
+      vazgecYok: true,
+      icerik: h(
+        'div',
+        { class: 'form-grid' },
+        h('p', null, 'Danışana randevu bilgisini WhatsApp\'tan gönderebilirsiniz.'),
+        h('pre', { class: 'mesaj-onizleme' }, mesaj),
+        h('a', { class: 'btn btn-wa', href: whatsapp(d.telefon, mesaj), target: '_blank', rel: 'noopener' }, 'WhatsApp ile Randevu Bilgisi Gönder'),
+        qrKipi ? qrDugmesi : null,
+        qrKipi ? h('p', { class: 'hint' }, 'Danışanın Takibim\'i yoksa QR\'ı okutunca ölçümleri ve bu randevu telefonunda açılır.') : null,
+      ),
+    });
+  }
+  if (qr) await qrTakibimGoster(d);
 }
 
 function qrTakibimSekmesi(d: Danisan): Node[] {
@@ -2163,6 +2348,7 @@ function bilgiSekmesi(d: Danisan): Node[] {
             if (d.takip) await api('DELETE', `/kutu/${d.takip.kutu}`, undefined, panelBasligi(depo!)).catch(() => undefined);
             V().danisanlar = V().danisanlar.filter((x) => x !== d);
             V().randevular = V().randevular.filter((r) => r.danisanId !== d.id);
+            islemKaydet(`Danışan ve tüm kayıtları silindi: ${d.ad}`);
             await depo!.simdiKaydet();
           },
         });
@@ -2225,7 +2411,22 @@ function duyuru(): Node[] {
   return [
     bolumBasligi('Duyuru', sunucuAcik ? 'Tek tuşla tüm danışanların Takibim sayfasına duyuru gönderin.' : 'Danışanlarınıza WhatsApp ile duyuru gönderin.'),
     sunucuAcik ? kart('Takibim Duyurusu', form) : null,
-    kart('WhatsApp ile Tek Tek', h('p', { class: 'hint' }, 'Mesajı bir kez yazın; WhatsApp toplu mesaja izin vermediği için her danışanın yanındaki düğme, mesajı o kişiye hazır olarak açar.'), waMetni, tum.length ? waListe : bos('Danışan yok.')),
+    kart(
+      'WhatsApp ile Tek Tek',
+      h('p', { class: 'hint' }, 'Mesajı bir kez yazın; WhatsApp toplu mesaja izin vermediği için her danışanın yanındaki düğme, mesajı o kişiye hazır olarak açar.'),
+      h(
+        'div',
+        { class: 'bilgi-kutu uyari' },
+        h(
+          'p',
+          null,
+          h('strong', null, 'Yalnızca bilgilendirme: '),
+          'Çalışma saatleri, tatil, adres değişikliği gibi hizmete ilişkin duyurular gönderin. Kampanya, indirim, paket tanıtımı gibi mesajlar ticari elektronik ileti sayılır; önceden yazılı onay ve İleti Yönetim Sistemi (İYS) kaydı gerektirir. Mesajlarda sağlık bilgisi paylaşmayın.',
+        ),
+      ),
+      waMetni,
+      tum.length ? waListe : bos('Danışan yok.'),
+    ),
   ].filter(Boolean) as Node[];
 }
 
@@ -2363,6 +2564,7 @@ async function sunucuBagla() {
 }
 
 async function yedekIndir() {
+  islemKaydet('Şifreli yedek indirildi');
   const blob = await depo!.yedek();
   indir(blob, `diyetisyen-paneli-yedek-${bugun()}.json`);
   toast('Yedek indirildi. Dosyayı USB belleğe veya ikinci bir diske kopyalayın.');
@@ -2457,7 +2659,7 @@ function ayarlar(): Node[] {
     'div',
     { class: 'form-grid' },
     Object.entries(SABLONLAR)
-      .filter(([k]) => (sunucuAcik ? k !== 'takibimGuncelleme' : k !== 'yeniSonuc' && (!['takibim', 'takibimGuncelleme'].includes(k) || takibimGorunur)))
+      .filter(([k]) => (sunucuAcik ? !['takibimGuncelleme', 'sonrakiRandevu'].includes(k) : k !== 'yeniSonuc' && (!['takibim', 'takibimGuncelleme', 'sonrakiRandevu'].includes(k) || takibimGorunur)))
       .map(([k, s]) => {
       const ta = metinAlani(`s-${k}`, V().sablonlar[k] ?? s.metin, { rows: 4 });
       ta.addEventListener('change', async () => {
@@ -2472,7 +2674,7 @@ function ayarlar(): Node[] {
     h(
       'p',
       { class: 'hint' },
-      `Kullanılabilen alanlar: {ad} (ilk ad), {adSoyad}, {tarih}, {gun}, {saat}, {adres}, {konum}, {paket}, {bitis}${takibimGorunur ? ', {baglanti}' : ''}${sunucuAcik ? ', {takibim}' : ''}. Ödeme şablonundaki IBAN bilgisini kendi hesabınızla değiştirin.`,
+      `Kullanılabilen alanlar: {ad} (ilk ad), {adSoyad}, {tarih}, {gun}, {saat}, {adres}, {konum}, {paket}, {bitis}, {tur}${takibimGorunur ? ', {baglanti}' : ''}${sunucuAcik ? ', {takibim}' : ''}. Ödeme şablonundaki IBAN bilgisini kendi hesabınızla değiştirin.`,
     ),
     dugme('Varsayılan Şablonlara Dön', async () => {
       V().sablonlar = {};
@@ -2486,6 +2688,8 @@ function ayarlar(): Node[] {
     sunucuAcik ? null : kart('Veriler Nerede?', h('p', null, 'Tüm danışan kayıtları yalnızca bu bilgisayarda, panel parolasıyla şifreli olarak saklanır; internete gönderilmez. Bu yüzden düzenli yedek almanız önemlidir; yedek dosyasını USB bellek veya harici diskte saklayın.'),
       qrKipi ? h('p', null, 'Takibim QR kodu, danışanın özetini (ölçümler, paket, yaklaşan randevular) doğrudan danışanın telefonuna aktarır; sunucuya gönderilmez. Alerji, hastalık, ilaç bilgileri ve notlarınız QR\'a eklenmez.') : null,
     ),
+    islemKayitlariKarti(),
+    saklamaKarti(),
     !sunucuAcik ? null : kart(
       'Sunucu Bağlantısı',
       sunucu
@@ -2543,6 +2747,7 @@ function ayarlar(): Node[] {
                 throw new Uyari((e as Error).message, 'Yeni parola');
               }
               if (f.parola !== f.tekrar) throw new Uyari('Parolalar aynı değil.', 'Yeni parola (tekrar)');
+              islemKaydet('Panel parolası değiştirildi');
               await depo!.parolaDegistir(f.parola);
               toast('Parola değiştirildi. Yeni bir yedek alın.');
             },
@@ -2552,6 +2757,71 @@ function ayarlar(): Node[] {
       ),
     ),
   ].filter(Boolean) as Node[];
+}
+
+function islemKayitlariKarti(): Node {
+  const liste = [...(V().islemler ?? [])].reverse();
+  const csv = () => {
+    const satirlar = [['Tarih', 'İşlem'], ...[...(V().islemler ?? [])].map((x) => [new Date(x.t).toLocaleString('tr-TR'), x.ne])];
+    const metin = satirlar.map((r) => r.map((h_) => `"${String(h_).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+    indir(new Blob(['\ufeff' + metin], { type: 'text/csv;charset=utf-8' }), `panel-islem-kayitlari-${bugun()}.csv`);
+  };
+  return kart(
+    'İşlem Kayıtları',
+    h(
+      'p',
+      null,
+      'Panelde yapılan işlemler (açılış ve kilitlenme, kayıt değişiklikleri, QR / bağlantı paylaşımları, yedek, silme) son 2 yıl için kayda geçirilir. Kayıtlar da panel parolasıyla şifrelidir ve yalnızca bu bilgisayardadır.',
+    ),
+    liste.length
+      ? h(
+          'details',
+          { class: 'tablo-ac' },
+          h('summary', null, `Son işlemler (${liste.length})`),
+          h('ul', { class: 'liste' }, liste.slice(0, 40).map((x) => h('li', null, h('div', { class: 'ana' }, h('span', { class: 'ince' }, tarihSaat(x.t)), h('span', null, ` ${x.ne}`))))),
+        )
+      : bos('Henüz kayıt yok.'),
+    h('div', { class: 'eylemler' }, dugme('Kayıtları İndir (CSV)', () => csv(), 'btn btn-outline btn-sm')),
+  );
+}
+
+function saklamaKarti(): Node {
+  const dolanlar = saklamaSuresiDolanlar();
+  return kart(
+    'Saklama Süreleri',
+    h(
+      'p',
+      null,
+      'KVKK aydınlatma metnine göre: danışan kayıtları son işlemden itibaren 10 yıl saklanır, süresi dolanlar aşağıda listelenir ve silinmelidir. Danışana dönüşmeyen randevu talepleri 1 yıl sonra kendiliğinden silinir.',
+    ),
+    dolanlar.length
+      ? h(
+          'ul',
+          { class: 'liste' },
+          dolanlar.map((d) =>
+            h(
+              'li',
+              null,
+              h('div', { class: 'ana' }, h('strong', null, d.ad), h('span', null, ` · son işlem ${tarih(d.guncelleme)}`)),
+              h(
+                'div',
+                { class: 'eylemler' },
+                dugme('Sil', async () => {
+                  const ok = await pencere({ baslik: 'Saklama Süresi Dolan Kaydı Sil', tehlikeli: true, kaydet: 'Kalıcı Olarak Sil', icerik: h('p', null, `${d.ad} ve tüm kayıtları silinsin mi? Bu işlem geri alınamaz.`) });
+                  if (!ok) return;
+                  V().danisanlar = V().danisanlar.filter((x) => x !== d);
+                  V().randevular = V().randevular.filter((r) => r.danisanId !== d.id);
+                  islemKaydet(`Saklama süresi dolan danışan kaydı silindi: ${d.ad}`);
+                  await depo!.simdiKaydet();
+                  ciz();
+                }, 'btn btn-tehlike btn-xs'),
+              ),
+            ),
+          ),
+        )
+      : bos('Saklama süresi dolan danışan kaydı yok.'),
+    h('p', { class: 'hint' }, 'Yedek dosyalarında silinen kayıtlar kalır; eski yedekleri (USB bellek vb.) en fazla 1 yıl saklayın, sonra silin.'),
+  );
 }
 
 // ================================================================ Başlangıç

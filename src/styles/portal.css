@@ -942,6 +942,11 @@
   width: 100%;
   justify-content: center;
 }
+.olcum-eylemler .sonraki-randevu {
+  margin: -2px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+}
 .birakma {
   display: grid;
   justify-items: center;

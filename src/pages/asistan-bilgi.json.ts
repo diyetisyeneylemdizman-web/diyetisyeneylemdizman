@@ -29,7 +29,9 @@ export const GET: APIRoute = async () => {
     ...assistantPages,
     ...Object.fromEntries(posts.map((p) => [`/blog/${p.id}/`, `Yazı: ${p.data.title}`])),
   };
-  const serviceNames = allServices.map((s) => s.name);
+  // Randevu bağlantısı yalnızca randevu formunda seçilebilen hizmetler için verilir
+  const serviceNames = allServices.filter((s) => s.secilebilir).map((s) => s.name);
+  const allServiceNames = allServices.map((s) => s.name);
 
   const resolve = (tags: AssistantAction[] = []) =>
     tags.map((t) => resolveAction(t, pages, serviceNames)).filter((a): a is ResolvedAction => Boolean(a));
@@ -46,7 +48,7 @@ export const GET: APIRoute = async () => {
   });
 
   for (const name of Object.keys(serviceKeywords)) {
-    if (!serviceNames.includes(name)) console.warn(`[asistan] serviceKeywords içinde bilinmeyen hizmet: ${name}`);
+    if (!allServiceNames.includes(name)) console.warn(`[asistan] serviceKeywords içinde bilinmeyen hizmet: ${name}`);
   }
 
   const topicIntents = topics.map((t) => {
@@ -69,7 +71,7 @@ export const GET: APIRoute = async () => {
       .filter(Boolean)
       .join(' ');
     const actions = resolve([
-      `randevu:${s.name}`,
+      s.secilebilir ? `randevu:${s.name}` : 'randevu',
       post ? (`sayfa:/blog/${post.id}/` as const) : 'sayfa:/hizmetler/',
     ]);
     return {
